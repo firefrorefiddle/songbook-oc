@@ -9,12 +9,119 @@
 
 	let showAddSongModal = $state(false);
 	let showNewVersionModal = $state(false);
-	let selectedSongVersionId = $state('');
+	let selectedSongVersionIds = $state<string[]>([]);
+	let songSearchQuery = $state('');
 	let versionTitle = $state('');
 	let versionDescription = $state('');
+	let draggedIndex = $state<number | null>(null);
+	let dragOverIndex = $state<number | null>(null);
 
 	function getCurrentVersion() {
 		return data.songbook.versions[0];
+	}
+
+	function fuzzyMatch(text: string, pattern: string): boolean {
+		const textLower = text.toLowerCase();
+		const patternLower = pattern.toLowerCase();
+		let patternIdx = 0;
+		for (let i = 0; i < textLower.length && patternIdx < patternLower.length; i++) {
+			if (textLower[i] === patternLower[patternIdx]) {
+				patternIdx++;
+			}
+		}
+		return patternIdx === patternLower.length;
+	}
+
+	function getFilteredSongs() {
+		if (!songSearchQuery.trim()) {
+			return data.availableSongs;
+		}
+		const query = songSearchQuery.trim();
+		return data.availableSongs.filter((song) => {
+			const latestVersion = song.versions[0];
+			if (!latestVersion) return false;
+			const titleMatch = fuzzyMatch(latestVersion.title, query);
+			const authorMatch = latestVersion.author ? fuzzyMatch(latestVersion.author, query) : false;
+			return titleMatch || authorMatch;
+		});
+	}
+
+	function toggleSong(songVersionId: string) {
+		if (selectedSongVersionIds.includes(songVersionId)) {
+			selectedSongVersionIds = selectedSongVersionIds.filter((id) => id !== songVersionId);
+		} else {
+			selectedSongVersionIds = [...selectedSongVersionIds, songVersionId];
+		}
+	}
+
+	function toggleAll(checked: boolean) {
+		const filtered = getFilteredSongs();
+		const versionIds = filtered.map((s) => s.versions[0]?.id).filter(Boolean) as string[];
+		if (checked) {
+			const existing = new Set(selectedSongVersionIds);
+			selectedSongVersionIds = [...selectedSongVersionIds, ...versionIds.filter((id) => !existing.has(id))];
+		} else {
+			selectedSongVersionIds = selectedSongVersionIds.filter((id) => !versionIds.includes(id));
+		}
+	}
+
+	function isAllSelected() {
+		const filtered = getFilteredSongs();
+		const versionIds = filtered.map((s) => s.versions[0]?.id).filter(Boolean) as string[];
+		return versionIds.length > 0 && versionIds.every((id) => selectedSongVersionIds.includes(id));
+	}
+
+	function handleDragStart(event: DragEvent, index: number) {
+		draggedIndex = index;
+		if (event.dataTransfer) {
+			event.dataTransfer.effectAllowed = 'move';
+			event.dataTransfer.setData('text/plain', index.toString());
+		}
+	}
+
+	function handleDragOver(event: DragEvent, index: number) {
+		event.preventDefault();
+		if (event.dataTransfer) {
+			event.dataTransfer.dropEffect = 'move';
+		}
+		dragOverIndex = index;
+	}
+
+	function handleDragLeave() {
+		dragOverIndex = null;
+	}
+
+	function handleDrop(event: DragEvent, targetIndex: number) {
+		event.preventDefault();
+		dragOverIndex = null;
+		if (draggedIndex === null || draggedIndex === targetIndex) {
+			draggedIndex = null;
+			return;
+		}
+
+		const songs = [...(getCurrentVersion()?.songs || [])];
+		const [removed] = songs.splice(draggedIndex, 1);
+		songs.splice(targetIndex, 0, removed);
+
+		const songVersionIds = songs.map(s => s.songVersion.id);
+		console.log('Drop reorder:', songVersionIds);
+
+		const form = document.getElementById('reorder-form') as HTMLFormElement;
+		if (!form) return;
+
+		const inputs = form.querySelectorAll('input[name="songVersionIds"]');
+		inputs.forEach((input, i) => {
+			(input as HTMLInputElement).value = songVersionIds[i];
+		});
+
+		form.requestSubmit();
+
+		draggedIndex = null;
+	}
+
+	function handleDragEnd() {
+		draggedIndex = null;
+		dragOverIndex = null;
 	}
 </script>
 
@@ -63,8 +170,22 @@
 	{:else}
 		<ul class="divide-y divide-gray-200">
 			{#each getCurrentVersion()?.songs || [] as songbookSong, index}
-				<li class="px-6 py-4 flex items-center justify-between">
+				<li
+					class="px-6 py-4 flex items-center justify-between cursor-move"
+					draggable="true"
+					ondragstart={(e) => handleDragStart(e, index)}
+					ondragover={(e) => handleDragOver(e, index)}
+					ondragleave={handleDragLeave}
+					ondrop={(e) => handleDrop(e, index)}
+					ondragend={handleDragEnd}
+					class:bg-indigo-50={draggedIndex === index}
+					class:border-l-4={dragOverIndex === index}
+					class:border-l-indigo-500={dragOverIndex === index}
+				>
 					<div class="flex items-center gap-4">
+						<svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
+						</svg>
 						<span class="text-gray-400 text-sm w-6">{index + 1}.</span>
 						<div>
 							<a href="/songs/{songbookSong.songVersion.song.id}" class="text-indigo-600 hover:text-indigo-800 font-medium">
@@ -117,7 +238,13 @@
 	</div>
 {/if}
 
-<Modal bind:open={showAddSongModal} title="Add Song to Songbook" onclose={() => showAddSongModal = false}>
+<form id="reorder-form" method="POST" action="?/reorderSongs">
+	{#each getCurrentVersion()?.songs || [] as song}
+		<input type="hidden" name="songVersionIds" value={song.songVersion.id} />
+	{/each}
+</form>
+
+<Modal bind:open={showAddSongModal} title="Add Song to Songbook" onclose={() => { showAddSongModal = false; songSearchQuery = ''; }}>
 	{#snippet children()}
 		{#if data.availableSongs.length === 0}
 			<p class="text-gray-700 mb-4">No songs available. Create a song first.</p>
@@ -128,14 +255,16 @@
 			<form
 				method="POST"
 				action="?/addSong"
-		use:enhance={() => {
-				return async ({ result }) => {
-					if (result.type === 'success') {
-						showAddSongModal = false;
-						await invalidateAll();
-					}
-				};
-			}}
+				use:enhance={() => {
+					return async ({ result }) => {
+						if (result.type === 'success') {
+							showAddSongModal = false;
+							songSearchQuery = '';
+							selectedSongVersionIds = [];
+							await invalidateAll();
+						}
+					};
+				}}
 			>
 				{#if form?.error}
 					<div class="mb-4 p-3 bg-red-50 text-red-700 rounded-md text-sm">
@@ -144,30 +273,62 @@
 				{/if}
 
 				<div class="mb-4">
-					<label for="songVersionId" class="block text-sm font-medium text-gray-700 mb-1">
-						Select Song Version <span class="text-red-500">*</span>
-					</label>
-					<select
-						id="songVersionId"
-						name="songVersionId"
-						bind:value={selectedSongVersionId}
-						required
-						class="block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500"
-					>
-						<option value="">Choose a song...</option>
-						{#each data.availableSongs as song}
-							{#if song.versions[0]}
-								<option value={song.versions[0].id}>
-									{song.versions[0].title} - {song.versions[0].author || 'Unknown'}
-								</option>
-							{/if}
-						{/each}
-					</select>
+					<input
+						type="text"
+						placeholder="Search songs..."
+						bind:value={songSearchQuery}
+						class="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500"
+					/>
 				</div>
 
+				<div class="mb-4 max-h-64 overflow-y-auto border rounded-md">
+					<table class="min-w-full divide-y divide-gray-200">
+						<thead class="bg-gray-50 sticky top-0">
+							<tr>
+								<th class="px-3 py-2 text-left">
+									<input
+										type="checkbox"
+										checked={isAllSelected()}
+										onchange={(e) => toggleAll(e.currentTarget.checked)}
+										class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+									/>
+								</th>
+								<th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
+								<th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Author</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-gray-200 bg-white">
+							{#each getFilteredSongs() as song}
+								{#if song.versions[0]}
+									<tr class="hover:bg-gray-50">
+										<td class="px-3 py-2">
+											<input
+												type="checkbox"
+												name="songVersionIds"
+												value={song.versions[0].id}
+												checked={selectedSongVersionIds.includes(song.versions[0].id)}
+												onchange={() => toggleSong(song.versions[0].id)}
+												class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+											/>
+										</td>
+										<td class="px-3 py-2 text-sm text-gray-900">{song.versions[0].title}</td>
+										<td class="px-3 py-2 text-sm text-gray-500">{song.versions[0].author || 'Unknown'}</td>
+									</tr>
+								{/if}
+							{/each}
+						</tbody>
+					</table>
+				</div>
+
+				{#if selectedSongVersionIds.length > 0}
+					<p class="mb-4 text-sm text-gray-600">
+						{selectedSongVersionIds.length} song{selectedSongVersionIds.length === 1 ? '' : 's'} selected
+					</p>
+				{/if}
+
 				<div class="flex justify-end gap-2">
-					<Button variant="secondary" onclick={() => showAddSongModal = false}>Cancel</Button>
-					<Button type="submit" disabled={!selectedSongVersionId}>Add Song</Button>
+					<Button variant="secondary" onclick={() => { showAddSongModal = false; songSearchQuery = ''; }}>Cancel</Button>
+					<Button type="submit" disabled={selectedSongVersionIds.length === 0}>Add {selectedSongVersionIds.length > 0 ? selectedSongVersionIds.length : ''} Song{selectedSongVersionIds.length === 1 ? '' : 's'}</Button>
 				</div>
 			</form>
 		{/if}

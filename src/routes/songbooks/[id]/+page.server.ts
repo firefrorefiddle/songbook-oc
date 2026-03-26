@@ -1,121 +1,174 @@
-import type { PageServerLoad, Actions } from './$types';
-import { prisma } from '$lib/server/prisma';
-import { fail } from '@sveltejs/kit';
+import type { PageServerLoad, Actions } from "./$types";
+import { prisma } from "$lib/server/prisma";
+import { fail } from "@sveltejs/kit";
 
 export const load: PageServerLoad = async ({ params }) => {
-	const songbook = await prisma.songbook.findUnique({
-		where: { id: params.id },
-		include: {
-			versions: {
-				orderBy: { createdAt: 'desc' },
-				include: {
-					songs: {
-						include: {
-							songVersion: {
-								include: {
-									song: true
-								}
-							}
-						},
-						orderBy: { order: 'asc' }
-					}
-				}
-			}
-		}
-	});
+  const songbook = await prisma.songbook.findUnique({
+    where: { id: params.id },
+    include: {
+      versions: {
+        orderBy: { createdAt: "desc" },
+        include: {
+          songs: {
+            include: {
+              songVersion: {
+                include: {
+                  song: true,
+                },
+              },
+            },
+            orderBy: { order: "asc" },
+          },
+        },
+      },
+    },
+  });
 
-	if (!songbook) {
-		throw new Error('Songbook not found');
-	}
+  if (!songbook) {
+    throw new Error("Songbook not found");
+  }
 
-	const availableSongs = await prisma.song.findMany({
-		where: { isArchived: false },
-		include: {
-			versions: {
-				orderBy: { createdAt: 'desc' },
-				take: 1
-			}
-		},
-		orderBy: { updatedAt: 'desc' }
-	});
+  const availableSongs = await prisma.song.findMany({
+    where: { isArchived: false },
+    include: {
+      versions: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
+    },
+    orderBy: { updatedAt: "desc" },
+  });
 
-	return { songbook, availableSongs };
+  return { songbook, availableSongs };
 };
 
 export const actions: Actions = {
-	createVersion: async ({ params, request }) => {
-		const formData = await request.formData();
-		const title = formData.get('title') as string;
-		const description = formData.get('description') as string;
+  createVersion: async ({ params, request }) => {
+    const formData = await request.formData();
+    const title = formData.get("title") as string;
+    const description = formData.get("description") as string;
 
-		if (!title?.trim()) {
-			return fail(400, { error: 'Title is required' });
-		}
+    if (!title?.trim()) {
+      return fail(400, { error: "Title is required" });
+    }
 
-		await prisma.songbookVersion.create({
-			data: {
-				songbookId: params.id,
-				title: title.trim(),
-				description: description?.trim() || null
-			}
-		});
+    await prisma.songbookVersion.create({
+      data: {
+        songbookId: params.id,
+        title: title.trim(),
+        description: description?.trim() || null,
+      },
+    });
 
-		return { success: true };
-	},
+    return { success: true };
+  },
 
-	addSong: async ({ params, request }) => {
-		const formData = await request.formData();
-		const songVersionId = formData.get('songVersionId') as string;
+  addSong: async ({ params, request }) => {
+    const formData = await request.formData();
+    const songVersionIds = formData.getAll("songVersionIds") as string[];
 
-		if (!songVersionId) {
-			return fail(400, { error: 'Please select a song' });
-		}
+    if (songVersionIds.length === 0) {
+      return fail(400, { error: "Please select at least one song" });
+    }
 
-		const currentVersion = await prisma.songbookVersion.findFirst({
-			where: { songbookId: params.id },
-			orderBy: { createdAt: 'desc' }
-		});
+    const currentVersion = await prisma.songbookVersion.findFirst({
+      where: { songbookId: params.id },
+      orderBy: { createdAt: "desc" },
+    });
 
-		if (!currentVersion) {
-			return fail(400, { error: 'No version found' });
-		}
+    if (!currentVersion) {
+      return fail(400, { error: "No version found" });
+    }
 
-		const maxOrder = await prisma.songbookSong.aggregate({
-			where: { songbookVersionId: currentVersion.id },
-			_max: { order: true }
-		});
+    const existingSongVersionIds = await prisma.songbookSong.findMany({
+      where: { songbookVersionId: currentVersion.id },
+      select: { songVersionId: true },
+    });
+    const existingIds = new Set(
+      existingSongVersionIds.map((s) => s.songVersionId),
+    );
 
-		await prisma.songbookSong.create({
-			data: {
-				songbookVersionId: currentVersion.id,
-				songVersionId,
-				order: (maxOrder._max.order ?? -1) + 1
-			}
-		});
+    const maxOrderResult = await prisma.songbookSong.aggregate({
+      where: { songbookVersionId: currentVersion.id },
+      _max: { order: true },
+    });
 
-		return { success: true };
-	},
+    let order = (maxOrderResult._max.order ?? -1) + 1;
+    const songsToCreate: {
+      songbookVersionId: string;
+      songVersionId: string;
+      order: number;
+    }[] = [];
 
-	removeSong: async ({ params, request }) => {
-		const formData = await request.formData();
-		const songVersionId = formData.get('songVersionId') as string;
+    for (const songVersionId of songVersionIds) {
+      if (!existingIds.has(songVersionId)) {
+        songsToCreate.push({
+          songbookVersionId: currentVersion.id,
+          songVersionId,
+          order: order++,
+        });
+      }
+    }
 
-		const currentVersion = await prisma.songbookVersion.findFirst({
-			where: { songbookId: params.id },
-			orderBy: { createdAt: 'desc' }
-		});
+    if (songsToCreate.length > 0) {
+      await prisma.songbookSong.createMany({
+        data: songsToCreate,
+      });
+    }
 
-		if (!currentVersion) {
-			return fail(400, { error: 'No version found' });
-		}
+    return { success: true };
+  },
 
-		await prisma.songbookSong.deleteMany({
-			where: {
-				songbookVersionId: currentVersion.id,
-				songVersionId
-			}
-		});
+  removeSong: async ({ params, request }) => {
+    const formData = await request.formData();
+    const songVersionId = formData.get("songVersionId") as string;
 
-		return { success: true };
-	}
+    const currentVersion = await prisma.songbookVersion.findFirst({
+      where: { songbookId: params.id },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (!currentVersion) {
+      return fail(400, { error: "No version found" });
+    }
+
+    await prisma.songbookSong.deleteMany({
+      where: {
+        songbookVersionId: currentVersion.id,
+        songVersionId,
+      },
+    });
+
+    return { success: true };
+  },
+
+  reorderSongs: async ({ params, request }) => {
+    const formData = await request.formData();
+    const songVersionIds = formData.getAll("songVersionIds") as string[];
+
+    if (songVersionIds.length === 0) {
+      return fail(400, { error: "No songs to reorder" });
+    }
+
+    const currentVersion = await prisma.songbookVersion.findFirst({
+      where: { songbookId: params.id },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (!currentVersion) {
+      return fail(400, { error: "No version found" });
+    }
+
+    for (let i = 0; i < songVersionIds.length; i++) {
+      await prisma.songbookSong.updateMany({
+        where: {
+          songbookVersionId: currentVersion.id,
+          songVersionId: songVersionIds[i],
+        },
+        data: { order: i },
+      });
+    }
+
+    return { success: true };
+  },
 };

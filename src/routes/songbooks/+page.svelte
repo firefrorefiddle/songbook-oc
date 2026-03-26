@@ -22,7 +22,7 @@
 
 	function handleCreateSuccess() {
 		showCreateModal = false;
-		goto('/songbooks');
+		goto('/songbooks', { invalidateAll: true });
 	}
 
 	function confirmDelete(songbook: { id: string; title: string }) {
@@ -152,7 +152,7 @@
 				return ({ result }) => {
 					if (result.type === 'success') {
 						cancelDelete();
-						goto('/songbooks');
+						goto('/songbooks', { invalidateAll: true });
 					}
 				};
 			}}
