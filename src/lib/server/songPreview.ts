@@ -11,12 +11,18 @@ const PROJECT_ROOT = process.cwd();
 const SONGMAKER_CLI = "/home/mike/.cabal/bin/songmaker-cli";
 const LATEX_DIR = join(PROJECT_ROOT, "src/lib/server/latex");
 
-async function getTempDir(): Promise<string> {
-  const tmpDir = join(PROJECT_ROOT, "tmp");
-  if (!existsSync(tmpDir)) {
-    await mkdir(tmpDir, { recursive: true });
-  }
+async function createTempDir(): Promise<string> {
+  const tmpDir = join(PROJECT_ROOT, "tmp", randomUUID());
+  await mkdir(tmpDir, { recursive: true });
   return tmpDir;
+}
+
+async function ensureOutputDir(): Promise<string> {
+  const outputDir = join(PROJECT_ROOT, "tmp", "output");
+  if (!existsSync(outputDir)) {
+    await mkdir(outputDir, { recursive: true });
+  }
+  return outputDir;
 }
 
 async function setupLatexFiles(tempDir: string): Promise<void> {
@@ -26,8 +32,14 @@ async function setupLatexFiles(tempDir: string): Promise<void> {
   }
 }
 
+async function cleanupTempDir(tempDir: string): Promise<void> {
+  try {
+    await rm(tempDir, { recursive: true, force: true });
+  } catch {}
+}
+
 export async function convertToLatex(songContent: string): Promise<string> {
-  const tempDir = await getTempDir();
+  const tempDir = await createTempDir();
   await setupLatexFiles(tempDir);
 
   const sngPath = join(tempDir, `${randomUUID()}.sng`);
@@ -35,21 +47,19 @@ export async function convertToLatex(songContent: string): Promise<string> {
   await writeFile(sngPath, songContent, "utf-8");
 
   try {
-    const { stdout } = await execAsync(`${SONGMAKER_CLI} ${sngPath}`, {
+    await execAsync(`${SONGMAKER_CLI} ${sngPath}`, {
       cwd: tempDir,
     });
     const texPath = sngPath.replace(".sng", ".tex");
     const { readFile } = await import("fs/promises");
     return await readFile(texPath, "utf-8");
   } finally {
-    try {
-      await unlink(sngPath);
-    } catch {}
+    await cleanupTempDir(tempDir);
   }
 }
 
 export async function renderPdf(latexContent: string): Promise<string> {
-  const tempDir = await getTempDir();
+  const tempDir = await createTempDir();
   await setupLatexFiles(tempDir);
 
   const generatedPath = join(tempDir, "generated-song.tex");
@@ -64,17 +74,12 @@ export async function renderPdf(latexContent: string): Promise<string> {
         cwd: tempDir,
       },
     );
-    return join(tempDir, "single-song.pdf");
+    const outputDir = await ensureOutputDir();
+    const outputPdfPath = join(outputDir, `${randomUUID()}.pdf`);
+    await copyFile(join(tempDir, "single-song.pdf"), outputPdfPath);
+    return outputPdfPath;
   } finally {
-    try {
-      await unlink(generatedPath);
-    } catch {}
-    try {
-      await unlink(join(tempDir, "single-song.aux"));
-    } catch {}
-    try {
-      await unlink(join(tempDir, "single-song.log"));
-    } catch {}
+    await cleanupTempDir(tempDir);
   }
 }
 
