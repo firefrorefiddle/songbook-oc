@@ -10,6 +10,8 @@
 	let showAddSongModal = $state(false);
 	let showNewVersionModal = $state(false);
 	let selectedSongVersionId = $state('');
+	let versionTitle = $state('');
+	let versionDescription = $state('');
 
 	function getCurrentVersion() {
 		return data.songbook.versions[0];
@@ -192,8 +194,8 @@
 				</div>
 			{/if}
 
-			<Input label="Title" id="title" required />
-			<Input label="Description" id="description" type="textarea" rows={3} />
+			<Input label="Title" id="title" required bind:value={versionTitle} />
+			<Input label="Description" id="description" type="textarea" rows={3} bind:value={versionDescription} />
 
 			<div class="flex justify-end gap-2 mt-6">
 				<Button variant="secondary" onclick={() => showNewVersionModal = false}>Cancel</Button>

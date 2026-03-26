@@ -26,6 +26,7 @@
 	{#if type === 'textarea'}
 		<textarea
 			{id}
+			name={id}
 			bind:value
 			{rows}
 			class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm {error ? 'border-red-300' : 'border'}"
@@ -33,6 +34,7 @@
 	{:else}
 		<input
 			{id}
+			name={id}
 			{type}
 			bind:value
 			class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm {error ? 'border-red-300' : 'border'}"

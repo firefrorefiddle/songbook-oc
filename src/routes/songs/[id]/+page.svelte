@@ -9,9 +9,18 @@
 
 	let showEditModal = $state(false);
 	let editingVersion = $state(data.song.versions[0]);
+	let editTitle = $state('');
+	let editAuthor = $state('');
+	let editContent = $state('');
+	let editCopyright = $state('');
 
 	function openEdit(versionIndex: number) {
 		editingVersion = data.song.versions[versionIndex];
+		const metadata = parseMetadata(editingVersion.metadata);
+		editTitle = editingVersion.title;
+		editAuthor = editingVersion.author || '';
+		editContent = editingVersion.content;
+		editCopyright = metadata.copyright || '';
 		showEditModal = true;
 	}
 
@@ -122,10 +131,10 @@
 				</div>
 			{/if}
 
-			<Input label="Title" id="title" required value={editingVersion?.title || ''} />
-			<Input label="Author" id="author" value={editingVersion?.author || ''} />
-			<Input label="Content" id="content" type="textarea" rows={10} required value={editingVersion?.content || ''} />
-			<Input label="Copyright" id="copyright" value={parseMetadata(editingVersion?.metadata || '{}').copyright || ''} />
+			<Input label="Title" id="title" required bind:value={editTitle} />
+			<Input label="Author" id="author" bind:value={editAuthor} />
+			<Input label="Content" id="content" type="textarea" rows={10} required bind:value={editContent} />
+			<Input label="Copyright" id="copyright" bind:value={editCopyright} />
 
 			<div class="flex justify-end gap-2 mt-6">
 				<Button variant="secondary" onclick={() => showEditModal = false}>Cancel</Button>

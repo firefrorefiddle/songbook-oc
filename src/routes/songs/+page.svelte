@@ -12,6 +12,10 @@
 	let songToDelete = $state<{ id: string; title: string } | null>(null);
 	let searchInput = $state(data.search);
 	let includeArchived = $state(data.includeArchived);
+	let createTitle = $state('');
+	let createAuthor = $state('');
+	let createContent = $state('');
+	let createCopyright = $state('');
 
 	function handleSearch() {
 		const params = new URLSearchParams();
@@ -130,10 +134,10 @@
 				</div>
 			{/if}
 
-			<Input label="Title" id="title" required value={form?.fields?.title || ''} />
-			<Input label="Author" id="author" value={form?.fields?.author || ''} />
-			<Input label="Content" id="content" type="textarea" rows={10} required value={form?.fields?.content || ''} />
-			<Input label="Copyright" id="copyright" value={form?.fields?.copyright || ''} />
+			<Input label="Title" id="title" required bind:value={createTitle} />
+			<Input label="Author" id="author" bind:value={createAuthor} />
+			<Input label="Content" id="content" type="textarea" rows={10} required bind:value={createContent} />
+			<Input label="Copyright" id="copyright" bind:value={createCopyright} />
 
 			<div class="flex justify-end gap-2 mt-6">
 				<Button variant="secondary" onclick={() => showCreateModal = false}>Cancel</Button>
