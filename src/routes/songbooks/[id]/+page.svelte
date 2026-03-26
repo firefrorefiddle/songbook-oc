@@ -123,6 +123,23 @@
 		draggedIndex = null;
 		dragOverIndex = null;
 	}
+
+	async function downloadPdf() {
+		const response = await fetch(`/api/songbooks/${data.songbook.id}/pdf`);
+		if (!response.ok) {
+			alert('Failed to generate PDF');
+			return;
+		}
+		const blob = await response.blob();
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = `${getCurrentVersion()?.title || 'songbook'}.pdf`;
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+		URL.revokeObjectURL(url);
+	}
 </script>
 
 <svelte:head>
@@ -148,6 +165,7 @@
 			{/if}
 		</div>
 		<div class="flex gap-2">
+			<Button onclick={() => downloadPdf()} disabled={!getCurrentVersion()?.songs.length}>Download PDF</Button>
 			<Button onclick={() => showAddSongModal = true}>Add Song</Button>
 			<Button variant="secondary" onclick={() => showNewVersionModal = true}>New Version</Button>
 		</div>

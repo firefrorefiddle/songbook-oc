@@ -15,13 +15,153 @@ Songs are simple text files in a special format that can be converted to LaTeX w
 to convert songbooks to PDF, and also for simple previews of songs.
 
 ## Stack
+
 - Frontend: SvelteKit + TypeScript
 - Backend: same app, server routes
 - DB: SQLite with Prisma
 - Styling: Tailwind
 - Package manager: pnpm
 
+## Songmaker CLI
+
+The songmaker-cli tool converts .sng files to LaTeX. It's installed at `/home/mike/.cabal/bin/songmaker-cli`.
+
+### Invocation Methods
+
+1. **File argument**: `songmaker-cli /path/to/song.sng`
+2. **stdin/stdout**: `echo "content" | songmaker-cli`
+
+When called with a file path, songmaker reads the .sng file and produces a corresponding .tex file in the same directory.
+
+### .sng Format
+
+The .sng format consists of a header section followed by a `***` separator, then the chordpro content:
+
+```
+title: Song Title
+author: Author Name (optional)
+copyright: Copyright info (optional)
+reference: (optional, leave empty or omit)
+***
+<chordpro content here>
+```
+
+**Important**: The header MUST include `title:` and the `***` separator. Without a title, songmaker will fail with "song has no title on songmaker import".
+
+Example:
+
+```
+title: Psalm 150
+author: Bernd Draffehn
+copyright: 1981 SCM Hänssler
+reference:
+***
+C          F             C            d G
+Halleluja, lobet Gott in seinem Heiligt-um,
+C                D            F G
+lobet ihn in der Feste seiner M-acht!
+```
+
+### Metadata Storage
+
+Song metadata (copyright, etc.) is stored in the SongVersion.metadata JSON field. When generating PDFs, extract this and format properly:
+
+```typescript
+function buildSongContent(
+  title: string,
+  content: string,
+  author?: string | null,
+  copyright?: string,
+): string {
+  if (content.trim().startsWith("title:")) {
+    return content; // Already in .sng format
+  }
+  let sngContent = `title: ${title}\n`;
+  if (author?.trim()) {
+    sngContent += `author: ${author}\n`;
+  }
+  if (copyright?.trim()) {
+    sngContent += `copyright: ${copyright}\n`;
+  }
+  sngContent += "reference:\n";
+  sngContent += "***\n";
+  sngContent += content;
+  return sngContent;
+}
+```
+
+## LaTeX Environment
+
+### Required Packages
+
+The project uses these LaTeX packages (ensure texlive-full is installed):
+
+- `songs` - For chorded song formatting
+- `scrbook` - KOMA-Script book class
+- `DejaVuSans` - Font for chord printing
+- `mathpazo` - Palatino font for text
+- `pdfpages` - For including PDF pages
+- `babel` with `ngerman` - German language support
+
+### Template Files
+
+Located in `src/lib/server/latex/`:
+
+- `layout.tex` - Document class and page setup
+- `font.tex` - Font configuration and song formatting
+- `songs.sty` - Song package (copied from Liedermappe)
+- `chorded.tex` - Main template for songbook PDFs
+- `single-song.tex` - Template for single song previews
+
+### PDF Generation Process
+
+1. Create a temporary directory in `tmp/`
+2. Copy LaTeX templates to temp dir
+3. For each song in the songbook:
+   - Build .sng content with proper header
+   - Run `songmaker-cli` to convert to LaTeX
+   - Read the generated .tex file
+4. Combine all song LaTeX into `generated-songs.tex`
+5. Run `pdflatex` twice (first run creates index, second includes it)
+6. Copy output PDF to `tmp/output/`
+7. Clean up temp directory
+
+### pdflatex Requirements
+
+- Must run pdflatex **twice** for proper table of contents/index generation
+- Use `-interaction=batchmode` for non-interactive runs
+- Always specify `-output-directory=` to keep temp files contained
+
+Example:
+
+```typescript
+await execAsync(
+  `pdflatex -interaction=batchmode -output-directory=${tempDir} ${texPath}`,
+  { cwd: tempDir },
+);
+await execAsync(
+  `pdflatex -interaction=batchmode -output-directory=${tempDir} ${texPath}`,
+  { cwd: tempDir },
+);
+```
+
+## Liedermappe Reference
+
+The Liedermappe project (at `/home/mike/src/Liedermappe`) is the source of the original .sng files and LaTeX templates:
+
+- `lieder/*.sng` - Source song files
+- `tex/chorded.tex` - Original chorded template
+- `tex/songs.sty` - Original songs package
+- `make.sh` - Build script showing the full process
+
+Use Liedermappe as reference for:
+
+- Correct .sng file format
+- LaTeX template structure
+- Package requirements
+
 ## Commands
+
 - install: `pnpm install`
 - dev: `pnpm dev`
 - test: `pnpm test`
@@ -29,12 +169,14 @@ to convert songbooks to PDF, and also for simple previews of songs.
 - format: `pnpm format`
 
 ## Architecture rules
+
 - Keep server and UI logic separate.
 - Put DB access behind repository/service functions.
 - No business logic in UI components.
 - Prefer small pure functions where possible.
 
 ## Quality rules
+
 - TypeScript strict mode.
 - Add validation for every form.
 - Add at least one happy-path test for each CRUD operation.
@@ -47,28 +189,30 @@ to convert songbooks to PDF, and also for simple previews of songs.
 
 - Keep functions small and focused (single responsibility)
 - Use meaningful variable and function names
-- Write comments that explain *why*, not *what*
+- Write comments that explain _why_, not _what_
 - Handle errors explicitly and gracefully
 - Write tests for all new functionality
 
 ### TypeScript/JavaScript
 
 **Imports**
+
 - Group by: external imports, internal imports, relative imports
 - Alphabetize within groups
 - Use named exports, avoid default exports for utilities
 
 ```typescript
 // Correct
-import { useState } from 'react';
-import { SongCard } from '@/components/SongCard';
-import { formatKey } from './utils';
+import { useState } from "react";
+import { SongCard } from "@/components/SongCard";
+import { formatKey } from "./utils";
 
 // Wrong
-const myComponent = require('./myComponent');
+const myComponent = require("./myComponent");
 ```
 
 **Formatting**
+
 - 2 spaces for indentation
 - Single quotes for strings
 - Semicolons at end of statements
@@ -76,6 +220,7 @@ const myComponent = require('./myComponent');
 - Line length: 100 characters
 
 **Types**
+
 - Use `interface` for object shapes
 - Use `type` for unions, intersections, aliases
 - Never use `any` - use `unknown` when type is unclear
@@ -98,6 +243,7 @@ interface Song {
 ```
 
 **Naming**
+
 - `camelCase` for variables and functions
 - `PascalCase` for classes, components, interfaces
 - `SCREAMING_SNAKE_CASE` for constants

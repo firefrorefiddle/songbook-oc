@@ -18,7 +18,7 @@
 	let isGeneratingPreview = $state(false);
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-	async function updatePreview(content: string, title: string, copyright: string) {
+	async function updatePreview(content: string, title: string, author: string, copyright: string) {
 		if (debounceTimer) clearTimeout(debounceTimer);
 		debounceTimer = setTimeout(async () => {
 			if (!content.trim()) {
@@ -30,7 +30,7 @@
 				const res = await fetch('/api/songs/preview', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ content, title, copyright }),
+					body: JSON.stringify({ content, title, author, copyright }),
 				});
 				const data = await res.json();
 				if (data.png) {
@@ -53,13 +53,13 @@
 		editCopyright = metadata.copyright || '';
 		previewPng = null;
 		showEditModal = true;
-		updatePreview(editingVersion.content, editTitle, editCopyright);
+		updatePreview(editingVersion.content, editTitle, editAuthor, editCopyright);
 	}
 
 	function handleContentChange(e: Event) {
 		const target = e.target as HTMLTextAreaElement;
 		editContent = target.value;
-		updatePreview(target.value, editTitle, editCopyright);
+		updatePreview(target.value, editTitle, editAuthor, editCopyright);
 	}
 
 	function parseMetadata(metadataStr: string): Record<string, string> {
