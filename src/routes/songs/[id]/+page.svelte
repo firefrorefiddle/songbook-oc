@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import Button from '$lib/components/Button.svelte';
 	import Input from '$lib/components/Input.svelte';
 	import Modal from '$lib/components/Modal.svelte';
@@ -102,7 +102,19 @@
 									{#if metadata.copyright} &bull; {metadata.copyright}{/if}
 								</p>
 							</div>
-							<Button variant="secondary" onclick={() => openEdit(i + 1)}>View/Edit</Button>
+							<div class="flex gap-2">
+								<form method="POST" action="?/deleteVersion" use:enhance={() => {
+									return async ({ result }) => {
+										if (result.type === 'success') {
+											await invalidateAll();
+										}
+									};
+								}}>
+									<input type="hidden" name="versionId" value={version.id} />
+									<Button variant="danger" type="submit">Delete</Button>
+								</form>
+								<Button variant="secondary" onclick={() => openEdit(i + 1)}>View/Edit</Button>
+							</div>
 						</div>
 					</li>
 				{/each}
@@ -117,10 +129,10 @@
 			method="POST"
 			action="?/update"
 			use:enhance={() => {
-				return ({ result }) => {
+				return async ({ result }) => {
 					if (result.type === 'success') {
 						showEditModal = false;
-						goto(`/songs/${data.song.id}`);
+						await invalidateAll();
 					}
 				};
 			}}

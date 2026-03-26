@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import Button from '$lib/components/Button.svelte';
 	import Input from '$lib/components/Input.svelte';
 	import Modal from '$lib/components/Modal.svelte';
@@ -128,14 +128,14 @@
 			<form
 				method="POST"
 				action="?/addSong"
-				use:enhance={() => {
-					return ({ result }) => {
-						if (result.type === 'success') {
-							showAddSongModal = false;
-							goto(`/songbooks/${data.songbook.id}`);
-						}
-					};
-				}}
+		use:enhance={() => {
+				return async ({ result }) => {
+					if (result.type === 'success') {
+						showAddSongModal = false;
+						await invalidateAll();
+					}
+				};
+			}}
 			>
 				{#if form?.error}
 					<div class="mb-4 p-3 bg-red-50 text-red-700 rounded-md text-sm">
@@ -180,10 +180,10 @@
 			method="POST"
 			action="?/createVersion"
 			use:enhance={() => {
-				return ({ result }) => {
+				return async ({ result }) => {
 					if (result.type === 'success') {
 						showNewVersionModal = false;
-						goto(`/songbooks/${data.songbook.id}`);
+						await invalidateAll();
 					}
 				};
 			}}
