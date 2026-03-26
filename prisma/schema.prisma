@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Song {
+  id        String        @id @default(cuid())
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  isArchived Boolean     @default(false)
+  versions  SongVersion[]
+}
+
+model SongVersion {
+  id        String    @id @default(cuid())
+  songId    String
+  song      Song      @relation(fields: [songId], references: [id], onDelete: Cascade)
+  title     String
+  author    String?
+  content   String
+  metadata  String    @default("{}")
+  createdAt DateTime  @default(now())
+  songbookSongs SongbookSong[]
+}
+
+model Songbook {
+  id        String    @id @default(cuid())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  isArchived Boolean  @default(false)
+  versions  SongbookVersion[]
+}
+
+model SongbookVersion {
+  id          String    @id @default(cuid())
+  songbookId  String
+  songbook    Songbook  @relation(fields: [songbookId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  createdAt   DateTime  @default(now())
+  songs       SongbookSong[]
+}
+
+model SongbookSong {
+  id               String          @id @default(cuid())
+  songbookVersionId String
+  songbookVersion  SongbookVersion @relation(fields: [songbookVersionId], references: [id], onDelete: Cascade)
+  songVersionId    String
+  songVersion      SongVersion     @relation(fields: [songVersionId], references: [id], onDelete: Cascade)
+  order            Int
+}
