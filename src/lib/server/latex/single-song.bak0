@@ -1,0 +1,16 @@
+\input{lib/server/latex/layout}
+
+\usepackage[chorded]{lib/server/latex/songs}
+\usepackage[utf8]{inputenc}
+\usepackage[ngerman]{babel}
+
+\input{lib/server/latex/font}
+
+\songcolumns{1}
+\def\lmnumcols{1}
+
+\begin{document}
+\begin{songs}{}
+\input{lib/server/latex/generated-song}
+\end{songs}
+\end{document}

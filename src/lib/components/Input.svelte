@@ -6,7 +6,8 @@
 		value = $bindable(), 
 		error = '',
 		required = false,
-		rows = 4
+		rows = 4,
+		oninput
 	}: { 
 		label: string; 
 		id: string; 
@@ -15,6 +16,7 @@
 		error?: string;
 		required?: boolean;
 		rows?: number;
+		oninput?: (e: Event) => void;
 	} = $props();
 </script>
 
@@ -29,6 +31,7 @@
 			name={id}
 			bind:value
 			{rows}
+			{oninput}
 			class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm {error ? 'border-red-300' : 'border'}"
 		></textarea>
 	{:else}

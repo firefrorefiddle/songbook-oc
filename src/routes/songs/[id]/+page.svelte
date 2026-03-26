@@ -14,6 +14,36 @@
 	let editContent = $state('');
 	let editCopyright = $state('');
 
+	let previewPng = $state<string | null>(null);
+	let isGeneratingPreview = $state(false);
+	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+	async function updatePreview(content: string, title: string, copyright: string) {
+		if (debounceTimer) clearTimeout(debounceTimer);
+		debounceTimer = setTimeout(async () => {
+			if (!content.trim()) {
+				previewPng = null;
+				return;
+			}
+			isGeneratingPreview = true;
+			try {
+				const res = await fetch('/api/songs/preview', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ content, title, copyright }),
+				});
+				const data = await res.json();
+				if (data.png) {
+					previewPng = data.png;
+				}
+			} catch (e) {
+				console.error('Preview error:', e);
+			} finally {
+				isGeneratingPreview = false;
+			}
+		}, 300);
+	}
+
 	function openEdit(versionIndex: number) {
 		editingVersion = data.song.versions[versionIndex];
 		const metadata = parseMetadata(editingVersion.metadata);
@@ -21,7 +51,15 @@
 		editAuthor = editingVersion.author || '';
 		editContent = editingVersion.content;
 		editCopyright = metadata.copyright || '';
+		previewPng = null;
 		showEditModal = true;
+		updatePreview(editingVersion.content, editTitle, editCopyright);
+	}
+
+	function handleContentChange(e: Event) {
+		const target = e.target as HTMLTextAreaElement;
+		editContent = target.value;
+		updatePreview(target.value, editTitle, editCopyright);
 	}
 
 	function parseMetadata(metadataStr: string): Record<string, string> {
@@ -125,33 +163,51 @@
 
 <Modal bind:open={showEditModal} title="Edit Song Version" onclose={() => showEditModal = false}>
 	{#snippet children()}
-		<form
-			method="POST"
-			action="?/update"
-			use:enhance={() => {
-				return async ({ result }) => {
-					if (result.type === 'success') {
-						showEditModal = false;
-						await invalidateAll();
-					}
-				};
-			}}
-		>
-			{#if form?.error}
-				<div class="mb-4 p-3 bg-red-50 text-red-700 rounded-md text-sm">
-					{form.error}
-				</div>
-			{/if}
+		<div class="flex gap-6">
+			<div class="flex-1">
+				<form
+					method="POST"
+					action="?/update"
+					use:enhance={() => {
+						return async ({ result }) => {
+							if (result.type === 'success') {
+								showEditModal = false;
+								await invalidateAll();
+							}
+						};
+					}}
+				>
+					{#if form?.error}
+						<div class="mb-4 p-3 bg-red-50 text-red-700 rounded-md text-sm">
+							{form.error}
+						</div>
+					{/if}
 
-			<Input label="Title" id="title" required bind:value={editTitle} />
-			<Input label="Author" id="author" bind:value={editAuthor} />
-			<Input label="Content" id="content" type="textarea" rows={10} required bind:value={editContent} />
-			<Input label="Copyright" id="copyright" bind:value={editCopyright} />
+					<Input label="Title" id="title" required bind:value={editTitle} />
+					<Input label="Author" id="author" bind:value={editAuthor} />
+					<Input label="Content" id="content" type="textarea" rows={15} required value={editContent} oninput={handleContentChange} />
+					<Input label="Copyright" id="copyright" bind:value={editCopyright} />
 
-			<div class="flex justify-end gap-2 mt-6">
-				<Button variant="secondary" onclick={() => showEditModal = false}>Cancel</Button>
-				<Button type="submit">Save Version</Button>
+					<div class="flex justify-end gap-2 mt-6">
+						<Button variant="secondary" onclick={() => showEditModal = false}>Cancel</Button>
+						<Button type="submit">Save Version</Button>
+					</div>
+				</form>
 			</div>
-		</form>
+			<div class="w-1/3 bg-gray-50 rounded-lg p-4">
+				<h3 class="text-sm font-medium text-gray-700 mb-3">Preview</h3>
+				{#if isGeneratingPreview}
+					<div class="flex items-center justify-center h-64 text-gray-400">
+						Generating preview...
+					</div>
+				{:else if previewPng}
+					<img src={previewPng} alt="Song preview" class="w-full border border-gray-200 rounded" />
+				{:else}
+					<div class="flex items-center justify-center h-64 text-gray-400 text-sm">
+						Start typing to see preview
+					</div>
+				{/if}
+			</div>
+		</div>
 	{/snippet}
 </Modal>
