@@ -3,12 +3,14 @@
 		open = $bindable(),
 		title,
 		onclose,
-		children
+		children,
+		class: className = ''
 	}: {
 		open: boolean;
 		title: string;
 		onclose: () => void;
 		children: import('svelte').Snippet;
+		class?: string;
 	} = $props();
 
 	function handleKeydown(e: KeyboardEvent) {
@@ -35,7 +37,7 @@
 		aria-modal="true"
 		aria-labelledby="modal-title"
 	>
-		<div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+		<div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto {className}">
 			<div class="flex items-center justify-between px-6 py-4 border-b">
 				<h2 id="modal-title" class="text-lg font-semibold text-gray-900">{title}</h2>
 				<button

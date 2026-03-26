@@ -7,3 +7,4 @@
 \pagestyle{empty}
 
 \setlength{\parindent}{0pt}
+\setlength{\versesep}{0.5\baselineskip}

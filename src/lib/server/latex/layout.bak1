@@ -5,5 +5,3 @@
 	BCOR=0mm]{book}
 
 \pagestyle{empty}
-
-\setlength{\parindent}{0pt}

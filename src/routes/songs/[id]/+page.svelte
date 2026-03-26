@@ -161,10 +161,10 @@
 	</div>
 {/if}
 
-<Modal bind:open={showEditModal} title="Edit Song Version" onclose={() => showEditModal = false}>
+<Modal bind:open={showEditModal} title="Edit Song Version" onclose={() => showEditModal = false} class="max-w-[2100px]">
 	{#snippet children()}
-		<div class="flex gap-6">
-			<div class="flex-1">
+		<div class="flex gap-6 items-stretch">
+			<div class="flex-1 min-w-0 flex flex-col">
 				<form
 					method="POST"
 					action="?/update"
@@ -176,6 +176,7 @@
 							}
 						};
 					}}
+					class="flex-1 flex flex-col"
 				>
 					{#if form?.error}
 						<div class="mb-4 p-3 bg-red-50 text-red-700 rounded-md text-sm">
@@ -185,7 +186,9 @@
 
 					<Input label="Title" id="title" required bind:value={editTitle} />
 					<Input label="Author" id="author" bind:value={editAuthor} />
-					<Input label="Content" id="content" type="textarea" rows={15} required value={editContent} oninput={handleContentChange} />
+					<div class="flex-1">
+						<Input label="Content" id="content" type="textarea" rows={30} required value={editContent} oninput={handleContentChange} />
+					</div>
 					<Input label="Copyright" id="copyright" bind:value={editCopyright} />
 
 					<div class="flex justify-end gap-2 mt-6">
@@ -194,19 +197,21 @@
 					</div>
 				</form>
 			</div>
-			<div class="w-1/3 bg-gray-50 rounded-lg p-4">
+			<div class="w-3/5 bg-gray-50 rounded-lg p-4 flex flex-col">
 				<h3 class="text-sm font-medium text-gray-700 mb-3">Preview</h3>
-				{#if isGeneratingPreview}
-					<div class="flex items-center justify-center h-64 text-gray-400">
-						Generating preview...
-					</div>
-				{:else if previewPng}
-					<img src={previewPng} alt="Song preview" class="w-full border border-gray-200 rounded" />
-				{:else}
-					<div class="flex items-center justify-center h-64 text-gray-400 text-sm">
-						Start typing to see preview
-					</div>
-				{/if}
+				<div class="flex-1 flex items-center justify-center">
+					{#if isGeneratingPreview}
+						<div class="text-gray-400">
+							Generating preview...
+						</div>
+					{:else if previewPng}
+						<img src={previewPng} alt="Song preview" class="max-h-full object-contain border border-gray-200 rounded" />
+					{:else}
+						<div class="text-gray-400 text-sm">
+							Start typing to see preview
+						</div>
+					{/if}
+				</div>
 			</div>
 		</div>
 	{/snippet}
