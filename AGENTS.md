@@ -180,8 +180,37 @@ Use Liedermappe as reference for:
 - TypeScript strict mode.
 - Add validation for every form.
 - Add at least one happy-path test for each CRUD operation.
+- Test corner cases in addition to happy paths.
 - Do not introduce new dependencies unless justified.
 - Before finishing, run lint and tests and fix failures.
+
+### Definition of Done
+
+Every feature or fix must have:
+
+1. **Tests**: Happy-path + corner cases for each CRUD operation + all new functionality
+2. **Lint & TypeScript**: Run `pnpm lint` and `pnpm check` (or `pnpm test`), fix any failures
+3. **Commit**: Create a commit with proper format: `type(scope): description` (e.g., `feat(songs): add chord transposition`)
+4. **Documentation**:
+   - Inline code comments explaining _why_, not _what_
+   - Update user-facing docs (README.md) if applicable
+   - Document decisions in the Decisions section below
+5. **Backlog**: Update BACKLOG.md to reflect the change (mark complete, add follow-ups)
+
+### AI-Facing Documentation (Decisions)
+
+Every architectural choice, tradeoff, or context that would be lost over time must be documented in this section. This ensures continuity when picking up work later.
+
+#### Decision Log
+
+<!-- Add new decisions here in the format:
+**Date**: YYYY-MM-DD
+**Context**: Brief description of the problem or situation
+**Decision**: What was decided and why
+**Alternatives considered**: Other options that were rejected and why
+-->
+
+_No decisions documented yet._
 
 ## Code Style Guidelines
 
