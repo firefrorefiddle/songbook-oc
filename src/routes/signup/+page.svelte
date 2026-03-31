@@ -6,6 +6,7 @@
   let token = $derived(data.token || "");
 
   let name = $state("");
+  let username = $state("");
   let password = $state("");
   let error = $state("");
   let loading = $state(false);
@@ -43,10 +44,14 @@
     error = "";
 
     try {
+      const nameParts = name.trim().split(/\s+/);
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
+
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, name, password }),
+        body: JSON.stringify({ token, firstName, lastName, username, password }),
       });
 
       const result = await res.json();
@@ -128,6 +133,20 @@
             id="name"
             type="text"
             bind:value={name}
+            required
+            placeholder="First Last"
+            class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <div>
+          <label for="username" class="block text-sm font-medium text-gray-700 mb-1"
+            >Username</label
+          >
+          <input
+            id="username"
+            type="text"
+            bind:value={username}
             required
             class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />

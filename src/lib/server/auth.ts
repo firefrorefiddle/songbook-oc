@@ -4,14 +4,14 @@ import Credentials from "@auth/sveltekit/providers/credentials";
 import Google from "@auth/sveltekit/providers/google";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
-import {
-  AUTH_SECRET,
-  GOOGLE_CLIENT_ID,
-  GOOGLE_CLIENT_SECRET,
-} from "$env/static/private";
+import { AUTH_SECRET } from "$env/static/private";
+// import {
+//   GOOGLE_CLIENT_ID,
+//   GOOGLE_CLIENT_SECRET,
+// } from "$env/static/private";
 
 export const { handle, signIn, signOut } = SvelteKitAuth({
-  adapter: PrismaAdapter(prisma),
+  adapter: PrismaAdapter(prisma as never),
   // JWT strategy avoids needing a Session table in SQLite
   session: { strategy: "jwt" },
   secret: AUTH_SECRET,
@@ -24,8 +24,11 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
+        const input = credentials.email as string;
+        const user = await prisma.user.findFirst({
+          where: {
+            OR: [{ email: input }, { username: input }],
+          },
         });
 
         if (!user?.passwordHash) return null;
@@ -46,10 +49,10 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
         };
       },
     }),
-    Google({
-      clientId: GOOGLE_CLIENT_ID,
-      clientSecret: GOOGLE_CLIENT_SECRET,
-    }),
+    // Google({
+    //   clientId: GOOGLE_CLIENT_ID,
+    //   clientSecret: GOOGLE_CLIENT_SECRET,
+    // }),
   ],
   callbacks: {
     // Persist role, firstName, lastName, and username into the JWT so they're available on every request
