@@ -39,11 +39,20 @@ async function cleanupTempDir(tempDir: string): Promise<void> {
   } catch {}
 }
 
+interface SongMetadata {
+  copyright?: string;
+  reference?: string;
+  extraIndex?: string;
+  translationBy?: string;
+  musicBy?: string;
+  lyricsBy?: string;
+}
+
 function buildSongContent(
   title: string,
   content: string,
   author?: string | null,
-  copyright?: string,
+  metadata?: SongMetadata,
 ): string {
   if (content.trim().startsWith("title:")) {
     return content;
@@ -52,10 +61,26 @@ function buildSongContent(
   if (author?.trim()) {
     sngContent += `author: ${author}\n`;
   }
-  if (copyright?.trim()) {
-    sngContent += `copyright: ${copyright}\n`;
+  if (metadata?.lyricsBy?.trim()) {
+    sngContent += `lyricsBy: ${metadata.lyricsBy}\n`;
   }
-  sngContent += "reference:\n";
+  if (metadata?.musicBy?.trim()) {
+    sngContent += `musicBy: ${metadata.musicBy}\n`;
+  }
+  if (metadata?.translationBy?.trim()) {
+    sngContent += `translationBy: ${metadata.translationBy}\n`;
+  }
+  if (metadata?.copyright?.trim()) {
+    sngContent += `copyright: ${metadata.copyright}\n`;
+  }
+  if (metadata?.reference?.trim()) {
+    sngContent += `reference: ${metadata.reference}\n`;
+  } else {
+    sngContent += "reference:\n";
+  }
+  if (metadata?.extraIndex?.trim()) {
+    sngContent += `extra-index: ${metadata.extraIndex}\n`;
+  }
   sngContent += "***\n";
   sngContent += content;
   return sngContent;
@@ -68,8 +93,8 @@ async function convertSongToLatex(
   metadata: string,
   tempDir: string,
 ): Promise<string> {
-  const parsed = JSON.parse(metadata || "{}");
-  const sngContent = buildSongContent(title, content, author, parsed.copyright);
+  const parsed = JSON.parse(metadata || "{}") as SongMetadata;
+  const sngContent = buildSongContent(title, content, author, parsed);
 
   const sngPath = join(tempDir, `${randomUUID()}.sng`);
   await writeFile(sngPath, sngContent, "utf-8");
@@ -81,6 +106,33 @@ async function convertSongToLatex(
   const texPath = sngPath.replace(".sng", ".tex");
   const latex = await readFile(texPath, "utf-8");
   return latex;
+}
+
+interface TocSongEntry {
+  order: number;
+  songVersion: {
+    title: string;
+  };
+}
+
+function generateTableOfContents(songs: TocSongEntry[]): string {
+  const tocLines = [
+    "\\clearpage",
+    "\\begin{center}",
+    "\\Large\\textbf{Inhaltsverzeichnis}",
+    "\\end{center}",
+    "\\begin{songtoc}",
+  ];
+
+  for (let i = 0; i < songs.length; i++) {
+    const song = songs[i];
+    const songNumber = i + 1;
+    tocLines.push(`\\item[${songNumber}] \\textsb{${song.songVersion.title}}`);
+  }
+
+  tocLines.push("\\end{songtoc}");
+
+  return tocLines.join("\n");
 }
 
 export async function generateSongbookPdf(
@@ -144,17 +196,42 @@ export async function generateSongbookPdf(
       "utf-8",
     );
 
+    const tocContent = generateTableOfContents(version.songs);
+    await writeFile(
+      join(tempDir, "table-of-contents.tex"),
+      tocContent,
+      "utf-8",
+    );
+
     const texPath = join(tempDir, "chorded.tex");
 
-    await execAsync(
-      `pdflatex -interaction=batchmode -output-directory=${tempDir} ${texPath}`,
-      { cwd: tempDir },
-    );
+    try {
+      await execAsync(
+        `pdflatex -interaction=batchmode -output-directory=${tempDir} ${texPath}`,
+        { cwd: tempDir },
+      );
+    } catch (e) {
+      const logPath = join(tempDir, "chorded.log");
+      if (existsSync(logPath)) {
+        const log = await readFile(logPath, "utf-8");
+        console.error("pdflatex log:", log.slice(-2000));
+      }
+      throw e;
+    }
 
-    await execAsync(
-      `pdflatex -interaction=batchmode -output-directory=${tempDir} ${texPath}`,
-      { cwd: tempDir },
-    );
+    try {
+      await execAsync(
+        `pdflatex -interaction=batchmode -output-directory=${tempDir} ${texPath}`,
+        { cwd: tempDir },
+      );
+    } catch (e) {
+      const logPath = join(tempDir, "chorded.log");
+      if (existsSync(logPath)) {
+        const log = await readFile(logPath, "utf-8");
+        console.error("pdflatex log:", log.slice(-2000));
+      }
+      throw e;
+    }
 
     const outputDir = await ensureOutputDir();
     const outputPdfPath = join(outputDir, `${songbookId}-${version.id}.pdf`);
