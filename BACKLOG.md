@@ -39,6 +39,13 @@ This file tracks the current state of work, improvements, and technical debt for
 - **Description**: Admin API to create invites. Email verification endpoint. Signup page with verify then create account flow. Invite tokens expire after 7 days.
 - **Related**: This commit
 
+### Share content when sending an invite
+
+- **Status**: completed
+- **Priority**: high
+- **Description**: Admin can attach content-sharing grants to an invite. On sign-up, the new user is automatically granted EDITOR access to all songs/songbooks owned by the specified users. Missing/archived resources are silently skipped.
+- **Follow-up**: Support sharing _specific_ songs/songbooks (not just "all from owner") — requires a scope field on InviteCollaboration and a multi-select picker in the admin UI.
+
 ### Collaboration & ownership transfer UI
 
 - **Status**: pending

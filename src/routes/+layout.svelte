@@ -5,7 +5,17 @@
 	let { children, data } = $props();
 
 	let isAdmin = $derived(data.session?.user?.role === 'ADMIN');
+	let isMenuOpen = $state(false);
+	let menuRef = $state<HTMLDivElement | null>(null);
+
+	function handleClickOutside(event: MouseEvent) {
+		if (menuRef && !menuRef.contains(event.target as Node)) {
+			isMenuOpen = false;
+		}
+	}
 </script>
+
+<svelte:window onclick={handleClickOutside} />
 
 <div class="min-h-screen bg-gray-50">
 	<nav class="bg-white shadow-sm border-b border-gray-200">
@@ -25,13 +35,32 @@
 					{/if}
 				</div>
 				{#if data.session}
-					<div class="flex items-center space-x-4">
+					<div class="relative" bind:this={menuRef}>
 						<button
-							onclick={() => signOut()}
-							class="text-sm text-gray-500 hover:text-gray-900"
+							onclick={() => isMenuOpen = !isMenuOpen}
+							class="flex items-center space-x-2 text-sm text-gray-500 hover:text-gray-900"
 						>
-							Sign out
+							<span>{data.session.user.firstName ? `${data.session.user.firstName} ${data.session.user.lastName ?? ''}`.trim() : data.session.user.username ?? data.session.user.email ?? 'User'}</span>
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+							</svg>
 						</button>
+						{#if isMenuOpen}
+							<div class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50">
+								<a
+									href="/settings"
+									class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+								>
+									Settings
+								</a>
+								<button
+									onclick={() => signOut()}
+									class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+								>
+									Sign out
+								</button>
+							</div>
+						{/if}
 					</div>
 				{/if}
 			</div>

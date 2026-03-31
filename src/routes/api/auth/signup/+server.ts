@@ -1,26 +1,47 @@
 import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { prisma } from "$lib/server/prisma";
+import { materialiseInviteCollaborations } from "$lib/server/inviteCollaborations";
 import bcrypt from "bcryptjs";
 import { EMAIL_VERIFICATION } from "$env/static/private";
 
+type UserCreateInput = Parameters<typeof prisma.user.create>[0]["data"];
+
 export const POST: RequestHandler = async ({ request }) => {
   const body = await request.json();
-  const { token, name, password } = body;
+  const { token, firstName, lastName, username, password } = body;
 
   if (!token) {
     throw error(400, "Invite token is required");
   }
 
-  if (!name?.trim()) {
-    throw error(400, "Name is required");
+  if (!firstName?.trim()) {
+    throw error(400, "First name is required");
+  }
+
+  if (!lastName?.trim()) {
+    throw error(400, "Last name is required");
+  }
+
+  if (!username?.trim()) {
+    throw error(400, "Username is required");
   }
 
   if (!password || password.length < 8) {
     throw error(400, "Password must be at least 8 characters");
   }
 
-  const invite = await prisma.invite.findUnique({ where: { token } });
+  const existingUsername = await prisma.user.findUnique({
+    where: { username: username.trim() } as any,
+  });
+  if (existingUsername) {
+    throw error(400, "Username is already taken");
+  }
+
+  const invite = await prisma.invite.findUnique({
+    where: { token },
+    include: { inviteCollaborations: true },
+  });
 
   if (!invite) {
     throw error(404, "Invalid invite token");
@@ -44,10 +65,12 @@ export const POST: RequestHandler = async ({ request }) => {
   const user = await prisma.user.create({
     data: {
       email: invite.email,
-      name: name.trim(),
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      username: username.trim(),
       passwordHash,
       role: invite.role,
-    },
+    } as any,
   });
 
   await prisma.invite.update({
@@ -55,13 +78,23 @@ export const POST: RequestHandler = async ({ request }) => {
     data: { usedAt: new Date(), userId: user.id },
   });
 
+  // Materialise any pending collaboration grants attached to this invite.
+  // Missing or archived resources are silently skipped inside the helper.
+  await materialiseInviteCollaborations(
+    prisma,
+    user.id,
+    invite.inviteCollaborations,
+  );
+
   return json(
     {
       success: true,
       user: {
         id: user.id,
         email: user.email,
-        name: user.name,
+        firstName: user.firstName ?? null,
+        lastName: user.lastName ?? null,
+        username: user.username ?? null,
         role: user.role,
       },
     },

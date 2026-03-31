@@ -205,13 +205,15 @@
 			{/if}
 		</div>
 		<div class="flex gap-2">
+			<Button onclick={() => generatePdf()} disabled={isGeneratingPdf || !getCurrentVersion()?.songs.length}>
+				{isGeneratingPdf ? 'Generating...' : 'Generate PDF'}
+			</Button>
 			{#if getCurrentVersion()?.pdfPath}
 				<Button onclick={() => downloadPdf()} disabled={isDownloadingPdf || !getCurrentVersion()?.songs.length}>
 					{isDownloadingPdf ? 'Downloading...' : 'Download PDF'}
-				</Button>
-			{:else}
-				<Button onclick={() => generatePdf()} disabled={isGeneratingPdf || !getCurrentVersion()?.songs.length}>
-					{isGeneratingPdf ? 'Generating...' : 'Generate PDF'}
+					{#if getCurrentVersion()?.pdfGeneratedAt}
+						({new Date(getCurrentVersion().pdfGeneratedAt).toLocaleDateString()})
+					{/if}
 				</Button>
 			{/if}
 			{#if getCurrentVersion()?.pdfLogPath}

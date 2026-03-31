@@ -15,17 +15,23 @@ datasource db {
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
+  firstName    String?
+  lastName     String?
+  username     String?  @unique
+  // Deprecated: use firstName + lastName instead
   name         String?
   // null when the account was created via OAuth only
   passwordHash String?
   role         Role     @default(USER)
   createdAt    DateTime @default(now())
 
-  ownedSongs      Song[]          @relation("SongOwner")
-  ownedSongbooks  Songbook[]      @relation("SongbookOwner")
-  collaborations  Collaboration[]
-  invitesSent     Invite[]        @relation("InviteSender")
-  invite          Invite?         @relation("InviteUser")
+  ownedSongs               Song[]                  @relation("SongOwner")
+  ownedSongbooks           Songbook[]              @relation("SongbookOwner")
+  collaborations           Collaboration[]
+  invitesSent              Invite[]                @relation("InviteSender")
+  invite                   Invite?                 @relation("InviteUser")
+  // InviteCollaborations where this user is the resource owner
+  inviteCollaborationsOwned InviteCollaboration[]  @relation("InviteCollabOwner")
 }
 
 enum Role {
@@ -52,6 +58,9 @@ model Invite {
   // linked once the user signs up
   userId String? @unique
   user   User?   @relation("InviteUser", fields: [userId], references: [id])
+
+  // content to share with the invited user on sign-up
+  inviteCollaborations InviteCollaboration[]
 }
 
 // ---------------------------------------------------------------------------
@@ -163,4 +172,24 @@ model Collaboration {
 enum CollabRole {
   EDITOR
   ADMIN
+}
+
+// ---------------------------------------------------------------------------
+// Invite Collaborations
+// ---------------------------------------------------------------------------
+
+// Specifies content that should be shared with the invited user upon sign-up.
+// resourceType = "song" | "songbook"; scope = "all" means every resource owned
+// by `owner`. Specific-resource selection is a planned follow-up (see BACKLOG).
+model InviteCollaboration {
+  id           String     @id @default(cuid())
+  role         CollabRole @default(EDITOR)
+  // "all" = all songs/songbooks owned by owner at sign-up time
+  resourceType String     // "song" | "songbook"
+
+  ownerId String
+  owner   User   @relation("InviteCollabOwner", fields: [ownerId], references: [id])
+
+  inviteId String
+  invite   Invite @relation(fields: [inviteId], references: [id], onDelete: Cascade)
 }

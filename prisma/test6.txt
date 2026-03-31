@@ -1,0 +1,17 @@
+interface SngMetadata {
+  title: string;
+  author?: string;
+  lyricsBy?: string;
+  musicBy?: string;
+  copyright?: string;
+  reference?: string;
+  extraIndex?: string;
+  translationBy?: string;
+  numbering?: string;
+}
+
+interface ParsedSng {
+  metadata: SngMetadata;
+  content: string;
+  filename: string;
+}

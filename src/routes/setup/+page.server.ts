@@ -22,32 +22,51 @@ export const actions: Actions = {
     }
 
     const formData = await request.formData();
-    const name = formData.get("name") as string;
+    const firstName = formData.get("firstName") as string;
+    const lastName = formData.get("lastName") as string;
+    const username = formData.get("username") as string;
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
 
-    if (!name?.trim()) {
-      return fail(400, { error: "Name is required", fields: { name, email } });
+    const fields = { firstName, lastName, username, email };
+
+    if (!firstName?.trim()) {
+      return fail(400, { error: "First name is required", fields });
+    }
+    if (!lastName?.trim()) {
+      return fail(400, { error: "Last name is required", fields });
+    }
+    if (!username?.trim()) {
+      return fail(400, { error: "Username is required", fields });
     }
     if (!email?.trim()) {
-      return fail(400, { error: "Email is required", fields: { name, email } });
+      return fail(400, { error: "Email is required", fields });
     }
     if (!password || password.length < 8) {
       return fail(400, {
         error: "Password must be at least 8 characters",
-        fields: { name, email },
+        fields,
       });
+    }
+
+    const existingUsername = await prisma.user.findUnique({
+      where: { username: username.trim() } as any,
+    });
+    if (existingUsername) {
+      return fail(400, { error: "Username is already taken", fields });
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
 
     await prisma.user.create({
       data: {
-        name: name.trim(),
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        username: username.trim(),
         email: email.trim().toLowerCase(),
         passwordHash,
         role: "ADMIN",
-      },
+      } as any,
     });
 
     throw redirect(302, "/login?setup=1");

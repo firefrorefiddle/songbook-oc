@@ -25,10 +25,23 @@ export const POST: RequestHandler = async ({ request, locals }) => {
   if (userRole !== "ADMIN") throw error(403, "Forbidden");
 
   const body = await request.json();
-  const { email, role: inviteRole = "USER" } = body;
+  const {
+    email,
+    role: inviteRole = "USER",
+    // Optional: [{ ownerId: string, resourceType: "song" | "songbook" }]
+    collaborations = [],
+  } = body;
 
   if (!email?.trim()) {
     throw error(400, "Email is required");
+  }
+
+  // Validate collaboration entries
+  for (const c of collaborations) {
+    if (!c.ownerId) throw error(400, "Each collaboration must have an ownerId");
+    if (c.resourceType !== "song" && c.resourceType !== "songbook") {
+      throw error(400, `Invalid resourceType: ${c.resourceType}`);
+    }
   }
 
   const existingUser = await prisma.user.findUnique({
@@ -49,6 +62,19 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     throw error(400, "An active invite already exists for this email");
   }
 
+  if (collaborations.length > 0) {
+    const ownerIdSet = Array.from(
+      new Set(collaborations.map((c: { ownerId: string }) => c.ownerId)),
+    );
+    const foundOwners = await prisma.user.findMany({
+      where: { id: { in: ownerIdSet as string[] } },
+      select: { id: true },
+    });
+    if (foundOwners.length !== ownerIdSet.length) {
+      throw error(400, "One or more specified owners do not exist");
+    }
+  }
+
   const token = randomBytes(32).toString("hex");
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + 7);
@@ -60,6 +86,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       role: inviteRole as "USER" | "ADMIN",
       expiresAt,
       sentById: session.user.id!,
+      inviteCollaborations: {
+        create: collaborations.map(
+          (c: { ownerId: string; resourceType: string }) => ({
+            ownerId: c.ownerId,
+            resourceType: c.resourceType,
+          }),
+        ),
+      },
     },
   });
 

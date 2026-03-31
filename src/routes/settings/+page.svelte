@@ -1,24 +1,25 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 
-	let { form } = $props();
+	let { data, form } = $props();
 </script>
 
-<svelte:head>
-	<title>Setup – Songbook</title>
-</svelte:head>
+<div class="max-w-2xl">
+	<h1 class="text-2xl font-bold text-gray-900 mb-6">Settings</h1>
 
-<div class="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4">
-	<div class="max-w-md w-full space-y-8">
-		<div class="text-center">
-			<h1 class="text-3xl font-bold text-gray-900">Welcome to Songbook</h1>
-			<p class="mt-2 text-gray-600">Create the first admin account to get started.</p>
-		</div>
+	<div class="bg-white shadow-sm rounded-lg border border-gray-200 p-6">
+		<h2 class="text-lg font-medium text-gray-900 mb-4">Account</h2>
 
-		<form method="POST" use:enhance class="bg-white shadow rounded-lg p-8 space-y-6">
+		<form method="POST" use:enhance class="space-y-4">
 			{#if form?.error}
 				<div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
 					{form.error}
+				</div>
+			{/if}
+
+			{#if form?.success}
+				<div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
+					Settings updated successfully.
 				</div>
 			{/if}
 
@@ -29,7 +30,7 @@
 					name="firstName"
 					type="text"
 					required
-					value={form?.fields?.firstName ?? ''}
+					value={form?.fields?.firstName ?? data.user?.firstName ?? ''}
 					class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
 				/>
 			</div>
@@ -41,7 +42,7 @@
 					name="lastName"
 					type="text"
 					required
-					value={form?.fields?.lastName ?? ''}
+					value={form?.fields?.lastName ?? data.user?.lastName ?? ''}
 					class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
 				/>
 			</div>
@@ -53,7 +54,7 @@
 					name="username"
 					type="text"
 					required
-					value={form?.fields?.username ?? ''}
+					value={form?.fields?.username ?? data.user?.username ?? ''}
 					class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
 				/>
 			</div>
@@ -64,30 +65,28 @@
 					id="email"
 					name="email"
 					type="email"
-					required
-					value={form?.fields?.email ?? ''}
-					class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+					disabled
+					value={data.user?.email ?? ''}
+					class="w-full border border-gray-200 rounded-md px-3 py-2 bg-gray-50 text-gray-500"
 				/>
+				<p class="mt-1 text-xs text-gray-500">Email cannot be changed.</p>
 			</div>
 
 			<div>
-				<label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+				<label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
 				<input
-					id="password"
-					name="password"
-					type="password"
-					required
-					minlength="8"
-					class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+					type="text"
+					disabled
+					value={data.user?.role ?? ''}
+					class="w-full border border-gray-200 rounded-md px-3 py-2 bg-gray-50 text-gray-500"
 				/>
-				<p class="mt-1 text-xs text-gray-500">Minimum 8 characters</p>
 			</div>
 
 			<button
 				type="submit"
-				class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 font-medium"
+				class="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 font-medium"
 			>
-				Create Admin Account
+				Save Changes
 			</button>
 		</form>
 	</div>

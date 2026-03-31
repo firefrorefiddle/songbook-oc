@@ -9,6 +9,10 @@
   let showLinkModal = $state(false);
   let copied = $state(false);
 
+  // Each entry represents "share all <resourceType>s owned by <ownerId>"
+  type CollabEntry = { ownerId: string; resourceType: "song" | "songbook" };
+  let collabs = $state<CollabEntry[]>([]);
+
   let signupUrl = $derived(formAction?.success ? formAction.signupUrl : "");
   let fullUrl = $derived(typeof window !== "undefined" ? window.location.origin + signupUrl : signupUrl);
 
@@ -17,6 +21,26 @@
     copied = true;
     setTimeout(() => (copied = false), 2000);
   }
+
+  function addCollab() {
+    // Default to the first user and "song" as a starting point
+    const firstUser = data.users[0];
+    if (!firstUser) return;
+    collabs = [...collabs, { ownerId: firstUser.id, resourceType: "song" }];
+  }
+
+  function removeCollab(index: number) {
+    collabs = collabs.filter((_, i) => i !== index);
+  }
+
+  // Reset local state after successful creation
+  $effect(() => {
+    if (formAction?.success) {
+      email = "";
+      role = "USER";
+      collabs = [];
+    }
+  });
 </script>
 
 <svelte:head>
@@ -42,25 +66,23 @@
         return async ({ update }) => {
           await update();
           if (formAction?.success) {
-            email = "";
             showCreate = false;
             showLinkModal = true;
           }
         };
       }}
-      class="bg-white shadow rounded-lg p-6 mb-8"
+      class="bg-white shadow rounded-lg p-6 mb-8 space-y-6"
     >
       {#if formAction?.error}
-        <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+        <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
           {formAction.error}
         </div>
       {/if}
 
+      <!-- Email + Role -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-          <label for="email" class="block text-sm font-medium text-gray-700 mb-1"
-            >Email Address</label
-          >
+          <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
           <input
             id="email"
             name="email"
@@ -72,9 +94,7 @@
         </div>
 
         <div>
-          <label for="role" class="block text-sm font-medium text-gray-700 mb-1"
-            >Role</label
-          >
+          <label for="role" class="block text-sm font-medium text-gray-700 mb-1">Role</label>
           <select
             id="role"
             name="role"
@@ -85,55 +105,109 @@
             <option value="ADMIN">Admin</option>
           </select>
         </div>
+      </div>
 
-        <div class="flex items-end">
-          <button
-            type="submit"
-            class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 font-medium"
-          >
-            Send Invite
-          </button>
+      <!-- Share Content section -->
+      <div>
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h3 class="text-sm font-medium text-gray-700">Share Content</h3>
+            <p class="text-xs text-gray-500 mt-0.5">
+              Grant the invited user editor access to existing songs or songbooks upon sign-up.
+            </p>
+          </div>
+          {#if data.users.length > 0}
+            <button
+              type="button"
+              onclick={addCollab}
+              class="text-sm text-blue-600 hover:text-blue-800 font-medium"
+            >
+              + Add
+            </button>
+          {/if}
         </div>
+
+        {#if data.users.length === 0}
+          <p class="text-sm text-gray-400 italic">No users yet — nothing to share.</p>
+        {:else if collabs.length === 0}
+          <p class="text-sm text-gray-400 italic">No content shared. Click "+ Add" to share.</p>
+        {:else}
+          <div class="space-y-2">
+            {#each collabs as entry, i}
+              <!-- Hidden inputs serialise the collab arrays to the server -->
+              <input type="hidden" name="collab_ownerId" value={entry.ownerId} />
+              <input type="hidden" name="collab_resourceType" value={entry.resourceType} />
+
+              <div class="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-md px-3 py-2">
+                <div class="flex-1 grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs text-gray-500 mb-1">Owner</label>
+                    <select
+                      class="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      bind:value={entry.ownerId}
+                    >
+                      {#each data.users as user}
+                        <option value={user.id}>{user.name ?? user.email}</option>
+                      {/each}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label class="block text-xs text-gray-500 mb-1">Resource</label>
+                    <select
+                      class="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      bind:value={entry.resourceType}
+                    >
+                      <option value="song">All songs</option>
+                      <option value="songbook">All songbooks</option>
+                    </select>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onclick={() => removeCollab(i)}
+                  class="text-gray-400 hover:text-red-500 text-lg leading-none mt-3"
+                  aria-label="Remove"
+                >
+                  &times;
+                </button>
+              </div>
+            {/each}
+          </div>
+        {/if}
+      </div>
+
+      <div class="flex justify-end">
+        <button
+          type="submit"
+          class="bg-blue-600 text-white py-2 px-6 rounded-md hover:bg-blue-700 font-medium"
+        >
+          Send Invite
+        </button>
       </div>
     </form>
   {/if}
 
+  <!-- Invite table -->
   <div class="bg-white shadow rounded-lg overflow-hidden">
     <table class="min-w-full divide-y divide-gray-200">
       <thead class="bg-gray-50">
         <tr>
-          <th
-            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-            >Email</th
-          >
-          <th
-            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-            >Role</th
-          >
-          <th
-            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-            >Status</th
-          >
-          <th
-            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-            >Sent By</th
-          >
-          <th
-            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-            >Expires</th
-          >
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sent By</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shared Content</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expires</th>
           <th class="px-6 py-3"></th>
         </tr>
       </thead>
       <tbody class="bg-white divide-y divide-gray-200">
         {#each data.invites as invite}
           <tr>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-              {invite.email}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-              {invite.role}
-            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{invite.email}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{invite.role}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm">
               {#if invite.usedAt}
                 <span class="text-green-600">Used</span>
@@ -148,6 +222,20 @@
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
               {invite.sentBy.name || invite.sentBy.email}
             </td>
+            <td class="px-6 py-4 text-sm text-gray-500">
+              {#if invite.inviteCollaborations.length === 0}
+                <span class="text-gray-400 italic">None</span>
+              {:else}
+                <ul class="space-y-0.5">
+                  {#each invite.inviteCollaborations as ic}
+                    <li>
+                      All {ic.resourceType === "song" ? "songs" : "songbooks"} by
+                      <span class="font-medium text-gray-700">{ic.owner.name ?? ic.owner.email}</span>
+                    </li>
+                  {/each}
+                </ul>
+              {/if}
+            </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
               {new Date(invite.expiresAt).toLocaleDateString()}
             </td>
@@ -155,10 +243,7 @@
               {#if !invite.usedAt}
                 <form method="POST" action="?/delete" use:enhance>
                   <input type="hidden" name="id" value={invite.id} />
-                  <button
-                    type="submit"
-                    class="text-red-600 hover:text-red-800 font-medium"
-                  >
+                  <button type="submit" class="text-red-600 hover:text-red-800 font-medium">
                     Delete
                   </button>
                 </form>
@@ -169,7 +254,7 @@
 
         {#if data.invites.length === 0}
           <tr>
-            <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+            <td colspan="7" class="px-6 py-8 text-center text-gray-500">
               No invites yet. Send one to get started.
             </td>
           </tr>

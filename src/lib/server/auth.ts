@@ -39,7 +39,9 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
         return {
           id: user.id,
           email: user.email,
-          name: user.name,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          username: user.username,
           role: user.role,
         };
       },
@@ -50,18 +52,27 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
     }),
   ],
   callbacks: {
-    // Persist role and id into the JWT so they're available on every request
+    // Persist role, firstName, lastName, and username into the JWT so they're available on every request
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.email = user.email;
+        token.firstName = (user as any).firstName;
+        token.lastName = (user as any).lastName;
+        token.username = (user as any).username;
       }
-      // Always refresh role from DB on each JWT creation/refresh
+      // Always refresh role and names from DB on each JWT creation/refresh
       if (token.email) {
         const dbUser = await prisma.user.findUnique({
           where: { email: token.email },
         });
         token.role = dbUser?.role ?? "USER";
-        if (dbUser) token.id = dbUser.id;
+        if (dbUser) {
+          token.id = dbUser.id;
+          token.firstName = dbUser.firstName;
+          token.lastName = dbUser.lastName;
+          token.username = dbUser.username;
+        }
       }
       return token;
     },
@@ -71,9 +82,15 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
         const user = session.user as {
           id: string;
           role: string;
+          firstName?: string | null;
+          lastName?: string | null;
+          username?: string | null;
         } & typeof session.user;
         user.id = token.id as string;
         user.role = token.role as string;
+        user.firstName = token.firstName as string | null;
+        user.lastName = token.lastName as string | null;
+        user.username = token.username as string | null;
       }
       return session;
     },
