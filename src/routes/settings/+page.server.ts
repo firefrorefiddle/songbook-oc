@@ -1,6 +1,7 @@
 import type { PageServerLoad, Actions } from "./$types";
 import { prisma } from "$lib/server/prisma";
 import { fail, redirect } from "@sveltejs/kit";
+import bcrypt from "bcryptjs";
 
 export const load: PageServerLoad = async ({ locals }) => {
   const session = await locals.auth();
@@ -17,6 +18,7 @@ export const load: PageServerLoad = async ({ locals }) => {
       lastName: true,
       username: true,
       role: true,
+      passwordHash: true,
     },
   });
 
@@ -29,6 +31,7 @@ export const load: PageServerLoad = async ({ locals }) => {
           lastName: user.lastName,
           username: user.username,
           role: user.role,
+          hasPassword: !!user.passwordHash,
         }
       : null,
   };
@@ -78,5 +81,56 @@ export const actions: Actions = {
     });
 
     return { success: true };
+  },
+
+  changePassword: async ({ request, locals }) => {
+    const session = await locals.auth();
+    if (!session?.user) {
+      throw redirect(302, "/login");
+    }
+
+    const formData = await request.formData();
+    const currentPassword = formData.get("currentPassword") as string;
+    const newPassword = formData.get("newPassword") as string;
+    const confirmPassword = formData.get("confirmPassword") as string;
+
+    if (!currentPassword) {
+      return fail(400, { passwordError: "Current password is required" });
+    }
+    if (!newPassword) {
+      return fail(400, { passwordError: "New password is required" });
+    }
+    if (newPassword.length < 8) {
+      return fail(400, {
+        passwordError: "New password must be at least 8 characters",
+      });
+    }
+    if (newPassword !== confirmPassword) {
+      return fail(400, { passwordError: "New passwords do not match" });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id as string },
+      select: { passwordHash: true },
+    });
+
+    if (!user?.passwordHash) {
+      return fail(400, {
+        passwordError: "Cannot change password for accounts without a password",
+      });
+    }
+
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) {
+      return fail(400, { passwordError: "Current password is incorrect" });
+    }
+
+    const newHash = await bcrypt.hash(newPassword, 12);
+    await prisma.user.update({
+      where: { id: session.user.id as string },
+      data: { passwordHash: newHash },
+    });
+
+    return { passwordSuccess: true };
   },
 };
