@@ -11,6 +11,14 @@ const execAsync = promisify(exec);
 const PROJECT_ROOT = process.cwd();
 const SONGMAKER_CLI = "/home/mike/.cabal/bin/songmaker-cli";
 const LATEX_DIR = join(PROJECT_ROOT, "src/lib/server/latex");
+const PDF_STORAGE_DIR = join(PROJECT_ROOT, "storage", "pdfs");
+
+async function ensurePdfStorageDir(): Promise<string> {
+  if (!existsSync(PDF_STORAGE_DIR)) {
+    await mkdir(PDF_STORAGE_DIR, { recursive: true });
+  }
+  return PDF_STORAGE_DIR;
+}
 
 async function createTempDir(): Promise<string> {
   const tmpDir = join(PROJECT_ROOT, "tmp", randomUUID());
@@ -138,7 +146,7 @@ function generateTableOfContents(songs: TocSongEntry[]): string {
 export async function generateSongbookPdf(
   songbookId: string,
   versionId?: string,
-): Promise<string> {
+): Promise<{ pdfPath: string; logPath: string }> {
   const songbook = await prisma.songbook.findUnique({
     where: { id: songbookId },
     include: {
@@ -172,6 +180,7 @@ export async function generateSongbookPdf(
     throw new Error("Songbook has no songs");
   }
 
+  const storageDir = await ensurePdfStorageDir();
   const tempDir = await createTempDir();
 
   try {
@@ -215,12 +224,30 @@ export async function generateSongbookPdf(
       { cwd: tempDir },
     );
 
-    const outputDir = await ensureOutputDir();
-    const outputPdfPath = join(outputDir, `${songbookId}-${version.id}.pdf`);
-    await copyFile(join(tempDir, "chorded.pdf"), outputPdfPath);
+    const pdfPath = join(storageDir, `${version.id}.pdf`);
+    const logPath = join(tempDir, "chorded.log");
 
-    return outputPdfPath;
-  } finally {
-    await cleanupTempDir(tempDir);
+    await copyFile(join(tempDir, "chorded.pdf"), pdfPath);
+
+    await prisma.songbookVersion.update({
+      where: { id: version.id },
+      data: {
+        pdfPath,
+        pdfLogPath: logPath,
+        pdfGeneratedAt: new Date(),
+      },
+    });
+
+    return { pdfPath, logPath };
+  } catch (error) {
+    const logPath = join(tempDir, "chorded.log");
+    await prisma.songbookVersion.update({
+      where: { id: version.id },
+      data: {
+        pdfLogPath: logPath,
+        pdfGeneratedAt: new Date(),
+      },
+    });
+    throw error;
   }
 }

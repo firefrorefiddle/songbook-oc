@@ -120,6 +120,10 @@ model SongbookVersion {
   description String?
   createdAt   DateTime @default(now())
 
+  pdfPath        String?
+  pdfGeneratedAt DateTime?
+  pdfLogPath     String?
+
   songs SongbookSong[]
 }
 

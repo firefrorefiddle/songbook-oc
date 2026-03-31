@@ -50,7 +50,8 @@ function buildSongContent(
 }
 
 export const POST: RequestHandler = async ({ request }) => {
-  const { content, title, author, metadata } = await request.json();
+  const body = await request.json();
+  const { content, title, author, metadata, copyright } = body;
 
   if (!content?.trim()) {
     return json({ error: "Content is required" }, { status: 400 });
@@ -62,12 +63,14 @@ export const POST: RequestHandler = async ({ request }) => {
     }
   }
 
+  const finalMetadata = metadata || (copyright ? { copyright } : undefined);
+
   try {
     const sngContent = buildSongContent(
       title || "Untitled",
       content,
       author,
-      metadata,
+      finalMetadata,
     );
     const pngBase64 = await generatePreview(sngContent);
     return json({ png: pngBase64 });

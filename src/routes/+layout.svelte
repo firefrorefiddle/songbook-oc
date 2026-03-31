@@ -1,7 +1,10 @@
 <script lang="ts">
 	import '../app.css';
+	import { signOut } from '@auth/sveltekit/client';
 
-	let { children } = $props();
+	let { children, data } = $props();
+
+	let isAdmin = $derived(data.session?.user?.role === 'ADMIN');
 </script>
 
 <div class="min-h-screen bg-gray-50">
@@ -15,7 +18,22 @@
 					<a href="/songbooks" class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900">
 						Songbooks
 					</a>
+					{#if isAdmin}
+						<a href="/admin/invites" class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900">
+							Invites
+						</a>
+					{/if}
 				</div>
+				{#if data.session}
+					<div class="flex items-center space-x-4">
+						<button
+							onclick={() => signOut()}
+							class="text-sm text-gray-500 hover:text-gray-900"
+						>
+							Sign out
+						</button>
+					</div>
+				{/if}
 			</div>
 		</div>
 	</nav>

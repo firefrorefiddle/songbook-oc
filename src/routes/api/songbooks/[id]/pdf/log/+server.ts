@@ -24,17 +24,16 @@ export const GET: RequestHandler = async ({ params, url }) => {
 
   const version = songbook.versions[0];
 
-  if (!version.pdfPath || !existsSync(version.pdfPath)) {
-    throw error(404, "PDF not generated yet");
+  if (!version.pdfLogPath || !existsSync(version.pdfLogPath)) {
+    throw error(404, "No log available - have you generated a PDF yet?");
   }
 
   try {
-    const pdfBuffer = await readFile(version.pdfPath);
+    const logContent = await readFile(version.pdfLogPath, "utf-8");
 
-    return new Response(pdfBuffer, {
+    return new Response(logContent, {
       headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${version.title || "songbook"}.pdf"`,
+        "Content-Type": "text/plain",
       },
     });
   } catch (e) {
