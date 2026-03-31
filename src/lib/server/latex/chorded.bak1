@@ -1,0 +1,19 @@
+\input{layout}
+
+\usepackage[chorded]{songs}
+\usepackage[utf8]{inputenc}
+\usepackage[ngerman]{babel}
+
+\input{font}
+
+\begin{document}
+
+\begin{songs}{}
+
+	\input{generated-songs}
+
+\end{songs}
+
+\input{table-of-contents}
+
+\end{document}

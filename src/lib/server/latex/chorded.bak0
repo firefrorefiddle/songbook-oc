@@ -1,0 +1,21 @@
+\input{layout}
+
+\usepackage[chorded]{songs}
+\usepackage[utf8]{inputenc}
+\usepackage[ngerman]{babel}
+
+\input{font}
+
+\newindex{inhalt}{inhalt}
+
+\begin{document}
+
+\begin{songs}{inhalt}
+
+	\input{generated-songs}
+
+\end{songs}
+
+\showindex[2]{Inhaltsverzeichnis}{inhalt}
+
+\end{document}

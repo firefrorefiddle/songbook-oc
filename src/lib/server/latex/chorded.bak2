@@ -2,14 +2,18 @@
 
 \usepackage[chorded]{songs}
 \usepackage[utf8]{inputenc}
+\usepackage[ngerman]{babel}
 
 \input{font}
 
-\songcolumns{1}
-\def\lmnumcols{1}
-
 \begin{document}
+
+\input{table-of-contents}
+
 \begin{songs}{}
-	\input{generated-song}
+
+	\input{generated-songs}
+
 \end{songs}
+
 \end{document}

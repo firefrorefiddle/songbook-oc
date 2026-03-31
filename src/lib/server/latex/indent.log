@@ -1,10 +1,10 @@
 INFO:  latexindent version 3.15, 2022-01-21, a script to indent .tex files
        latexindent lives here: /usr/share/texlive/texmf-dist/scripts/latexindent/
-       Thu Mar 26 17:04:22 2026
-       Filename: /home/mike/src/songbook-oc/src/lib/server/latex/layout.tex
+       Tue Mar 31 10:23:30 2026
+       Filename: /home/mike/src/songbook-oc/src/lib/server/latex/chorded.tex
 INFO:  Processing switches:
        -s|--silent: Silent mode active (you have used either -s or --silent)
-       -w|--overwrite: Overwrite mode active, will make a back up of /home/mike/src/songbook-oc/src/lib/server/latex/layout.tex first
+       -w|--overwrite: Overwrite mode active, will make a back up of /home/mike/src/songbook-oc/src/lib/server/latex/chorded.tex first
 INFO:  Directory for backup files and indent.log: /home/mike/src/songbook-oc/src/lib/server/latex
 INFO:  YAML settings read: defaultSettings.yaml
        Reading defaultSettings.yaml from /usr/share/texlive/texmf-dist/scripts/latexindent/defaultSettings.yaml
@@ -13,18 +13,17 @@ INFO:  YAML settings read: indentconfig.yaml or .indentconfig.yaml
        To specify user settings you would put indentconfig.yaml here: /home/mike/indentconfig.yaml
        Alternatively, you can use the hidden file .indentconfig.yaml as: /home/mike/.indentconfig.yaml
 INFO:  Backup procedure (-w flag active):
-       /home/mike/src/songbook-oc/src/lib/server/latex/layout.bak0 already exists, incrementing by 1... (see maxNumberOfBackUps and onlyOneBackUp)
-       /home/mike/src/songbook-oc/src/lib/server/latex/layout.bak1 already exists, incrementing by 1... (see maxNumberOfBackUps and onlyOneBackUp)
-       /home/mike/src/songbook-oc/src/lib/server/latex/layout.bak2 already exists, incrementing by 1... (see maxNumberOfBackUps and onlyOneBackUp)
-       copying /home/mike/src/songbook-oc/src/lib/server/latex/layout.tex to /home/mike/src/songbook-oc/src/lib/server/latex/layout.bak3
-       Backup file: /home/mike/src/songbook-oc/src/lib/server/latex/layout.bak3
-       /home/mike/src/songbook-oc/src/lib/server/latex/layout.tex will be overwritten after indentation
+       /home/mike/src/songbook-oc/src/lib/server/latex/chorded.bak0 already exists, incrementing by 1... (see maxNumberOfBackUps and onlyOneBackUp)
+       /home/mike/src/songbook-oc/src/lib/server/latex/chorded.bak1 already exists, incrementing by 1... (see maxNumberOfBackUps and onlyOneBackUp)
+       copying /home/mike/src/songbook-oc/src/lib/server/latex/chorded.tex to /home/mike/src/songbook-oc/src/lib/server/latex/chorded.bak2
+       Backup file: /home/mike/src/songbook-oc/src/lib/server/latex/chorded.bak2
+       /home/mike/src/songbook-oc/src/lib/server/latex/chorded.tex will be overwritten after indentation
 INFO:  Phase 1: searching for objects
 INFO:  Phase 2: finding surrounding indentation
 INFO:  Phase 3: indenting objects
 INFO:  Phase 4: final indentation check
 INFO:  Output routine:
-       Overwriting file /home/mike/src/songbook-oc/src/lib/server/latex/layout.tex
+       Overwriting file /home/mike/src/songbook-oc/src/lib/server/latex/chorded.tex
        --------------
 INFO:  Please direct all communication/issues to:
         https://github.com/cmhughes/latexindent.pl

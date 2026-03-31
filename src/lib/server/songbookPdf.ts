@@ -205,33 +205,15 @@ export async function generateSongbookPdf(
 
     const texPath = join(tempDir, "chorded.tex");
 
-    try {
-      await execAsync(
-        `pdflatex -interaction=batchmode -output-directory=${tempDir} ${texPath}`,
-        { cwd: tempDir },
-      );
-    } catch (e) {
-      const logPath = join(tempDir, "chorded.log");
-      if (existsSync(logPath)) {
-        const log = await readFile(logPath, "utf-8");
-        console.error("pdflatex log:", log.slice(-2000));
-      }
-      throw e;
-    }
+    await execAsync(
+      `pdflatex -interaction=batchmode -output-directory=${tempDir} ${texPath}`,
+      { cwd: tempDir },
+    );
 
-    try {
-      await execAsync(
-        `pdflatex -interaction=batchmode -output-directory=${tempDir} ${texPath}`,
-        { cwd: tempDir },
-      );
-    } catch (e) {
-      const logPath = join(tempDir, "chorded.log");
-      if (existsSync(logPath)) {
-        const log = await readFile(logPath, "utf-8");
-        console.error("pdflatex log:", log.slice(-2000));
-      }
-      throw e;
-    }
+    await execAsync(
+      `pdflatex -interaction=batchmode -output-directory=${tempDir} ${texPath}`,
+      { cwd: tempDir },
+    );
 
     const outputDir = await ensureOutputDir();
     const outputPdfPath = join(outputDir, `${songbookId}-${version.id}.pdf`);

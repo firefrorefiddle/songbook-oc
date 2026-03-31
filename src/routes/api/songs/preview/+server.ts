@@ -2,11 +2,20 @@ import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { generatePreview } from "$lib/server/songPreview";
 
+interface SongMetadata {
+  copyright?: string;
+  reference?: string;
+  extraIndex?: string;
+  translationBy?: string;
+  musicBy?: string;
+  lyricsBy?: string;
+}
+
 function buildSongContent(
   title: string,
   content: string,
   author?: string,
-  copyright?: string,
+  metadata?: SongMetadata,
 ): string {
   if (content.trim().startsWith("title:")) {
     return content;
@@ -15,17 +24,33 @@ function buildSongContent(
   if (author?.trim()) {
     sngContent += `author: ${author}\n`;
   }
-  if (copyright?.trim()) {
-    sngContent += `copyright: ${copyright}\n`;
+  if (metadata?.lyricsBy?.trim()) {
+    sngContent += `lyricsBy: ${metadata.lyricsBy}\n`;
   }
-  sngContent += "reference:\n";
+  if (metadata?.musicBy?.trim()) {
+    sngContent += `musicBy: ${metadata.musicBy}\n`;
+  }
+  if (metadata?.translationBy?.trim()) {
+    sngContent += `translationBy: ${metadata.translationBy}\n`;
+  }
+  if (metadata?.copyright?.trim()) {
+    sngContent += `copyright: ${metadata.copyright}\n`;
+  }
+  if (metadata?.reference?.trim()) {
+    sngContent += `reference: ${metadata.reference}\n`;
+  } else {
+    sngContent += "reference:\n";
+  }
+  if (metadata?.extraIndex?.trim()) {
+    sngContent += `extra-index: ${metadata.extraIndex}\n`;
+  }
   sngContent += "***\n";
   sngContent += content;
   return sngContent;
 }
 
 export const POST: RequestHandler = async ({ request }) => {
-  const { content, title, author, copyright } = await request.json();
+  const { content, title, author, metadata } = await request.json();
 
   if (!content?.trim()) {
     return json({ error: "Content is required" }, { status: 400 });
@@ -42,7 +67,7 @@ export const POST: RequestHandler = async ({ request }) => {
       title || "Untitled",
       content,
       author,
-      copyright,
+      metadata,
     );
     const pngBase64 = await generatePreview(sngContent);
     return json({ png: pngBase64 });

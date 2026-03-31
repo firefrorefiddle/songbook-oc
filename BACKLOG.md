@@ -30,13 +30,14 @@ This file tracks the current state of work, improvements, and technical debt for
 - **Status**: completed
 - **Priority**: high
 - **Description**: Added User/Invite/Collaboration schema. Configured Auth.js with Credentials + Google OAuth. Created /setup page for first admin user and /login page. Added auth guards and ownership filters to all Song/Songbook routes.
-- **Related**: This commit
+- **Related**: 13e4d36
 
 ### Invite system (phase 2)
 
-- **Status**: pending
+- **Status**: completed
 - **Priority**: high
-- **Description**: Admin UI to send invites. Email verification flow. Signup via invite token.
+- **Description**: Admin API to create invites. Email verification endpoint. Signup page with verify then create account flow. Invite tokens expire after 7 days.
+- **Related**: This commit
 
 ### Collaboration & ownership transfer UI
 
