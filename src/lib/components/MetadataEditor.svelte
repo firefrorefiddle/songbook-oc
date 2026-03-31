@@ -10,14 +10,19 @@
 	let entries = $state<{ key: string; value: string }[]>([]);
 	let showKeySelect = $state(true);
 
+	let isUpdating = false;
+
 	$effect(() => {
+		if (isUpdating) return;
 		if (metadata) {
-			entries = Object.entries(metadata)
+			const newEntries = Object.entries(metadata)
 				.filter(([, v]) => v?.trim())
 				.map(([key, value]) => ({ key, value }));
-		}
-		if (entries.length === 0) {
-			entries = [{ key: '', value: '' }];
+			if (newEntries.length === 0) {
+				entries = [{ key: '', value: '' }];
+			} else {
+				entries = newEntries;
+			}
 		}
 	});
 
@@ -32,6 +37,7 @@
 	}
 
 	function syncToMetadata() {
+		isUpdating = true;
 		const newMeta: Record<string, string> = {};
 		for (const entry of entries) {
 			if (entry.key?.trim() && entry.value?.trim()) {
@@ -39,6 +45,7 @@
 			}
 		}
 		metadata = newMeta;
+		isUpdating = false;
 	}
 
 	function onKeyChange(index: number, newKeyValue: string) {
@@ -65,9 +72,9 @@
 </script>
 
 <div class="space-y-2">
-	<label class="block text-sm font-medium text-gray-700">
+	<span class="block text-sm font-medium text-gray-700">
 		Metadata
-	</label>
+	</span>
 	
 	{#each entries as entry, index (index)}
 		<div class="flex gap-2 items-start">
@@ -112,6 +119,7 @@
 				type="button"
 				onclick={() => removeEntry(index)}
 				class="mt-1 text-gray-400 hover:text-red-500"
+				aria-label="Remove field"
 			>
 				<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
 					<path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
