@@ -16,7 +16,7 @@
 		error?: string;
 		required?: boolean;
 		rows?: number;
-		oninput?: (e: Event) => void;
+		oninput?: (_e: Event) => void;
 	} = $props();
 </script>
 

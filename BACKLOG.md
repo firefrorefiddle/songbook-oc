@@ -16,6 +16,13 @@ This file tracks the current state of work, improvements, and technical debt for
 - **Status**: completed
 - **Priority**: high
 - **Description**: Added DoD to AGENTS.md with tests, commit, docs requirements. Added AI-facing documentation section. Created BACKLOG.md.
+- **Related**: 4991e76
+
+### Fix lint configuration issues
+
+- **Status**: completed
+- **Priority**: high
+- **Description**: Fixed ESLint config to use typescript-eslint properly, added browser globals, disabled overly strict Svelte rules, fixed unused variable warnings.
 - **Related**: This commit
 
 ---
