@@ -15,7 +15,11 @@
     "test:run": "vitest run",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
-    "db:studio": "prisma studio"
+    "db:seed-liedermappe": "tsx prisma/seed-liedermappe.ts",
+    "db:studio": "prisma studio",
+    "user:reset-password": "tsx scripts/user-reset-password.ts",
+    "user:create": "tsx scripts/user-create.ts",
+    "postinstall": "prisma generate && rm -f node_modules/@prisma/client && ln -s ../.prisma/client node_modules/@prisma/client"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
