@@ -34,9 +34,11 @@
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
 		onclick={handleBackdropClick}
+		onkeydown={(e) => e.key === 'Enter' && handleBackdropClick(e as unknown as MouseEvent)}
 		role="dialog"
 		aria-modal="true"
 		aria-labelledby="modal-title"
+		tabindex="-1"
 	>
 		<div class="bg-white shadow-xl {fullscreen ? 'w-screen h-screen max-w-none max-h-none rounded-none' : 'rounded-lg max-w-lg w-full mx-4 max-h-[90vh]'} overflow-y-auto {className}">
 			<div class="flex items-center justify-between px-6 py-4 border-b">

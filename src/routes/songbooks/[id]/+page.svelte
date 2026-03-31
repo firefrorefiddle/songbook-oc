@@ -212,7 +212,7 @@
 				<Button onclick={() => downloadPdf()} disabled={isDownloadingPdf || !getCurrentVersion()?.songs.length}>
 					{isDownloadingPdf ? 'Downloading...' : 'Download PDF'}
 					{#if getCurrentVersion()?.pdfGeneratedAt}
-						({new Date(getCurrentVersion().pdfGeneratedAt).toLocaleDateString()})
+						({new Date(getCurrentVersion()!.pdfGeneratedAt!).toLocaleDateString()})
 					{/if}
 				</Button>
 			{/if}
@@ -227,7 +227,7 @@
 	<div class="px-6 py-4 border-b bg-gray-50">
 		<div class="text-sm text-gray-500">
 			{getCurrentVersion()?.songs.length || 0} songs in this version
-			&bull; Created {new Date(getCurrentVersion()?.createdAt || '').toLocaleDateString()}
+			&bull; Created {getCurrentVersion()?.createdAt ? new Date(getCurrentVersion()!.createdAt!).toLocaleDateString() : 'N/A'}
 		</div>
 	</div>
 

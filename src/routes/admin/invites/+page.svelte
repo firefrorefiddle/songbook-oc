@@ -17,9 +17,11 @@
   let fullUrl = $derived(typeof window !== "undefined" ? window.location.origin + signupUrl : signupUrl);
 
   function copyLink() {
-    navigator.clipboard.writeText(fullUrl);
-    copied = true;
-    setTimeout(() => (copied = false), 2000);
+    if (fullUrl) {
+      navigator.clipboard.writeText(fullUrl);
+      copied = true;
+      setTimeout(() => (copied = false), 2000);
+    }
   }
 
   function addCollab() {

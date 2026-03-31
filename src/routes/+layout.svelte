@@ -4,7 +4,18 @@
 
 	let { children, data } = $props();
 
-	let isAdmin = $derived(data.session?.user?.role === 'ADMIN');
+	type AuthUser = {
+		id: string;
+		role: string;
+		firstName?: string | null;
+		lastName?: string | null;
+		username?: string | null;
+		email?: string | null;
+		name?: string | null;
+	};
+
+	const user = $derived(data.session?.user as AuthUser | undefined);
+	let isAdmin = $derived(user?.role === 'ADMIN');
 	let isMenuOpen = $state(false);
 	let menuRef = $state<HTMLDivElement | null>(null);
 
@@ -34,13 +45,13 @@
 						</a>
 					{/if}
 				</div>
-				{#if data.session}
+				{#if user}
 					<div class="relative" bind:this={menuRef}>
 						<button
 							onclick={() => isMenuOpen = !isMenuOpen}
 							class="flex items-center space-x-2 text-sm text-gray-500 hover:text-gray-900"
 						>
-							<span>{data.session.user.firstName ? `${data.session.user.firstName} ${data.session.user.lastName ?? ''}`.trim() : data.session.user.username ?? data.session.user.email ?? 'User'}</span>
+							<span>{user.firstName ? `${user.firstName} ${user.lastName ?? ''}`.trim() : user.username ?? user.email ?? 'User'}</span>
 							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
 							</svg>
