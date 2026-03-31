@@ -68,7 +68,8 @@ export const actions: Actions = {
       },
     });
 
-    return { success: true };
+    const signupUrl = `/signup?token=${token}&email=${encodeURIComponent(email)}`;
+    return { success: true, signupUrl };
   },
 
   delete: async ({ request, locals }) => {

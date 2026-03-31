@@ -6,6 +6,17 @@
   let email = $state("");
   let role = $state("USER");
   let showCreate = $state(false);
+  let showLinkModal = $state(false);
+  let copied = $state(false);
+
+  let signupUrl = $derived(formAction?.success ? formAction.signupUrl : "");
+  let fullUrl = $derived(typeof window !== "undefined" ? window.location.origin + signupUrl : signupUrl);
+
+  function copyLink() {
+    navigator.clipboard.writeText(fullUrl);
+    copied = true;
+    setTimeout(() => (copied = false), 2000);
+  }
 </script>
 
 <svelte:head>
@@ -33,6 +44,7 @@
           if (formAction?.success) {
             email = "";
             showCreate = false;
+            showLinkModal = true;
           }
         };
       }}
@@ -166,3 +178,47 @@
     </table>
   </div>
 </div>
+
+{#if showLinkModal}
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 p-6">
+      <h2 class="text-lg font-semibold text-gray-900 mb-2">Invite Sent</h2>
+      <div class="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded mb-4">
+        <p class="text-sm">
+          <strong>Email not configured.</strong> Sharing invitations by email is not yet available.
+          Please share the signup link below with the invited user through an alternative method.
+        </p>
+      </div>
+      <div class="mb-4">
+        <label for="signup-link" class="block text-sm font-medium text-gray-700 mb-1">
+          Signup Link
+        </label>
+        <div class="flex gap-2">
+          <input
+            id="signup-link"
+            type="text"
+            readonly
+            value={fullUrl}
+            class="flex-1 border border-gray-300 rounded-md px-3 py-2 bg-gray-50 text-sm"
+          />
+          <button
+            type="button"
+            onclick={copyLink}
+            class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 font-medium text-sm"
+          >
+            {copied ? "Copied!" : "Copy"}
+          </button>
+        </div>
+      </div>
+      <div class="flex justify-end">
+        <button
+          type="button"
+          onclick={() => (showLinkModal = false)}
+          class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
+        >
+          Done
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
