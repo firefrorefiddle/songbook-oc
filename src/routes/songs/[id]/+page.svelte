@@ -189,9 +189,7 @@
 
 					<Input label="Title" id="title" required bind:value={editTitle} />
 					<Input label="Author" id="author" bind:value={editAuthor} />
-					<div class="flex-1">
-						<Input label="Content" id="content" type="textarea" rows={30} required value={editContent} oninput={handleContentChange} />
-					</div>
+					<Input label="Content" id="content" type="textarea" rows={30} required value={editContent} oninput={handleContentChange} />
 					<MetadataEditor bind:metadata={editMetadata} />
 
 					<div class="flex justify-end gap-2 mt-6">
