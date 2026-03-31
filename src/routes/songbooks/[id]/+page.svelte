@@ -124,21 +124,61 @@
 		dragOverIndex = null;
 	}
 
+	let isGeneratingPdf = $state(false);
+	let isDownloadingPdf = $state(false);
+
+	async function generatePdf() {
+		if (isGeneratingPdf) return;
+		isGeneratingPdf = true;
+		try {
+			const response = await fetch(`/api/songbooks/${data.songbook.id}/pdf/generate`, {
+				method: 'POST'
+			});
+			if (!response.ok) {
+				const err = await response.text();
+				alert(`Failed to generate PDF: ${err}`);
+				return;
+			}
+			await invalidateAll();
+		} finally {
+			isGeneratingPdf = false;
+		}
+	}
+
 	async function downloadPdf() {
-		const response = await fetch(`/api/songbooks/${data.songbook.id}/pdf`);
+		if (isDownloadingPdf) return;
+		isDownloadingPdf = true;
+		try {
+			const response = await fetch(`/api/songbooks/${data.songbook.id}/pdf`);
+			if (!response.ok) {
+				alert('PDF not available. Please generate it first.');
+				return;
+			}
+			const blob = await response.blob();
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = `${getCurrentVersion()?.title || 'songbook'}.pdf`;
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			URL.revokeObjectURL(url);
+		} finally {
+			isDownloadingPdf = false;
+		}
+	}
+
+	async function viewLog() {
+		const response = await fetch(`/api/songbooks/${data.songbook.id}/pdf/log`);
 		if (!response.ok) {
-			alert('Failed to generate PDF');
+			alert('Log not available');
 			return;
 		}
-		const blob = await response.blob();
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = `${getCurrentVersion()?.title || 'songbook'}.pdf`;
-		document.body.appendChild(a);
-		a.click();
-		document.body.removeChild(a);
-		URL.revokeObjectURL(url);
+		const logContent = await response.text();
+		const logWindow = window.open('', '_blank');
+		if (logWindow) {
+			logWindow.document.write(`<pre>${logContent}</pre>`);
+		}
 	}
 </script>
 
@@ -165,7 +205,16 @@
 			{/if}
 		</div>
 		<div class="flex gap-2">
-			<Button onclick={() => downloadPdf()} disabled={!getCurrentVersion()?.songs.length}>Download PDF</Button>
+			{#if getCurrentVersion()?.pdfPath}
+				<Button onclick={() => downloadPdf()} disabled={isDownloadingPdf || !getCurrentVersion()?.songs.length}>
+					{isDownloadingPdf ? 'Downloading...' : 'Download PDF'}
+				</Button>
+				<Button variant="secondary" onclick={() => viewLog()}>View Log</Button>
+			{:else}
+				<Button onclick={() => generatePdf()} disabled={isGeneratingPdf || !getCurrentVersion()?.songs.length}>
+					{isGeneratingPdf ? 'Generating...' : 'Generate PDF'}
+				</Button>
+			{/if}
 			<Button onclick={() => showAddSongModal = true}>Add Song</Button>
 			<Button variant="secondary" onclick={() => showNewVersionModal = true}>New Version</Button>
 		</div>

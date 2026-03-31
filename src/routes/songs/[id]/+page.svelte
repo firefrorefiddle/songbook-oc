@@ -161,10 +161,10 @@
 	</div>
 {/if}
 
-<Modal bind:open={showEditModal} title="Edit Song Version" onclose={() => showEditModal = false} class="max-w-[2100px]">
+<Modal bind:open={showEditModal} title="Edit Song Version" onclose={() => showEditModal = false} fullscreen>
 	{#snippet children()}
-		<div class="flex gap-6 items-stretch">
-			<div class="flex-1 min-w-0 flex flex-col">
+		<div class="flex gap-6 items-stretch h-full -m-6">
+			<div class="flex-1 min-w-0 flex flex-col p-6">
 				<form
 					method="POST"
 					action="?/update"
@@ -197,9 +197,9 @@
 					</div>
 				</form>
 			</div>
-			<div class="w-3/5 bg-gray-50 rounded-lg p-4 flex flex-col">
+			<div class="w-3/5 bg-gray-50 p-6 flex flex-col">
 				<h3 class="text-sm font-medium text-gray-700 mb-3">Preview</h3>
-				<div class="flex-1 flex items-center justify-center">
+				<div class="flex-1 flex items-center justify-center overflow-auto">
 					{#if isGeneratingPreview}
 						<div class="text-gray-400">
 							Generating preview...

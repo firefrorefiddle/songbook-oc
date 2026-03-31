@@ -11,7 +11,7 @@ export const load: PageServerLoad = async ({ locals }) => {
   if (role !== "ADMIN") throw redirect(302, "/songs");
 
   const invites = await prisma.invite.findMany({
-    orderBy: { createdAt: "desc" },
+    orderBy: { expiresAt: "desc" },
     include: { sentBy: { select: { name: true, email: true } } },
   });
 
