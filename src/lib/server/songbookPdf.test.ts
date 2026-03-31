@@ -1,14 +1,24 @@
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { generateSongbookPdf } from "./songbookPdf";
 import { prisma } from "./prisma";
 
 describe("songbookPdf", () => {
   let testSongbookId: string;
-  let testSongIds: string[] = [];
+  let testUserId: string;
 
   beforeAll(async () => {
+    // Create a test user to satisfy the owner requirement
+    const user = await prisma.user.create({
+      data: {
+        email: `test-pdf-${Date.now()}@example.com`,
+        name: "Test User",
+      },
+    });
+    testUserId = user.id;
+
     const song1 = await prisma.song.create({
       data: {
+        ownerId: testUserId,
         versions: {
           create: {
             title: "Test Song One",
@@ -26,6 +36,7 @@ lobet ihn in der Feste seiner M-acht!`,
 
     const song2 = await prisma.song.create({
       data: {
+        ownerId: testUserId,
         versions: {
           create: {
             title: "Test Song Two",
@@ -45,10 +56,9 @@ und liebt auch mich.`,
       include: { versions: true },
     });
 
-    testSongIds = [song1.id, song2.id];
-
     const songbook = await prisma.songbook.create({
       data: {
+        ownerId: testUserId,
         versions: {
           create: {
             title: "Test Songbook",
@@ -71,6 +81,14 @@ und liebt auch mich.`,
     });
 
     testSongbookId = songbook.id;
+  });
+
+  afterAll(async () => {
+    // Delete in dependency order: songbooks and songs cascade-delete their versions,
+    // but Song/Songbook reference the user so must be deleted before the user.
+    await prisma.songbook.deleteMany({ where: { ownerId: testUserId } });
+    await prisma.song.deleteMany({ where: { ownerId: testUserId } });
+    await prisma.user.delete({ where: { id: testUserId } });
   });
 
   describe("generateSongbookPdf", () => {

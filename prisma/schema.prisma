@@ -7,49 +7,155 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ---------------------------------------------------------------------------
+// Users & Auth
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  // null when the account was created via OAuth only
+  passwordHash String?
+  role         Role     @default(USER)
+  createdAt    DateTime @default(now())
+
+  ownedSongs      Song[]          @relation("SongOwner")
+  ownedSongbooks  Songbook[]      @relation("SongbookOwner")
+  collaborations  Collaboration[]
+  invitesSent     Invite[]        @relation("InviteSender")
+  invite          Invite?         @relation("InviteUser")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+// Invite tokens are created by admins and emailed to prospective users.
+// The invited email must be verified before the token can be consumed.
+model Invite {
+  id              String    @id @default(cuid())
+  email           String
+  token           String    @unique
+  role            Role      @default(USER)
+  expiresAt       DateTime
+  // set when the invited email address is verified via the verification link
+  emailVerifiedAt DateTime?
+  // set when the user actually creates their account
+  usedAt          DateTime?
+
+  sentById String
+  sentBy   User   @relation("InviteSender", fields: [sentById], references: [id])
+
+  // linked once the user signs up
+  userId String? @unique
+  user   User?   @relation("InviteUser", fields: [userId], references: [id])
+}
+
+// ---------------------------------------------------------------------------
+// Songs
+// ---------------------------------------------------------------------------
+
 model Song {
-  id        String        @id @default(cuid())
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-  isArchived Boolean     @default(false)
-  versions  SongVersion[]
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  isArchived Boolean  @default(false)
+  isPublic   Boolean  @default(false)
+
+  ownerId String
+  owner   User   @relation("SongOwner", fields: [ownerId], references: [id])
+
+  // set when this song was forked from another song
+  forkedFromId String?
+  forkedFrom   Song?   @relation("SongForks", fields: [forkedFromId], references: [id])
+  forks        Song[]  @relation("SongForks")
+
+  versions       SongVersion[]
+  collaborations Collaboration[]
 }
 
 model SongVersion {
-  id        String    @id @default(cuid())
+  id        String   @id @default(cuid())
   songId    String
-  song      Song      @relation(fields: [songId], references: [id], onDelete: Cascade)
+  song      Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
   title     String
   author    String?
   content   String
-  metadata  String    @default("{}")
-  createdAt DateTime  @default(now())
+  metadata  String   @default("{}")
+  createdAt DateTime @default(now())
+
   songbookSongs SongbookSong[]
 }
 
+// ---------------------------------------------------------------------------
+// Songbooks
+// ---------------------------------------------------------------------------
+
 model Songbook {
-  id        String    @id @default(cuid())
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
   isArchived Boolean  @default(false)
-  versions  SongbookVersion[]
+  isPublic   Boolean  @default(false)
+
+  ownerId String
+  owner   User   @relation("SongbookOwner", fields: [ownerId], references: [id])
+
+  // set when this songbook was forked from another songbook
+  forkedFromId String?
+  forkedFrom   Songbook?  @relation("SongbookForks", fields: [forkedFromId], references: [id])
+  forks        Songbook[] @relation("SongbookForks")
+
+  versions       SongbookVersion[]
+  collaborations Collaboration[]
 }
 
 model SongbookVersion {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   songbookId  String
-  songbook    Songbook  @relation(fields: [songbookId], references: [id], onDelete: Cascade)
+  songbook    Songbook @relation(fields: [songbookId], references: [id], onDelete: Cascade)
   title       String
   description String?
-  createdAt   DateTime  @default(now())
-  songs       SongbookSong[]
+  createdAt   DateTime @default(now())
+
+  songs SongbookSong[]
 }
 
 model SongbookSong {
-  id               String          @id @default(cuid())
+  id                String          @id @default(cuid())
   songbookVersionId String
-  songbookVersion  SongbookVersion @relation(fields: [songbookVersionId], references: [id], onDelete: Cascade)
-  songVersionId    String
-  songVersion      SongVersion     @relation(fields: [songVersionId], references: [id], onDelete: Cascade)
-  order            Int
+  songbookVersion   SongbookVersion @relation(fields: [songbookVersionId], references: [id], onDelete: Cascade)
+  songVersionId     String
+  songVersion       SongVersion     @relation(fields: [songVersionId], references: [id], onDelete: Cascade)
+  order             Int
+}
+
+// ---------------------------------------------------------------------------
+// Collaboration
+// ---------------------------------------------------------------------------
+
+// A Collaboration record grants a user edit access to a song or songbook.
+// Exactly one of songId / songbookId must be set (enforced at application level).
+model Collaboration {
+  id   String        @id @default(cuid())
+  role CollabRole    @default(EDITOR)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  songId String?
+  song   Song?   @relation(fields: [songId], references: [id], onDelete: Cascade)
+
+  songbookId String?
+  songbook   Songbook? @relation(fields: [songbookId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, songId])
+  @@unique([userId, songbookId])
+}
+
+enum CollabRole {
+  EDITOR
+  ADMIN
 }

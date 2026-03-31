@@ -1,65 +1,73 @@
-import { json, error } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
-import { prisma } from '$lib/server/prisma';
-import { createSongbookSchema } from '$lib/schemas';
+import { json, error } from "@sveltejs/kit";
+import type { RequestHandler } from "./$types";
+import { prisma } from "$lib/server/prisma";
+import { createSongbookSchema } from "$lib/schemas";
 
-export const GET: RequestHandler = async ({ url }) => {
-	const search = url.searchParams.get('search') || '';
-	const includeArchived = url.searchParams.get('includeArchived') === 'true';
+export const GET: RequestHandler = async ({ url, locals }) => {
+  const session = await locals.auth();
+  if (!session?.user) throw error(401, "Unauthorized");
 
-	const songbooks = await prisma.songbook.findMany({
-		where: {
-			isArchived: includeArchived ? undefined : false,
-			versions: search
-				? {
-						some: {
-							title: { contains: search }
-						}
-					}
-				: undefined
-		},
-		include: {
-			versions: {
-				orderBy: { createdAt: 'desc' },
-				take: 1,
-				include: {
-					songs: {
-						include: {
-							songVersion: true
-						}
-					}
-				}
-			}
-		},
-		orderBy: { updatedAt: 'desc' }
-	});
+  const search = url.searchParams.get("search") || "";
+  const includeArchived = url.searchParams.get("includeArchived") === "true";
+  const userId = session.user.id;
 
-	return json(songbooks);
+  const songbooks = await prisma.songbook.findMany({
+    where: {
+      isArchived: includeArchived ? undefined : false,
+      // Show songbooks the user owns, collaborates on, or are public
+      OR: [
+        { ownerId: userId },
+        { collaborations: { some: { userId } } },
+        { isPublic: true },
+      ],
+      versions: search ? { some: { title: { contains: search } } } : undefined,
+    },
+    include: {
+      versions: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        include: {
+          songs: {
+            include: {
+              songVersion: true,
+            },
+          },
+        },
+      },
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  return json(songbooks);
 };
 
-export const POST: RequestHandler = async ({ request }) => {
-	const body = await request.json();
-	const parsed = createSongbookSchema.safeParse(body);
+export const POST: RequestHandler = async ({ request, locals }) => {
+  const session = await locals.auth();
+  if (!session?.user) throw error(401, "Unauthorized");
 
-	if (!parsed.success) {
-		throw error(400, parsed.error.errors[0].message);
-	}
+  const body = await request.json();
+  const parsed = createSongbookSchema.safeParse(body);
 
-	const { title, description } = parsed.data;
+  if (!parsed.success) {
+    throw error(400, parsed.error.errors[0].message);
+  }
 
-	const songbook = await prisma.songbook.create({
-		data: {
-			versions: {
-				create: {
-					title,
-					description
-				}
-			}
-		},
-		include: {
-			versions: true
-		}
-	});
+  const { title, description } = parsed.data;
 
-	return json(songbook, { status: 201 });
+  const songbook = await prisma.songbook.create({
+    data: {
+      ownerId: session.user.id!,
+      versions: {
+        create: {
+          title,
+          description,
+        },
+      },
+    },
+    include: {
+      versions: true,
+    },
+  });
+
+  return json(songbook, { status: 201 });
 };

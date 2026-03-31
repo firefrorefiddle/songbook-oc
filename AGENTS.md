@@ -210,7 +210,45 @@ Every architectural choice, tradeoff, or context that would be lost over time mu
 **Alternatives considered**: Other options that were rejected and why
 -->
 
-_No decisions documented yet._
+---
+
+**Date**: 2026-03-31
+**Context**: Adding users, authentication, and ownership to the application. Needed to decide on auth mechanism, invite flow, ownership/collaboration model, and visibility rules.
+**Decision**:
+
+- Auth via Auth.js with two providers: Email+Password (credentials) and Google OAuth.
+- Invite-only registration: only admins can send invites. Invite tokens expire after 7 days. Invited user must verify their email before the invite is consumable. Token is single-use.
+- One owner per Song/Songbook. Owner can add collaborators (with edit access) or transfer ownership (original owner auto-becomes collaborator). Bulk transfer across all songs is also supported.
+- Fork = independent copy of a song/songbook, owned by the forking user. `forkedFromId` tracks the original for attribution.
+- All content (including "public") requires login. Public = visible to all authenticated users. Private = owner + collaborators only.
+- First admin user is created via a `/setup` page that is only accessible when zero users exist (no email verification required for the bootstrap user).
+
+**Alternatives considered**:
+
+- Magic links: simpler but requires email infra from day one; credentials + Google is a better bootstrap path.
+- Multiple owners: increases complexity without clear benefit over the collaborator model.
+- Public without login: rejected to keep the user base known and controlled.
+
+---
+
+#### Auth.js Integration Notes
+
+- Package: `@auth/sveltekit`
+- Providers: `Credentials` (bcrypt password hash), `Google`
+- Session strategy: JWT (SQLite has no session table overhead)
+- `AUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` must be set in `.env`
+- Hooks file: `src/hooks.server.ts` exposes `handle` from Auth.js
+- Session available in server load functions via `event.locals.auth()`
+
+#### User & Ownership Schema Summary
+
+```
+User        – id, email, name, passwordHash, role (USER|ADMIN), createdAt
+Invite      – id, email, token, role, expiresAt, usedAt, sentById, userId, emailVerifiedAt
+Song        – + ownerId, isPublic, forkedFromId
+Songbook    – + ownerId, isPublic, forkedFromId
+Collaboration – id, userId, songId?, songbookId?, role (EDITOR|ADMIN)
+```
 
 ## Code Style Guidelines
 
