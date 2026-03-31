@@ -4,6 +4,7 @@
 	import Button from '$lib/components/Button.svelte';
 	import Input from '$lib/components/Input.svelte';
 	import Modal from '$lib/components/Modal.svelte';
+	import MetadataEditor from '$lib/components/MetadataEditor.svelte';
 
 	let { data, form } = $props();
 
@@ -15,7 +16,7 @@
 	let createTitle = $state('');
 	let createAuthor = $state('');
 	let createContent = $state('');
-	let createCopyright = $state('');
+	let createMetadata = $state<Record<string, string>>({});
 
 	function handleSearch() {
 		const params = new URLSearchParams();
@@ -137,7 +138,7 @@
 			<Input label="Title" id="title" required bind:value={createTitle} />
 			<Input label="Author" id="author" bind:value={createAuthor} />
 			<Input label="Content" id="content" type="textarea" rows={10} required bind:value={createContent} />
-			<Input label="Copyright" id="copyright" bind:value={createCopyright} />
+			<MetadataEditor bind:metadata={createMetadata} />
 
 			<div class="flex justify-end gap-2 mt-6">
 				<Button variant="secondary" onclick={() => showCreateModal = false}>Cancel</Button>

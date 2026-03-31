@@ -45,23 +45,29 @@ export const actions: Actions = {
     const title = formData.get("title") as string;
     const author = formData.get("author") as string;
     const content = formData.get("content") as string;
-    const copyright = formData.get("copyright") as string;
 
     if (!title?.trim()) {
       return fail(400, {
         error: "Title is required",
-        fields: { title, author, content, copyright },
+        fields: { title, author, content },
       });
     }
     if (!content?.trim()) {
       return fail(400, {
         error: "Content is required",
-        fields: { title, author, content, copyright },
+        fields: { title, author, content },
       });
     }
 
     const metadata: Record<string, string> = {};
-    if (copyright) metadata.copyright = copyright;
+    for (const [key, value] of formData.entries()) {
+      if (key.startsWith("meta_")) {
+        const metaKey = key.slice(5);
+        if (metaKey && value && typeof value === "string" && value.trim()) {
+          metadata[metaKey] = value.trim();
+        }
+      }
+    }
 
     await prisma.song.create({
       data: {

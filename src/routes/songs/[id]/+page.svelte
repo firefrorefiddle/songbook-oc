@@ -4,6 +4,7 @@
 	import Button from '$lib/components/Button.svelte';
 	import Input from '$lib/components/Input.svelte';
 	import Modal from '$lib/components/Modal.svelte';
+	import MetadataEditor from '$lib/components/MetadataEditor.svelte';
 
 	let { data, form } = $props();
 
@@ -12,13 +13,13 @@
 	let editTitle = $state('');
 	let editAuthor = $state('');
 	let editContent = $state('');
-	let editCopyright = $state('');
+	let editMetadata = $state<Record<string, string>>({});
 
 	let previewPng = $state<string | null>(null);
 	let isGeneratingPreview = $state(false);
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-	async function updatePreview(content: string, title: string, author: string, copyright: string) {
+	async function updatePreview(content: string, title: string, author: string, metadata: Record<string, string>) {
 		if (debounceTimer) clearTimeout(debounceTimer);
 		debounceTimer = setTimeout(async () => {
 			if (!content.trim()) {
@@ -30,11 +31,11 @@
 				const res = await fetch('/api/songs/preview', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ content, title, author, copyright }),
+					body: JSON.stringify({ content, title, author, metadata }),
 				});
-				const data = await res.json();
-				if (data.png) {
-					previewPng = data.png;
+				const resData = await res.json();
+				if (resData.png) {
+					previewPng = resData.png;
 				}
 			} catch (e) {
 				console.error('Preview error:', e);
@@ -46,20 +47,20 @@
 
 	function openEdit(versionIndex: number) {
 		editingVersion = data.song.versions[versionIndex];
-		const metadata = parseMetadata(editingVersion.metadata);
+		const parsed = parseMetadata(editingVersion.metadata);
 		editTitle = editingVersion.title;
 		editAuthor = editingVersion.author || '';
 		editContent = editingVersion.content;
-		editCopyright = metadata.copyright || '';
+		editMetadata = parsed;
 		previewPng = null;
 		showEditModal = true;
-		updatePreview(editingVersion.content, editTitle, editAuthor, editCopyright);
+		updatePreview(editingVersion.content, editTitle, editAuthor, editMetadata);
 	}
 
 	function handleContentChange(e: Event) {
 		const target = e.target as HTMLTextAreaElement;
 		editContent = target.value;
-		updatePreview(target.value, editTitle, editAuthor, editCopyright);
+		updatePreview(target.value, editTitle, editAuthor, editMetadata);
 	}
 
 	function parseMetadata(metadataStr: string): Record<string, string> {
@@ -106,12 +107,14 @@
 					<span class="text-gray-500">Created:</span>
 					<span class="ml-1">{new Date(data.song.versions[0].createdAt).toLocaleDateString()}</span>
 				</div>
-				{#if metadata.copyright}
-					<div>
-						<span class="text-gray-500">Copyright:</span>
-						<span class="ml-1">{metadata.copyright}</span>
-					</div>
-				{/if}
+				{#each Object.entries(metadata) as [key, value]}
+					{#if value}
+						<div>
+							<span class="text-gray-500">{key}:</span>
+							<span class="ml-1">{value}</span>
+						</div>
+					{/if}
+				{/each}
 			</div>
 		</div>
 	{/if}
@@ -189,7 +192,7 @@
 					<div class="flex-1">
 						<Input label="Content" id="content" type="textarea" rows={30} required value={editContent} oninput={handleContentChange} />
 					</div>
-					<Input label="Copyright" id="copyright" bind:value={editCopyright} />
+					<MetadataEditor bind:metadata={editMetadata} />
 
 					<div class="flex justify-end gap-2 mt-6">
 						<Button variant="secondary" onclick={() => showEditModal = false}>Cancel</Button>

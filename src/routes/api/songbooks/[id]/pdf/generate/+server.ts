@@ -22,6 +22,6 @@ export const POST: RequestHandler = async ({ params, url }) => {
     );
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unknown error";
-    throw error(500, message);
+    throw error(500, message + ". Click 'View Log' to see the LaTeX output.");
   }
 };

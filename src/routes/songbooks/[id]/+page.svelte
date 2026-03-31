@@ -209,11 +209,13 @@
 				<Button onclick={() => downloadPdf()} disabled={isDownloadingPdf || !getCurrentVersion()?.songs.length}>
 					{isDownloadingPdf ? 'Downloading...' : 'Download PDF'}
 				</Button>
-				<Button variant="secondary" onclick={() => viewLog()}>View Log</Button>
 			{:else}
 				<Button onclick={() => generatePdf()} disabled={isGeneratingPdf || !getCurrentVersion()?.songs.length}>
 					{isGeneratingPdf ? 'Generating...' : 'Generate PDF'}
 				</Button>
+			{/if}
+			{#if getCurrentVersion()?.pdfLogPath}
+				<Button variant="secondary" onclick={() => viewLog()}>View Log</Button>
 			{/if}
 			<Button onclick={() => showAddSongModal = true}>Add Song</Button>
 			<Button variant="secondary" onclick={() => showNewVersionModal = true}>New Version</Button>

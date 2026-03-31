@@ -1,0 +1,516 @@
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2026.3.26)  31 MAR 2026 10:46
+entering extended mode
+ restricted \write18 enabled.
+ %&-line parsing enabled.
+**/home/mike/src/songbook-oc/tmp/9117bf98-6f81-4747-8c91-be6286571d98/chorded.t
+ex
+
+(/home/mike/src/songbook-oc/tmp/9117bf98-6f81-4747-8c91-be6286571d98/chorded.te
+x
+LaTeX2e <2021-11-15> patch level 1
+L3 programming layer <2022-01-21> (./layout.tex (/usr/share/texlive/texmf-dist/
+tex/latex/koma-script/scrbook.cls
+Document Class: scrbook 2021/11/13 v3.35 KOMA-Script document class (book)
+(/usr/share/texlive/texmf-dist/tex/latex/koma-script/scrkbase.sty
+Package: scrkbase 2021/11/13 v3.35 KOMA-Script package (KOMA-Script-dependent b
+asics and keyval usage)
+(/usr/share/texlive/texmf-dist/tex/latex/koma-script/scrbase.sty
+Package: scrbase 2021/11/13 v3.35 KOMA-Script package (KOMA-Script-independent 
+basics and keyval usage)
+(/usr/share/texlive/texmf-dist/tex/latex/koma-script/scrlfile.sty
+Package: scrlfile 2021/11/13 v3.35 KOMA-Script package (file load hooks)
+(/usr/share/texlive/texmf-dist/tex/latex/koma-script/scrlfile-hook.sty
+Package: scrlfile-hook 2021/11/13 v3.35 KOMA-Script package (using LaTeX hooks)
+
+(/usr/share/texlive/texmf-dist/tex/latex/koma-script/scrlogo.sty
+Package: scrlogo 2021/11/13 v3.35 KOMA-Script package (logo)
+))) (/usr/share/texlive/texmf-dist/tex/latex/graphics/keyval.sty
+Package: keyval 2014/10/28 v1.15 key=value parser (DPC)
+\KV@toks@=\toks16
+)
+Applying: [2021/05/01] Usage of raw or classic option list on input line 252.
+Already applied: [0000/00/00] Usage of raw or classic option list on input line
+ 368.
+)) (/usr/share/texlive/texmf-dist/tex/latex/koma-script/tocbasic.sty
+Package: tocbasic 2021/11/13 v3.35 KOMA-Script package (handling toc-files)
+\scr@dte@tocline@numberwidth=\skip47
+\scr@dte@tocline@numbox=\box50
+)
+Package tocbasic Info: babel extension for `toc' omitted
+(tocbasic)             because of missing \bbl@set@language on input line 137.
+
+LaTeX Font Warning: Font shape `OT1/cmr/m/n' in size <16> not available
+(Font)              size <17.28> substituted on input line 2490.
+
+(/usr/share/texlive/texmf-dist/tex/latex/koma-script/typearea.sty
+Package: typearea 2021/11/13 v3.35 KOMA-Script package (type area)
+\ta@bcor=\skip48
+\ta@div=\count185
+Package typearea Info: You've used standard option `a4paper'.
+(typearea)             This is correct!
+(typearea)             Internally I'm using `paper=a4'.
+(typearea)             If you'd like to set the option with \KOMAoptions,
+(typearea)             you'd have to use `paper=a4' there
+(typearea)             instead of `a4paper', too.
+\ta@hblk=\skip49
+\ta@vblk=\skip50
+\ta@temp=\skip51
+\footheight=\skip52
+Package typearea Info: These are the values describing the layout:
+(typearea)             DIV  = 20
+(typearea)             BCOR = 0.0pt
+(typearea)             \paperwidth      = 597.50793pt
+(typearea)              \textwidth      = 507.88174pt
+(typearea)              DIV departure   = 3%
+(typearea)              \evensidemargin = -12.5192pt
+(typearea)              \oddsidemargin  = -42.39459pt
+(typearea)             \paperheight     = 845.04694pt
+(typearea)              \textheight     = 726.3982pt
+(typearea)              \topmargin      = -82.81752pt
+(typearea)              \headheight     = 23.99994pt
+(typearea)              \headsep        = 28.79993pt
+(typearea)              \topskip        = 16.0pt
+(typearea)              \footskip       = 67.19983pt
+(typearea)              \baselineskip   = 19.19995pt
+(typearea)              on input line 1743.
+)
+\c@part=\count186
+\c@chapter=\count187
+\c@section=\count188
+\c@subsection=\count189
+\c@subsubsection=\count190
+\c@paragraph=\count191
+\c@subparagraph=\count192
+\scr@dte@chapter@maxnumwidth=\skip53
+Class scrbook Info: using compatibility default `afterindent=bysign'
+(scrbook)           for `\chapter on input line 5715.
+\scr@dte@section@maxnumwidth=\skip54
+Class scrbook Info: using compatibility default `runin=bysign'
+(scrbook)           for `\section on input line 5726.
+Class scrbook Info: using compatibility default `afterindent=bysign'
+(scrbook)           for `\section on input line 5726.
+\scr@dte@part@maxnumwidth=\skip55
+Class scrbook Info: using compatibility default `afterindent=true'
+(scrbook)           for `\part on input line 5735.
+\scr@dte@subsection@maxnumwidth=\skip56
+Class scrbook Info: using compatibility default `runin=bysign'
+(scrbook)           for `\subsection on input line 5745.
+Class scrbook Info: using compatibility default `afterindent=bysign'
+(scrbook)           for `\subsection on input line 5745.
+\scr@dte@subsubsection@maxnumwidth=\skip57
+Class scrbook Info: using compatibility default `runin=bysign'
+(scrbook)           for `\subsubsection on input line 5755.
+Class scrbook Info: using compatibility default `afterindent=bysign'
+(scrbook)           for `\subsubsection on input line 5755.
+\scr@dte@paragraph@maxnumwidth=\skip58
+Class scrbook Info: using compatibility default `runin=bysign'
+(scrbook)           for `\paragraph on input line 5766.
+Class scrbook Info: using compatibility default `afterindent=bysign'
+(scrbook)           for `\paragraph on input line 5766.
+\scr@dte@subparagraph@maxnumwidth=\skip59
+Class scrbook Info: using compatibility default `runin=bysign'
+(scrbook)           for `\subparagraph on input line 5776.
+Class scrbook Info: using compatibility default `afterindent=bysign'
+(scrbook)           for `\subparagraph on input line 5776.
+\abovecaptionskip=\skip60
+\belowcaptionskip=\skip61
+\c@pti@nb@sid@b@x=\box51
+Package tocbasic Info: babel extension for `lof' omitted
+(tocbasic)             because of missing \bbl@set@language on input line 6962.
+
+\scr@dte@figure@maxnumwidth=\skip62
+\c@figure=\count193
+Package tocbasic Info: babel extension for `lot' omitted
+(tocbasic)             because of missing \bbl@set@language on input line 6978.
+
+\scr@dte@table@maxnumwidth=\skip63
+\c@table=\count194
+Class scrbook Info: Redefining `\numberline' on input line 7146.
+\bibindent=\dimen138
+)) (/home/mike/src/songbook-oc/tmp/9117bf98-6f81-4747-8c91-be6286571d98/songs.s
+ty
+Package: songs 2015/08/18 v2.18 Songs package
+\SB@dimen=\dimen139
+\SB@dimenii=\dimen140
+\SB@dimeniii=\dimen141
+\SB@dimeniv=\dimen142
+\SB@box=\box52
+\SB@boxii=\box53
+\SB@boxiii=\box54
+\SB@toks=\toks17
+\SB@cnt=\count195
+\SB@cntii=\count196
+\SB@skip=\skip64
+\SB@envbox=\box55
+\c@songnum=\count197
+\c@versenum=\count198
+\versesep=\skip65
+\afterpreludeskip=\skip66
+\beforepostludeskip=\skip67
+\baselineadj=\skip68
+\idxheadwidth=\skip69
+\songnumwidth=\skip70
+
+LaTeX Font Warning: Font shape `OT1/cmss/m/n' in size <16> not available
+(Font)              size <17.28> substituted on input line 139.
+
+
+LaTeX Font Warning: Font shape `OT1/cmss/bx/n' in size <16> not available
+(Font)              size <17.28> substituted on input line 139.
+
+
+LaTeX Font Warning: Font shape `OT1/cmss/bx/n' in size <27.64795> not available
+
+(Font)              size <24.88> substituted on input line 139.
+
+\versenumwidth=\skip71
+\cbarwidth=\skip72
+\sbarheight=\skip73
+\vvpenalty=\count199
+\ccpenalty=\count266
+\vcpenalty=\count267
+\cvpenalty=\count268
+\brkpenalty=\count269
+\spenalty=\count270
+\minfrets=\count271
+\SB@colwidth=\dimen143
+\SB@songbox=\box56
+\SB@numcols=\count272
+\SB@colnum=\count273
+\SB@colbox=\box57
+\SB@pgbox=\box58
+\SB@mrkbox=\box59
+\SB@groupcnt=\count274
+\SB@titlelist=\toks18
+\SB@titletail=\toks19
+\SB@parindent=\dimen144
+
+LaTeX Warning: Command \verse  has changed.
+               Check if current package is valid.
+
+\SB@chorusbox=\box60
+\SB@cmarkclass=\marks1
+\SB@nocmarkclass=\marks2
+\SB@grouplvl=\count275
+\SB@transposefactor=\count276
+\SB@lyric=\toks20
+\SB@numhyps=\count277
+\SB@lyricnohyp=\toks21
+\SB@lyricbox=\box61
+\SB@chordbox=\box62
+\SB@cr@=\toks22
+\SB@ctail=\toks23
+\SB@fretwidth=\skip74
+\SB@tabindent=\dimen145
+\c@SB@songsnum=\count278
+\SB@songwrites=\box63
+
+LaTeX Font Warning: Font shape `OT1/cmss/m/sl' in size <16> not available
+(Font)              size <17.28> substituted on input line 3698.
+
+
+LaTeX Font Warning: Font shape `OT1/cmss/m/sl' in size <19.19995> not available
+
+(Font)              size <20.74> substituted on input line 3698.
+
+LaTeX Font Info:    Calculating math sizes for size <19.19995> on input line 36
+98.
+
+LaTeX Font Warning: Font shape `OT1/cmr/m/n' in size <19.19995> not available
+(Font)              size <20.74> substituted on input line 3698.
+
+
+LaTeX Font Warning: Font shape `OT1/cmr/m/n' in size <13.4399> not available
+(Font)              size <14.4> substituted on input line 3698.
+
+
+LaTeX Font Warning: Font shape `OT1/cmr/m/n' in size <9.59998> not available
+(Font)              size <10> substituted on input line 3698.
+
+
+LaTeX Font Warning: Font shape `OML/cmm/m/it' in size <19.19995> not available
+(Font)              size <20.74> substituted on input line 3698.
+
+
+LaTeX Font Warning: Font shape `OML/cmm/m/it' in size <13.4399> not available
+(Font)              size <14.4> substituted on input line 3698.
+
+
+LaTeX Font Warning: Font shape `OML/cmm/m/it' in size <9.59998> not available
+(Font)              size <10> substituted on input line 3698.
+
+
+LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <19.19995> not available
+(Font)              size <20.74> substituted on input line 3698.
+
+
+LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <13.4399> not available
+(Font)              size <14.4> substituted on input line 3698.
+
+
+LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <9.59998> not available
+(Font)              size <10> substituted on input line 3698.
+
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <19.19995> on input line 3698.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <13.4399> on input line 3698.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <9.59998> on input line 3698.
+(/usr/share/texlive/texmf-dist/tex/latex/graphics/color.sty
+Package: color 2021/12/07 v1.3c Standard LaTeX Color (DPC)
+(/usr/share/texlive/texmf-dist/tex/latex/graphics-cfg/color.cfg
+File: color.cfg 2016/01/02 v1.6 sample color configuration
+)
+Package color Info: Driver file: pdftex.def on input line 149.
+(/usr/share/texlive/texmf-dist/tex/latex/graphics-def/pdftex.def
+File: pdftex.def 2020/10/05 v1.2a Graphics/color driver for pdftex
+))) (/usr/share/texlive/texmf-dist/tex/latex/base/inputenc.sty
+Package: inputenc 2021/02/14 v1.3d Input encoding file
+\inpenc@prehook=\toks24
+\inpenc@posthook=\toks25
+) (/usr/share/texlive/texmf-dist/tex/generic/babel/babel.sty
+Package: babel 2022/01/26 3.70 The Babel package
+\babel@savecnt=\count279
+\U@D=\dimen146
+\l@unhyphenated=\language87
+(/usr/share/texlive/texmf-dist/tex/generic/babel/txtbabel.def)
+\bbl@readstream=\read2
+\bbl@dirlevel=\count280
+(/usr/share/texlive/texmf-dist/tex/generic/babel-german/ngerman.ldf
+Language: ngerman 2021/02/27 v2.13 German support for babel (post-1996 orthogra
+phy)
+(/usr/share/texlive/texmf-dist/tex/generic/babel-german/ngermanb.ldf
+Language: ngermanb 2021/02/27 v2.13 German support for babel (post-1996 orthogr
+aphy)
+Package babel Info: Making " an active character on input line 122.
+))) (./font.tex (/usr/share/texlive/texmf-dist/tex/latex/dejavu/DejaVuSans.sty
+Package: DejaVuSans 2011/06/01 Style file for DejaVuSans.
+) (/usr/share/texlive/texmf-dist/tex/latex/base/fontenc.sty
+Package: fontenc 2021/04/29 v2.0v Standard LaTeX package
+
+LaTeX Font Warning: Font shape `T1/cmr/m/n' in size <16> not available
+(Font)              size <17.28> substituted on input line 112.
+
+) (/usr/share/texlive/texmf-dist/tex/latex/psnfss/mathpazo.sty
+Package: mathpazo 2020/03/25 PSNFSS-v9.3 Palatino w/ Pazo Math (D.Puga, WaS) 
+\symupright=\mathgroup4
+) (/usr/share/texlive/texmf-dist/tex/latex/pdfpages/pdfpages.sty
+Package: pdfpages 2022/01/29 v0.5u Insert pages of external PDF documents (AM)
+(/usr/share/texlive/texmf-dist/tex/latex/base/ifthen.sty
+Package: ifthen 2020/11/24 v1.1c Standard LaTeX ifthen package (DPC)
+) (/usr/share/texlive/texmf-dist/tex/latex/tools/calc.sty
+Package: calc 2017/05/25 v4.3 Infix arithmetic (KKT,FJ)
+\calc@Acount=\count281
+\calc@Bcount=\count282
+\calc@Adimen=\dimen147
+\calc@Bdimen=\dimen148
+\calc@Askip=\skip75
+\calc@Bskip=\skip76
+LaTeX Info: Redefining \setlength on input line 80.
+LaTeX Info: Redefining \addtolength on input line 81.
+\calc@Ccount=\count283
+\calc@Cskip=\skip77
+) (/usr/share/texlive/texmf-dist/tex/latex/eso-pic/eso-pic.sty
+Package: eso-pic 2020/10/14 v3.0a eso-pic (RN)
+\ESO@tempdima=\dimen149
+\ESO@tempdimb=\dimen150
+) (/usr/share/texlive/texmf-dist/tex/latex/graphics/graphicx.sty
+Package: graphicx 2021/09/16 v1.2d Enhanced LaTeX Graphics (DPC,SPQR)
+(/usr/share/texlive/texmf-dist/tex/latex/graphics/graphics.sty
+Package: graphics 2021/03/04 v1.4d Standard LaTeX Graphics (DPC,SPQR)
+(/usr/share/texlive/texmf-dist/tex/latex/graphics/trig.sty
+Package: trig 2021/08/11 v1.11 sin cos tan (DPC)
+) (/usr/share/texlive/texmf-dist/tex/latex/graphics-cfg/graphics.cfg
+File: graphics.cfg 2016/06/04 v1.11 sample graphics configuration
+)
+Package graphics Info: Driver file: pdftex.def on input line 107.
+)
+\Gin@req@height=\dimen151
+\Gin@req@width=\dimen152
+)
+\AM@pagewidth=\dimen153
+\AM@pageheight=\dimen154
+\AM@fboxrule=\dimen155
+(/usr/share/texlive/texmf-dist/tex/latex/pdfpages/pppdftex.def
+File: pppdftex.def 2022/01/29 v0.5u Pdfpages driver for pdfTeX (AM)
+)
+\pdfpages@includegraphics@status=\count284
+\AM@pagebox=\box64
+\AM@global@opts=\toks26
+\AM@pagecnt=\count285
+\AM@toc@title=\toks27
+\c@AM@survey=\count286
+\AM@templatesizebox=\box65
+)
+\SB@out=\write3
+\openout3 = `chorded.sxc'.
+
+)
+LaTeX Font Info:    Trying to load font information for T1+pplx on input line 9
+.
+(/usr/share/texlive/texmf-dist/tex/latex/psnfss/t1pplx.fd
+File: t1pplx.fd 2004/09/06 font definitions for T1/pplx.
+) (/usr/share/texlive/texmf-dist/tex/latex/l3backend/l3backend-pdftex.def
+File: l3backend-pdftex.def 2022-01-12 L3 backend support: PDF output (pdfTeX)
+\l__color_backend_stack_int=\count287
+\l__pdf_internal_box=\box66
+)
+No file chorded.aux.
+\openout1 = `chorded.aux'.
+
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 9.
+LaTeX Font Info:    ... okay on input line 9.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 9.
+LaTeX Font Info:    ... okay on input line 9.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 9.
+LaTeX Font Info:    ... okay on input line 9.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 9.
+LaTeX Font Info:    ... okay on input line 9.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 9.
+LaTeX Font Info:    ... okay on input line 9.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 9.
+LaTeX Font Info:    ... okay on input line 9.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 9.
+LaTeX Font Info:    ... okay on input line 9.
+LaTeX Font Info:    Trying to load font information for T1+DejaVuSans-TLF on in
+put line 9.
+(/usr/share/texlive/texmf-dist/tex/latex/dejavu/T1DejaVuSans-TLF.fd
+File: T1DejaVuSans-TLF.fd 2011/10/30 Font definitions for T1/DejaVuSans-TLF.
+)
+LaTeX Font Info:    Font shape `T1/DejaVuSans-TLF/m/sl' in size <14.6001> not a
+vailable
+(Font)              Font shape `T1/DejaVuSans-TLF/m/it' tried instead on input 
+line 9.
+LaTeX Font Info:    Calculating math sizes for size <14.6001> on input line 9.
+LaTeX Font Info:    Trying to load font information for OT1+pplx on input line 
+9.
+(/usr/share/texlive/texmf-dist/tex/latex/psnfss/ot1pplx.fd
+File: ot1pplx.fd 2004/09/06 font definitions for OT1/pplx.
+)
+LaTeX Font Info:    Trying to load font information for OML+zplm on input line 
+9.
+(/usr/share/texlive/texmf-dist/tex/latex/psnfss/omlzplm.fd
+File: omlzplm.fd 2002/09/08 Fontinst v1.914 font definitions for OML/zplm.
+)
+LaTeX Font Info:    Trying to load font information for OMS+zplm on input line 
+9.
+(/usr/share/texlive/texmf-dist/tex/latex/psnfss/omszplm.fd
+File: omszplm.fd 2002/09/08 Fontinst v1.914 font definitions for OMS/zplm.
+)
+LaTeX Font Info:    Trying to load font information for OMX+zplm on input line 
+9.
+(/usr/share/texlive/texmf-dist/tex/latex/psnfss/omxzplm.fd
+File: omxzplm.fd 2002/09/08 Fontinst v1.914 font definitions for OMX/zplm.
+)
+LaTeX Font Info:    Trying to load font information for OT1+zplm on input line 
+9.
+(/usr/share/texlive/texmf-dist/tex/latex/psnfss/ot1zplm.fd
+File: ot1zplm.fd 2002/09/08 Fontinst v1.914 font definitions for OT1/zplm.
+) (/usr/share/texlive/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
+[Loading MPS to PDF converter (version 2006.09.02).]
+\scratchcounter=\count288
+\scratchdimen=\dimen156
+\scratchbox=\box67
+\nofMPsegments=\count289
+\nofMParguments=\count290
+\everyMPshowfont=\toks28
+\MPscratchCnt=\count291
+\MPscratchDim=\dimen157
+\MPnumerator=\count292
+\makeMPintoPDFobject=\count293
+\everyMPtoPDFconversion=\toks29
+) (/usr/share/texlive/texmf-dist/tex/latex/epstopdf-pkg/epstopdf-base.sty
+Package: epstopdf-base 2020-01-24 v2.11 Base part for package epstopdf
+Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 4
+85.
+(/usr/share/texlive/texmf-dist/tex/latex/latexconfig/epstopdf-sys.cfg
+File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Liv
+e
+))
+\big@size=\dimen158
+(/usr/share/texlive/texmf-dist/tex/latex/pdflscape/pdflscape.sty
+Package: pdflscape 2019/12/05 v0.12 Display of landscape pages in PDF (HO)
+(/usr/share/texlive/texmf-dist/tex/generic/iftex/iftex.sty
+Package: iftex 2020/03/06 v1.0d TeX engine tests
+) (/usr/share/texlive/texmf-dist/tex/latex/graphics/lscape.sty
+Package: lscape 2020/05/28 v3.02 Landscape Pages (DPC)
+)
+Package pdflscape Info: Auto-detected driver: pdftex on input line 81.
+) (./table-of-contents.tex
+! Undefined control sequence.
+l.6 \item[1] \textsb
+                    {Amazing Grace}
+The control sequence at the end of the top line
+of your error message was never \def'ed. If you have
+misspelled it (e.g., `\hobx'), type `I' and the correct
+spelling (e.g., `I\hbox'). Otherwise just continue,
+and I'll forget about whatever was undefined.
+
+! Undefined control sequence.
+l.7 \item[2] \textsb
+                    {Gott hat sich find gemacht}
+The control sequence at the end of the top line
+of your error message was never \def'ed. If you have
+misspelled it (e.g., `\hobx'), type `I' and the correct
+spelling (e.g., `I\hbox'). Otherwise just continue,
+and I'll forget about whatever was undefined.
+
+! Undefined control sequence.
+l.8 \item[3] \textsb
+                    {Be Thou My Vision}
+The control sequence at the end of the top line
+of your error message was never \def'ed. If you have
+misspelled it (e.g., `\hobx'), type `I' and the correct
+spelling (e.g., `I\hbox'). Otherwise just continue,
+and I'll forget about whatever was undefined.
+
+) (./generated-songs.tex
+LaTeX Font Info:    Font shape `T1/DejaVuSans-TLF/m/sl' in size <16> not availa
+ble
+(Font)              Font shape `T1/DejaVuSans-TLF/m/it' tried instead on input 
+line 13.
+LaTeX Font Info:    Font shape `T1/DejaVuSans-TLF/m/sl' in size <23.04004> not 
+available
+(Font)              Font shape `T1/DejaVuSans-TLF/m/it' tried instead on input 
+line 13.
+LaTeX Font Info:    Font shape `T1/pplx/m/sl' in size <8> not available
+(Font)              Font shape `T1/pplx/m/it' tried instead on input line 13.
+[1
+
+
+{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}] [2]) [3]
+\openout3 = `liedindex.sxd'.
+
+
+(/home/mike/src/songbook-oc/tmp/9117bf98-6f81-4747-8c91-be6286571d98/chorded.sx
+c)
+(/home/mike/src/songbook-oc/tmp/9117bf98-6f81-4747-8c91-be6286571d98/chorded.au
+x)
+
+LaTeX Font Warning: Size substitutions with differences
+(Font)              up to 2.76794pt have occurred.
+
+ ) 
+Here is how much of TeX's memory you used:
+ 7664 strings out of 478287
+ 146478 string characters out of 5849289
+ 591493 words of memory out of 5000000
+ 25751 multiletter control sequences out of 15000+600000
+ 506713 words of font info for 80 fonts, out of 8000000 for 9000
+ 1141 hyphenation exceptions out of 8191
+ 113i,6n,109p,10685b,344s stack positions out of 5000i,500n,10000p,200000b,80000s
+{/usr/share/texlive/texmf-dist/fonts/enc/dvips/dejavu/dejavusans_t1-type1.enc
+}{/usr/share/texlive/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/share/texlive
+/texmf-dist/fonts/type1/public/dejavu/DejaVuSans-Bold.pfb></usr/share/texlive/t
+exmf-dist/fonts/type1/public/dejavu/DejaVuSans-Oblique.pfb></usr/share/texlive/
+texmf-dist/fonts/type1/urw/palatino/uplb8a.pfb></usr/share/texlive/texmf-dist/f
+onts/type1/urw/palatino/uplr8a.pfb>
+Output written on /home/mike/src/songbook-oc/tmp/9117bf98-6f81-4747-8c91-be6286
+571d98/chorded.pdf (3 pages, 59635 bytes).
+PDF statistics:
+ 36 PDF objects out of 1000 (max. 8388607)
+ 22 compressed objects within 1 object stream
+ 0 named destinations out of 1000 (max. 500000)
+ 1 words of extra memory for PDF output out of 10000 (max. 10000000)
+

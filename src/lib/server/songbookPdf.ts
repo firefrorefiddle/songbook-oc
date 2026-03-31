@@ -135,7 +135,7 @@ function generateTableOfContents(songs: TocSongEntry[]): string {
   for (let i = 0; i < songs.length; i++) {
     const song = songs[i];
     const songNumber = i + 1;
-    tocLines.push(`\\item[${songNumber}] \\textsb{${song.songVersion.title}}`);
+    tocLines.push(`\\item[${songNumber}] \\textbf{${song.songVersion.title}}`);
   }
 
   tocLines.push("\\end{songtoc}");
@@ -225,9 +225,10 @@ export async function generateSongbookPdf(
     );
 
     const pdfPath = join(storageDir, `${version.id}.pdf`);
-    const logPath = join(tempDir, "chorded.log");
+    const logPath = join(storageDir, `${version.id}.log`);
 
     await copyFile(join(tempDir, "chorded.pdf"), pdfPath);
+    await copyFile(join(tempDir, "chorded.log"), logPath);
 
     await prisma.songbookVersion.update({
       where: { id: version.id },
@@ -240,7 +241,11 @@ export async function generateSongbookPdf(
 
     return { pdfPath, logPath };
   } catch (error) {
-    const logPath = join(tempDir, "chorded.log");
+    const logPath = join(storageDir, `${version.id}.log`);
+    const tempLogPath = join(tempDir, "chorded.log");
+    if (existsSync(tempLogPath)) {
+      await copyFile(tempLogPath, logPath);
+    }
     await prisma.songbookVersion.update({
       where: { id: version.id },
       data: {
@@ -249,5 +254,7 @@ export async function generateSongbookPdf(
       },
     });
     throw error;
+  } finally {
+    await cleanupTempDir(tempDir);
   }
 }

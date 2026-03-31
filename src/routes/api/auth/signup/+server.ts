@@ -2,6 +2,7 @@ import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { prisma } from "$lib/server/prisma";
 import bcrypt from "bcryptjs";
+import { EMAIL_VERIFICATION } from "$env/static/private";
 
 export const POST: RequestHandler = async ({ request }) => {
   const body = await request.json();
@@ -33,7 +34,8 @@ export const POST: RequestHandler = async ({ request }) => {
     throw error(400, "This invite has expired");
   }
 
-  if (!invite.emailVerifiedAt) {
+  const requireVerification = EMAIL_VERIFICATION === "true";
+  if (requireVerification && !invite.emailVerifiedAt) {
     throw error(400, "Please verify your email first");
   }
 
