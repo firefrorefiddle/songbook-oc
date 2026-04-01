@@ -1,6 +1,22 @@
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
+
+function getArgs() {
+  const args: { email?: string; password?: string } = {};
+  const argv = process.argv.slice(2);
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === "--email" && argv[i + 1]) {
+      args.email = argv[i + 1];
+      i++;
+    } else if (argv[i] === "--password" && argv[i + 1]) {
+      args.password = argv[i + 1];
+      i++;
+    }
+  }
+  return args;
+}
 
 const sampleSongs = [
   {
@@ -127,11 +143,32 @@ Thou in me dwelling, and I with thee one`,
 async function seed() {
   console.log("Seeding database...");
 
-  // Get the first admin user to own the seeded content
-  const admin = await prisma.user.findFirst({ where: { role: "ADMIN" } });
-  if (!admin) {
-    console.error("No admin user found. Run /setup first to create an admin.");
+  const args = getArgs();
+
+  if (!args.email || !args.password) {
+    console.error(
+      "Usage: tsx prisma/seed.ts --email <email> --password <password>",
+    );
     process.exit(1);
+  }
+
+  let admin = await prisma.user.findFirst({ where: { role: "ADMIN" } });
+  if (!admin) {
+    console.log(`Creating admin user: ${args.email}`);
+    const passwordHash = await bcrypt.hash(args.password, 12);
+    const emailParts = args.email.split("@");
+    admin = await prisma.user.create({
+      data: {
+        email: args.email.toLowerCase(),
+        firstName: emailParts[0],
+        lastName: "Admin",
+        username: emailParts[0],
+        passwordHash,
+        role: "ADMIN",
+      },
+    });
+  } else {
+    console.log(`Using existing admin user: ${admin.email}`);
   }
   const ownerId = admin.id;
 

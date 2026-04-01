@@ -15,6 +15,7 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
   // JWT strategy avoids needing a Session table in SQLite
   session: { strategy: "jwt" },
   secret: AUTH_SECRET,
+  trustHost: true,
   providers: [
     Credentials({
       credentials: {

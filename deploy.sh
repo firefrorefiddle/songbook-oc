@@ -8,19 +8,42 @@ fi
 
 SERVER="${SERVER:-152.53.251.51}"
 DOMAIN="${DOMAIN:-liedermappe.upscale-automation.com}"
-APP_DIR="/opt/songbook-oc"
+APP_DIR="/home/$USER/songbook-oc"
 USER="${USER:-$USER}"
 
-SSH_OPTS="-o PreferredAuthentications=password -o PubkeyAuthentication=no -o StrictHostKeyChecking=no"
-RSYNC_SSH="sshpass -e ssh $SSH_OPTS"
+SSH_OPTS="-o StrictHostKeyChecking=no"
+RSYNC_SSH="ssh $SSH_OPTS"
 
 show_logs() {
   ssh "$USER@$SERVER" "journalctl -u songbook -n 50 --no-pager"
 }
 
-if [ "$1" = "--logs" ]; then
-  show_logs
-  exit 0
+SEED_DB=""
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --logs)
+      show_logs
+      exit 0
+      ;;
+    --seed)
+      SEED_DB="${2:-prisma/prod.db}"
+      shift 2
+      ;;
+    --seed=*)
+      SEED_DB="${1#*=}"
+      shift
+      ;;
+    *)
+      echo "Unknown option: $1"
+      echo "Usage: $0 [--logs] [--seed[=db-path]]"
+      exit 1
+      ;;
+  esac
+done
+
+if [ -n "$SEED_DB" ] && [ ! -f "$SEED_DB" ]; then
+  echo "Error: Seed database not found: $SEED_DB"
+  exit 1
 fi
 
 echo "=== Building app locally ==="
@@ -43,26 +66,34 @@ rsync -avz --delete -e "$RSYNC_SSH" \
   --exclude='build' \
   . "$USER@$SERVER:$APP_DIR/"
 
+if [ -n "$SEED_DB" ]; then
+  echo "=== Syncing seeded database ==="
+  scp $SSH_OPTS "$SEED_DB" "$USER@$SERVER:$APP_DIR/data/songbook.db"
+fi
+
 echo "=== Syncing build folder ==="
 rsync -avz -e "$RSYNC_SSH" build/ "$USER@$SERVER:$APP_DIR/build/"
 
 echo "=== Ensuring songmaker-cli is executable ==="
-sshpass -e ssh $SSH_OPTS "$USER@$SERVER" "chmod +x $APP_DIR/bin/songmaker-cli"
+ssh $SSH_OPTS "$USER@$SERVER" "chmod +x $APP_DIR/bin/songmaker-cli"
 
 echo "=== Syncing environment file ==="
-sshpass -e scp $SSH_OPTS .env.production "$USER@$SERVER:$APP_DIR/.env"
+scp $SSH_OPTS .env.production "$USER@$SERVER:$APP_DIR/.env"
 
 echo "=== Running post-install on server ==="
-sshpass -e ssh $SSH_OPTS "$USER@$SERVER" "cd $APP_DIR && pnpm install"
+ssh $SSH_OPTS "$USER@$SERVER" "cd $APP_DIR && pnpm install"
 
-echo "=== Restarting service ==="
-sshpass -e ssh $SSH_OPTS "$USER@$SERVER" "sudo systemctl restart songbook"
-
-echo "=== Waiting for service to start ==="
-sleep 3
-
-echo "=== Checking service status ==="
-sshpass -e ssh $SSH_OPTS "$USER@$SERVER" "sudo systemctl status songbook --no-pager"
+echo "=== Restarting app ==="
+ssh $SSH_OPTS "$USER@$SERVER" "
+  systemctl --user restart songbook
+  sleep 2
+  if systemctl --user is-active --quiet songbook; then
+    echo 'App started successfully'
+  else
+    echo 'App failed to start'
+    journalctl --user -u songbook --no-pager -n 10
+  fi
+"
 
 echo "=== Deployment complete ==="
 echo "App available at: http://$DOMAIN"
