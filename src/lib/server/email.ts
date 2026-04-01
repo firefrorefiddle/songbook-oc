@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { prisma } from "./prisma";
 
-type EmailTemplate = "invite";
+type EmailTemplate = "invite" | "password_reset";
 type EmailTransport = "log" | "sendmail";
 
 interface EmailMessage {
@@ -22,6 +22,14 @@ interface InviteEmailInput {
   expiresAt: Date;
   invitedByName?: string | null;
   requireEmailVerification: boolean;
+}
+
+interface PasswordResetEmailInput {
+  passwordResetTokenId: string;
+  toEmail: string;
+  resetUrl: string;
+  expiresAt: Date;
+  userDisplayName?: string | null;
 }
 
 interface SendEmailResult {
@@ -136,6 +144,12 @@ export function buildInviteSignupUrl(baseUrl: string, token: string, email: stri
   return url.toString();
 }
 
+export function buildPasswordResetUrl(baseUrl: string, token: string) {
+  const url = new URL("/reset-password", baseUrl);
+  url.searchParams.set("token", token);
+  return url.toString();
+}
+
 export function buildInviteEmail(input: Omit<InviteEmailInput, "inviteId" | "toEmail">) {
   const inviterLine = input.invitedByName
     ? `${input.invitedByName} invited you to join Songbook.`
@@ -158,23 +172,50 @@ export function buildInviteEmail(input: Omit<InviteEmailInput, "inviteId" | "toE
   };
 }
 
-export async function sendInviteEmail(input: InviteEmailInput): Promise<SendEmailResult> {
-  const from = getFromAddress();
-  const rendered = buildInviteEmail(input);
+export function buildPasswordResetEmail(
+  input: Omit<PasswordResetEmailInput, "passwordResetTokenId" | "toEmail">,
+) {
+  const greeting = input.userDisplayName
+    ? `Hello ${input.userDisplayName},`
+    : "Hello,";
+  const expiresLine = `This reset link expires on ${input.expiresAt.toLocaleString("en-GB")}.`;
 
+  return {
+    subject: "Reset your Songbook password",
+    text: [
+      greeting,
+      "",
+      "We received a request to reset your Songbook password.",
+      "Open the link below to choose a new password.",
+      expiresLine,
+      "",
+      "If you did not request this, you can ignore this email.",
+      "",
+      input.resetUrl,
+    ].join("\n"),
+  };
+}
+
+async function sendTrackedEmail(input: {
+  template: EmailTemplate;
+  toEmail: string;
+  subject: string;
+  text: string;
+  metadata: string;
+  inviteId?: string;
+  passwordResetTokenId?: string;
+}): Promise<SendEmailResult> {
+  const from = getFromAddress();
   const delivery = await prisma.emailDelivery.create({
     data: {
-      template: "invite",
+      template: input.template,
       toEmail: input.toEmail,
       fromEmail: from,
-      subject: rendered.subject,
+      subject: input.subject,
       transport: getEmailTransport(),
+      metadata: input.metadata,
       inviteId: input.inviteId,
-      metadata: JSON.stringify({
-        signupUrl: input.signupUrl,
-        expiresAt: input.expiresAt.toISOString(),
-        requireEmailVerification: input.requireEmailVerification,
-      }),
+      passwordResetTokenId: input.passwordResetTokenId,
     },
   });
 
@@ -182,8 +223,8 @@ export async function sendInviteEmail(input: InviteEmailInput): Promise<SendEmai
     const dispatch = await dispatchEmail({
       from,
       to: input.toEmail,
-      subject: rendered.subject,
-      text: rendered.text,
+      subject: input.subject,
+      text: input.text,
     });
 
     await prisma.emailDelivery.update({
@@ -218,4 +259,39 @@ export async function sendInviteEmail(input: InviteEmailInput): Promise<SendEmai
       errorMessage,
     };
   }
+}
+
+export async function sendInviteEmail(input: InviteEmailInput): Promise<SendEmailResult> {
+  const rendered = buildInviteEmail(input);
+
+  return sendTrackedEmail({
+    template: "invite",
+    toEmail: input.toEmail,
+    subject: rendered.subject,
+    text: rendered.text,
+    inviteId: input.inviteId,
+    metadata: JSON.stringify({
+      signupUrl: input.signupUrl,
+      expiresAt: input.expiresAt.toISOString(),
+      requireEmailVerification: input.requireEmailVerification,
+    }),
+  });
+}
+
+export async function sendPasswordResetEmail(
+  input: PasswordResetEmailInput,
+): Promise<SendEmailResult> {
+  const rendered = buildPasswordResetEmail(input);
+
+  return sendTrackedEmail({
+    template: "password_reset",
+    toEmail: input.toEmail,
+    subject: rendered.subject,
+    text: rendered.text,
+    passwordResetTokenId: input.passwordResetTokenId,
+    metadata: JSON.stringify({
+      resetUrl: input.resetUrl,
+      expiresAt: input.expiresAt.toISOString(),
+    }),
+  });
 }

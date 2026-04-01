@@ -12,6 +12,8 @@ vi.mock("./prisma", () => ({
 import {
   buildInviteEmail,
   buildInviteSignupUrl,
+  buildPasswordResetEmail,
+  buildPasswordResetUrl,
   resolvePublicBaseUrl,
 } from "./email";
 
@@ -25,6 +27,17 @@ describe("email helpers", () => {
 
     expect(signupUrl).toBe(
       "https://songbook.example.org/signup?token=token-123&email=user%2Btest%40example.org",
+    );
+  });
+
+  it("builds an absolute password reset URL", () => {
+    const resetUrl = buildPasswordResetUrl(
+      "https://songbook.example.org",
+      "token-123",
+    );
+
+    expect(resetUrl).toBe(
+      "https://songbook.example.org/reset-password?token=token-123",
     );
   });
 
@@ -56,5 +69,20 @@ describe("email helpers", () => {
 
     expect(message.text).toContain("Open the signup link to create your account.");
     expect(message.text).not.toContain("verify your email address");
+  });
+
+  it("renders password reset copy with the reset link", () => {
+    const message = buildPasswordResetEmail({
+      resetUrl: "https://songbook.example.org/reset-password?token=abc",
+      expiresAt: new Date("2026-04-08T12:00:00Z"),
+      userDisplayName: "Jane User",
+    });
+
+    expect(message.subject).toBe("Reset your Songbook password");
+    expect(message.text).toContain("Hello Jane User,");
+    expect(message.text).toContain("reset your Songbook password");
+    expect(message.text).toContain(
+      "https://songbook.example.org/reset-password?token=abc",
+    );
   });
 });

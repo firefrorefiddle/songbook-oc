@@ -11,7 +11,7 @@ A songbook management application for managing songs, song versions, and songboo
 - **Search**: Filter songs and songbooks by title
 - **Taxonomy**: Imported songs can carry first-class categories and tags
 - **Validation**: Form validation with helpful error messages
-- **Transactional Email**: Invite delivery via configurable email transport with local logging fallback
+- **Transactional Email**: Invite and password reset delivery via configurable email transport with local logging fallback
 
 ## Tech Stack
 
@@ -43,6 +43,8 @@ pnpm db:seed -- --email <email> --password <password>
 The first user is created via the `/setup` page when no users exist. Alternatively, use the seed script with admin credentials.
 
 Admins can manage users from `/admin/users`, where they can review ownership and collaboration footprint, deactivate or reactivate accounts, and resend pending invite links.
+
+Users who forget their password can request a reset link from `/forgot-password`.
 
 ### Development
 

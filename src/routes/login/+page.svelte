@@ -48,6 +48,18 @@
 			</div>
 		{/if}
 
+		{#if data.reset}
+			<div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
+				Your password has been reset. Sign in with your new password.
+			</div>
+		{/if}
+
+		{#if data.deactivated}
+			<div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+				This account has been deactivated. Contact an administrator if you need access restored.
+			</div>
+		{/if}
+
 		<div class="bg-white shadow rounded-lg p-8 space-y-6">
 			{#if error}
 				<div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
@@ -79,8 +91,13 @@
 						type="password"
 						bind:value={password}
 						required
+						autocomplete="current-password"
 						class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
 					/>
+				</div>
+
+				<div class="text-right text-sm">
+					<a href="/forgot-password" class="text-blue-600 hover:text-blue-700">Forgot password?</a>
 				</div>
 
 				<button

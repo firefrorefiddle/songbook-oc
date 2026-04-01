@@ -13,27 +13,28 @@ datasource db {
 // ---------------------------------------------------------------------------
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  firstName    String?
-  lastName     String?
-  username     String?  @unique
+  id            String    @id @default(cuid())
+  email         String    @unique
+  firstName     String?
+  lastName      String?
+  username      String?   @unique
   // Deprecated: use firstName + lastName instead
-  name         String?
+  name          String?
   // null when the account was created via OAuth only
   passwordHash  String?
-  role          Role     @default(USER)
-  isActive      Boolean  @default(true)
+  role          Role      @default(USER)
+  isActive      Boolean   @default(true)
   deactivatedAt DateTime?
-  createdAt     DateTime @default(now())
+  createdAt     DateTime  @default(now())
 
-  ownedSongs               Song[]                  @relation("SongOwner")
-  ownedSongbooks           Songbook[]              @relation("SongbookOwner")
-  collaborations           Collaboration[]
-  invitesSent              Invite[]                @relation("InviteSender")
-  invite                   Invite?                 @relation("InviteUser")
+  ownedSongs                Song[]                @relation("SongOwner")
+  ownedSongbooks            Songbook[]            @relation("SongbookOwner")
+  collaborations            Collaboration[]
+  invitesSent               Invite[]              @relation("InviteSender")
+  invite                    Invite?               @relation("InviteUser")
   // InviteCollaborations where this user is the resource owner
-  inviteCollaborationsOwned InviteCollaboration[]  @relation("InviteCollabOwner")
+  inviteCollaborationsOwned InviteCollaboration[] @relation("InviteCollabOwner")
+  passwordResetTokens       PasswordResetToken[]
 }
 
 enum Role {
@@ -81,9 +82,9 @@ model Song {
   owner   User   @relation("SongOwner", fields: [ownerId], references: [id])
 
   // set when this song was forked from another song
-  forkedFromId String?
-  forkedFrom   Song?   @relation("SongForks", fields: [forkedFromId], references: [id])
-  forks        Song[]  @relation("SongForks")
+  forkedFromId         String?
+  forkedFrom           Song?        @relation("SongForks", fields: [forkedFromId], references: [id])
+  forks                Song[]       @relation("SongForks")
   recommendedVersionId String?
   recommendedVersion   SongVersion? @relation("RecommendedSongVersion", fields: [recommendedVersionId], references: [id], onDelete: SetNull)
 
@@ -103,8 +104,8 @@ model SongVersion {
   metadata  String   @default("{}")
   createdAt DateTime @default(now())
 
-  recommendedForSongs Song[] @relation("RecommendedSongVersion")
-  songbookSongs SongbookSong[]
+  recommendedForSongs Song[]         @relation("RecommendedSongVersion")
+  songbookSongs       SongbookSong[]
 }
 
 model SongTag {
@@ -195,8 +196,8 @@ model SongbookSong {
 // A Collaboration record grants a user edit access to a song or songbook.
 // Exactly one of songId / songbookId must be set (enforced at application level).
 model Collaboration {
-  id   String        @id @default(cuid())
-  role CollabRole    @default(EDITOR)
+  id   String     @id @default(cuid())
+  role CollabRole @default(EDITOR)
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -227,7 +228,7 @@ model InviteCollaboration {
   id           String     @id @default(cuid())
   role         CollabRole @default(EDITOR)
   // "all" = all songs/songbooks owned by owner at sign-up time
-  resourceType String     // "song" | "songbook"
+  resourceType String // "song" | "songbook"
 
   ownerId String
   owner   User   @relation("InviteCollabOwner", fields: [ownerId], references: [id])
@@ -249,18 +250,36 @@ model EmailDelivery {
   transport String
   status    EmailDeliveryStatus @default(PENDING)
 
-  metadata          String  @default("{}")
+  metadata          String    @default("{}")
   providerMessageId String?
   errorMessage      String?
   sentAt            DateTime?
-  createdAt         DateTime @default(now())
+  createdAt         DateTime  @default(now())
 
   inviteId String?
   invite   Invite? @relation(fields: [inviteId], references: [id], onDelete: SetNull)
+
+  passwordResetTokenId String?
+  passwordResetToken   PasswordResetToken? @relation(fields: [passwordResetTokenId], references: [id], onDelete: SetNull)
 }
 
 enum EmailDeliveryStatus {
   PENDING
   SENT
   FAILED
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  emailDeliveries EmailDelivery[]
+
+  @@index([userId, usedAt, expiresAt])
 }

@@ -70,9 +70,9 @@ This file tracks the current state of work, improvements, and technical debt for
 
 ### Password reset by email
 
-- **Status**: pending
+- **Status**: completed
 - **Priority**: high
-- **Description**: Implement a secure password reset flow with single-use tokens, expiry, and clear success or failure states. This removes the need for manual admin intervention when users forget passwords and is necessary for stable day-to-day operation.
+- **Description**: Implemented a secure password reset flow with single-use emailed tokens, hashed token storage, expiry handling, public request/reset pages, and clear invalid, expired, used, and success states. This removes the need for manual admin intervention when users forget passwords.
 
 ### User directory
 
@@ -241,6 +241,21 @@ This file tracks the current state of work, improvements, and technical debt for
 
 - Login-only deactivation checks: rejected because existing sessions would keep access.
 - Folding ownership reassignment and audit history into this change: deferred to dedicated backlog items to keep scope tight.
+
+---
+
+**Date**: 2026-04-01
+**Context**: Password resets were still handled manually via a script, even though invite delivery and transactional email tracking already existed. The app needed a self-service flow without leaking which email addresses are registered.
+**Decision**:
+
+- Add a dedicated `PasswordResetToken` model with hashed tokens, expiry, and single-use semantics.
+- Reuse the transactional email service for reset delivery and `EmailDelivery` auditing instead of creating a separate mail path.
+- Make the request screen return a generic success message regardless of whether the email exists, while the reset screen shows explicit invalid, expired, used, and success states once the user follows a link.
+
+**Alternatives considered**:
+
+- Storing raw reset tokens: rejected because a database leak would make outstanding reset links immediately usable.
+- Showing request-time errors for unknown email addresses: rejected because it leaks account existence and is unnecessary for the user flow.
 
 ---
 
