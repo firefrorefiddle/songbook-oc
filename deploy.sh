@@ -9,10 +9,19 @@ fi
 SERVER="${SERVER:-152.53.251.51}"
 DOMAIN="${DOMAIN:-liedermappe.upscale-automation.com}"
 APP_DIR="/opt/songbook-oc"
-USER="root"
+USER="${USER:-$USER}"
 
 SSH_OPTS="-o PreferredAuthentications=password -o PubkeyAuthentication=no -o StrictHostKeyChecking=no"
 RSYNC_SSH="sshpass -e ssh $SSH_OPTS"
+
+show_logs() {
+  ssh "$USER@$SERVER" "journalctl -u songbook -n 50 --no-pager"
+}
+
+if [ "$1" = "--logs" ]; then
+  show_logs
+  exit 0
+fi
 
 echo "=== Building app locally ==="
 pnpm install
