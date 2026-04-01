@@ -18,6 +18,7 @@ declare module "@auth/sveltekit" {
     user: {
       id: string;
       role: string;
+      isActive?: boolean;
       firstName?: string | null;
       lastName?: string | null;
       username?: string | null;
@@ -32,6 +33,8 @@ declare module "@prisma/client" {
     firstName: string | null;
     lastName: string | null;
     username: string | null;
+    isActive: boolean;
+    deactivatedAt: Date | null;
   }
 }
 

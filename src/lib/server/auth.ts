@@ -32,7 +32,7 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
           },
         });
 
-        if (!user?.passwordHash) return null;
+        if (!user?.passwordHash || !user.isActive) return null;
 
         const valid = await bcrypt.compare(
           credentials.password as string,
@@ -47,6 +47,7 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
           lastName: user.lastName,
           username: user.username,
           role: user.role,
+          isActive: user.isActive,
         };
       },
     }),
@@ -64,6 +65,7 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
         token.firstName = (user as any).firstName;
         token.lastName = (user as any).lastName;
         token.username = (user as any).username;
+        token.isActive = (user as any).isActive;
       }
       // Always refresh role and names from DB on each JWT creation/refresh
       if (token.email) {
@@ -71,6 +73,7 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
           where: { email: token.email },
         });
         token.role = dbUser?.role ?? "USER";
+        token.isActive = dbUser?.isActive ?? false;
         if (dbUser) {
           token.id = dbUser.id;
           token.firstName = dbUser.firstName;
@@ -86,12 +89,14 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
         const user = session.user as {
           id: string;
           role: string;
+          isActive?: boolean;
           firstName?: string | null;
           lastName?: string | null;
           username?: string | null;
         } & typeof session.user;
         user.id = token.id as string;
         user.role = token.role as string;
+        user.isActive = token.isActive as boolean | undefined;
         user.firstName = token.firstName as string | null;
         user.lastName = token.lastName as string | null;
         user.username = token.username as string | null;
