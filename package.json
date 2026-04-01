@@ -15,7 +15,7 @@
     "test:run": "vitest run",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
-    "db:seed-liedermappe": "tsx prisma/seed-liedermappe.ts",
+    "db:seed-from-files": "tsx prisma/seed-liedermappe.ts",
     "db:studio": "prisma studio",
     "user:reset-password": "tsx scripts/user-reset-password.ts",
     "user:create": "tsx scripts/user-create.ts",

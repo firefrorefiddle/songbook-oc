@@ -109,7 +109,7 @@ Located in `src/lib/server/latex/`:
 
 - `layout.tex` - Document class and page setup
 - `font.tex` - Font configuration and song formatting
-- `songs.sty` - Song package (copied from Liedermappe)
+- `songs.sty` - Song package (from seed_data)
 - `chorded.tex` - Main template for songbook PDFs
 - `single-song.tex` - Template for single song previews
 
@@ -145,16 +145,17 @@ await execAsync(
 );
 ```
 
-## Liedermappe Reference
+## Seed Data Reference
 
-The Liedermappe project (at `/home/mike/src/Liedermappe`) is the source of the original .sng files and LaTeX templates:
+The seed data in `seed_data/` contains the .sng files and LaTeX templates:
 
 - `lieder/*.sng` - Source song files
-- `tex/chorded.tex` - Original chorded template
-- `tex/songs.sty` - Original songs package
-- `make.sh` - Build script showing the full process
+- `tex/chorded.tex` - Chorded template
+- `tex/songs.sty` - Songs package
+- `tex/layout.tex` - Document layout
+- `tex/font.tex` - Font configuration
 
-Use Liedermappe as reference for:
+Use seed_data as reference for:
 
 - Correct .sng file format
 - LaTeX template structure

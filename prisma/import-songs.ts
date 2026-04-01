@@ -1,6 +1,12 @@
 import { PrismaClient } from "@prisma/client";
 import { readdir, readFile } from "fs/promises";
-import { join, basename } from "path";
+import { basename } from "path";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const projectRoot = join(__dirname, "..");
 
 interface SngMetadata {
   title: string;
@@ -171,7 +177,7 @@ async function importSongs(
   await prisma.$disconnect();
 }
 
-const sngDir = process.argv[2] || "/home/mike/src/Liedermappe/lieder";
+const sngDir = process.argv[2] || join(projectRoot, "seed_data", "lieder");
 const clearExisting = process.argv.includes("--clear");
 
 importSongs(sngDir, clearExisting).catch((e) => {

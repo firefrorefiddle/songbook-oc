@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { readFileSync, readdirSync, existsSync } from "fs";
-import { join, basename } from "path";
+import { basename } from "path";
 
 const prisma = new PrismaClient();
 
@@ -158,7 +158,14 @@ async function importSongs(sngDir: string, ownerId: string): Promise<void> {
   );
 }
 
-const liedermappeDir = process.argv[2] || "/home/mike/src/Liedermappe";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const projectRoot = join(__dirname, "..");
+
+const liedermappeDir = process.argv[2] || join(projectRoot, "seed_data");
 const clearExisting = process.argv.includes("--clear");
 
 const SONGBOOKS = [
