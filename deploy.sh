@@ -50,7 +50,7 @@ echo "=== Ensuring songmaker-cli is executable ==="
 sshpass -e ssh $SSH_OPTS "$USER@$SERVER" "chmod +x $APP_DIR/bin/songmaker-cli"
 
 echo "=== Syncing environment file ==="
-sshpass -e scp $SSH_OPTS .env.production.example "$USER@$SERVER:$APP_DIR/.env"
+sshpass -e scp $SSH_OPTS .env.production "$USER@$SERVER:$APP_DIR/.env"
 
 echo "=== Running post-install on server ==="
 sshpass -e ssh $SSH_OPTS "$USER@$SERVER" "cd $APP_DIR && pnpm install"
