@@ -58,6 +58,170 @@ This file tracks the current state of work, improvements, and technical debt for
 - **Priority**: medium
 - **Description**: API + UI for forking a song/songbook. Show forked-from reference.
 
+## Roadmap
+
+### Email sending infrastructure
+
+- **Status**: pending
+- **Priority**: high
+- **Description**: Add a central mail service for transactional emails such as invites, email verification, password reset, ownership transfer, and notification digests. The implementation should support templates, retries, and delivery status tracking so admins can see whether important messages were actually sent.
+
+### Password reset by email
+
+- **Status**: pending
+- **Priority**: high
+- **Description**: Implement a secure password reset flow with single-use tokens, expiry, and clear success or failure states. This removes the need for manual admin intervention when users forget passwords and is necessary for stable day-to-day operation.
+
+### User directory
+
+- **Status**: pending
+- **Priority**: high
+- **Description**: Add a "People" page where users can search for others by name or email and quickly understand who is part of the community. This should become the main entry point for sharing and collaboration without requiring users to remember exact email addresses.
+
+### Shared with me dashboard
+
+- **Status**: pending
+- **Priority**: high
+- **Description**: Create a dedicated view listing all songs and songbooks others have shared with the current user, with filters for recent items, editable items, and owner. Users should not need to search the entire library just to find content that was explicitly shared with them.
+
+### Sharing management UI with clear roles
+
+- **Status**: pending
+- **Priority**: high
+- **Description**: Add UI on songs and songbooks to show owner, collaborators, and permission levels in one place. Users should be able to add or remove collaborators, adjust roles, and understand what each role allows without admin help.
+
+### Fine-grained sharing for specific songs and songbooks
+
+- **Status**: pending
+- **Priority**: high
+- **Description**: Extend the collaboration model so users can share individual songs, specific songbooks, or selected content sets rather than only broad owner-level access. This includes the existing follow-up for invite-based sharing of specific songs and songbooks.
+
+### Collaboration roles expansion
+
+- **Status**: pending
+- **Priority**: medium
+- **Description**: Refine permissions into a clearer model such as `viewer`, `editor`, `manager`, and `owner`. This should support printing without editing, editing without resharing, and delegated management without losing ownership control.
+
+### Ownership transfer and stewardship tools
+
+- **Status**: pending
+- **Priority**: medium
+- **Description**: Finish ownership transfer for individual items and bulk transfer, with safeguards around accidental changes. The app should support continuity when responsibilities change so content does not get stranded with inactive users.
+
+### Friends and trusted collaborators
+
+- **Status**: pending
+- **Priority**: medium
+- **Description**: Let users mark frequent collaborators so they appear first in sharing dialogs and directory results. This keeps common workflows fast for church teams where the same people work together regularly.
+
+### Groups
+
+- **Status**: pending
+- **Priority**: medium
+- **Description**: Add user-managed or admin-managed groups such as "Worship Team", "Youth", or "Tech Team". Groups should reflect how church collaboration works in practice and reduce the amount of repeated sharing setup.
+
+### Group-based sharing
+
+- **Status**: pending
+- **Priority**: medium
+- **Description**: Allow songs and songbooks to be shared directly with groups instead of only individuals. Membership changes should update access automatically so collaboration stays maintainable as teams change.
+
+### Community profile visibility
+
+- **Status**: pending
+- **Priority**: low
+- **Description**: Show light profile information such as display name, optional team or church note, recent activity presence, and what the user has shared with you. The goal is not social networking, but enough context to make collaboration understandable and human.
+
+### Activity log
+
+- **Status**: pending
+- **Priority**: high
+- **Description**: Add an activity feed for important events such as create, edit, fork, share, archive, ownership change, and invite acceptance. Shared systems work better when users and admins can answer "what happened?" without guessing.
+
+### Notifications
+
+- **Status**: pending
+- **Priority**: medium
+- **Description**: Introduce in-app notifications for collaboration events, with optional email delivery for important actions. Users should be informed when content is shared with them, when access changes, or when a new version appears in content they work on.
+
+### Admin user management
+
+- **Status**: pending
+- **Priority**: medium
+- **Description**: Provide an admin view for browsing users, deactivating accounts, resending invites, checking verification state, and reviewing collaboration footprint. Even in a trusted internal community, basic operational controls are needed to keep the system healthy.
+
+### Mail delivery and audit visibility
+
+- **Status**: pending
+- **Priority**: medium
+- **Description**: Add admin-level visibility into whether system emails were queued, sent, failed, or bounced, and keep audit records for key account and permission events. This is necessary for real support work when users report that they never received an email.
+
+### Better search and filtering
+
+- **Status**: pending
+- **Priority**: medium
+- **Description**: Improve search across titles, lyrics, authors, metadata, and ownership or sharing scope. As the library grows, search quality becomes one of the highest-leverage productivity features for building songbooks quickly.
+
+### Tags and categories
+
+- **Status**: pending
+- **Priority**: medium
+- **Description**: Support tags like `Christmas`, `Easter`, `Youth`, `Opening`, `Communion`, `German`, or `English`, with filters in song and songbook flows. This matches how churches think about songs and will make collection building much faster.
+
+### Version comparison and recommended versions
+
+- **Status**: pending
+- **Priority**: medium
+- **Description**: Show differences between song versions and allow a preferred version to be marked for reuse or printing. This helps teams collaborate without confusion when multiple variants of the same song exist.
+
+### Duplicate detection and metadata quality checks
+
+- **Status**: pending
+- **Priority**: low
+- **Description**: Warn when newly created songs look very similar to existing ones, and surface missing metadata such as author or copyright before export. These checks reduce long-term library mess and prevent quality issues from accumulating silently.
+
+### Song collection presentation generation
+
+- **Status**: pending
+- **Priority**: high
+- **Description**: Add a new output mode for song collections intended for on-screen presentation using the overhead LaTeX layout and a clickable table of contents at the beginning. This should be optimized for projection use and navigation rather than simply reusing the print flow.
+
+### Presentation mode in the app
+
+- **Status**: pending
+- **Priority**: high
+- **Description**: Create a browser-based presentation mode that can open a generated collection and step through songs cleanly, ideally with keyboard navigation and quick jumps via the table of contents. This makes the app usable during rehearsals, meetings, and services without leaving the system.
+
+### Presentation-friendly songbook options
+
+- **Status**: pending
+- **Priority**: medium
+- **Description**: Allow users to choose between print layout and presentation layout when generating a songbook, with settings for chord visibility, font size, and section display. Projection and paper serve different needs, so output should be intentional rather than one-size-fits-all.
+
+### Reusable song collections and setlists
+
+- **Status**: pending
+- **Priority**: medium
+- **Description**: Let users assemble temporary or reusable collections for events, services, or practice evenings, then print them or present them on screen. This bridges the gap between the raw song library and the actual workflow of preparing content for gatherings.
+
+### Single-community visibility rules cleanup
+
+- **Status**: pending
+- **Priority**: medium
+- **Description**: Formalize the visibility model around `private`, `shared`, and `community-visible` content so users can understand who can see what. The app should stay a single shared community while still supporting selective collaboration across trusted people.
+
+### Inactive user stewardship
+
+- **Status**: pending
+- **Priority**: medium
+- **Description**: Add a process for handling inactive users without deleting their history, such as deactivation plus optional ownership reassignment. Church responsibilities change often, and the app should preserve continuity of shared content.
+
+### Community publishing and discoverability
+
+- **Status**: pending
+- **Priority**: medium
+- **Description**: Allow users to explicitly publish selected songs or songbooks to the wider authenticated community while keeping other items private or selectively shared. This supports the "invite our friends and share songs" model without introducing separate workspaces.
+
 ---
 
 _Update this file on each commit per the Definition of Done._
