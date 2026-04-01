@@ -55,6 +55,10 @@
 				</div>
 			{/if}
 
+			<div class="text-center text-sm">
+				<a href="/impressum" class="text-blue-600 hover:text-blue-700">Impressum</a>
+			</div>
+
 			<form onsubmit={handleCredentials} class="space-y-4">
 				<div>
 					<label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email or Username</label>
