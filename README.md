@@ -194,15 +194,17 @@ The deploy script:
 
 ### Environment Variables
 
-Create `.env.production`:
+Create `.env.production` in the app directory on the server:
 
 ```
-DATABASE_URL="file:./data/songbook.db"
+DATABASE_URL="file:/home/<username>/songbook-oc/data/songbook.db"
 AUTH_SECRET="<generate-a-secure-random-string>"
 GOOGLE_CLIENT_ID=""
 GOOGLE_CLIENT_SECRET=""
 EMAIL_VERIFICATION=false
 ```
+
+**Important**: Use an absolute path for the database, not a relative path. The working directory of the systemd service may differ from where the app is located.
 
 ### Secrets
 
