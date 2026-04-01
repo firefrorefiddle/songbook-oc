@@ -62,9 +62,11 @@ This file tracks the current state of work, improvements, and technical debt for
 
 ### Email sending infrastructure
 
-- **Status**: pending
+- **Status**: completed
 - **Priority**: high
-- **Description**: Add a central mail service for transactional emails such as invites, email verification, password reset, ownership transfer, and notification digests. The implementation should support templates, retries, and delivery status tracking so admins can see whether important messages were actually sent.
+- **Description**: Added a central transactional mail service with `sendmail` and local `log` transports, plus persisted `EmailDelivery` records for delivery tracking. Invite creation now uses this service and records whether the email was sent, logged locally, or failed.
+- **Related**: This commit
+- **Follow-up**: Extend the same service to password reset, notifications, and ownership transfer emails.
 
 ### Password reset by email
 
@@ -146,9 +148,11 @@ This file tracks the current state of work, improvements, and technical debt for
 
 ### Admin user management
 
-- **Status**: pending
+- **Status**: completed
 - **Priority**: medium
 - **Description**: Provide an admin view for browsing users, deactivating accounts, resending invites, checking verification state, and reviewing collaboration footprint. Even in a trusted internal community, basic operational controls are needed to keep the system healthy.
+- **Related**: This commit
+- **Implementation notes**: Added `/admin/users` with account status controls, pending invite resend, verification visibility, and ownership/collaboration summaries. User deactivation now blocks sign-in and protected-route access.
 
 ### Mail delivery and audit visibility
 
@@ -164,13 +168,14 @@ This file tracks the current state of work, improvements, and technical debt for
 
 ### Tags and categories
 
-- **Status**: pending
+- **Status**: in progress
 - **Priority**: medium
 - **Description**: Support tags like `Christmas`, `Easter`, `Youth`, `Opening`, `Communion`, `German`, or `English`, with filters in song and songbook flows. This matches how churches think about songs and will make collection building much faster.
+- **Progress**: Liedermappe import now persists first-class song tags and categories, inferred from source collections plus conservative language/keyword rules. Song and songbook filtering UI still needs to be built.
 
 ### Version comparison and recommended versions
 
-- **Status**: pending
+- **Status**: done (2026-04-01)
 - **Priority**: medium
 - **Description**: Show differences between song versions and allow a preferred version to be marked for reuse or printing. This helps teams collaborate without confusion when multiple variants of the same song exist.
 
@@ -221,6 +226,21 @@ This file tracks the current state of work, improvements, and technical debt for
 - **Status**: pending
 - **Priority**: medium
 - **Description**: Allow users to explicitly publish selected songs or songbooks to the wider authenticated community while keeping other items private or selectively shared. This supports the "invite our friends and share songs" model without introducing separate workspaces.
+
+## Decisions
+
+**Date**: 2026-04-01
+**Context**: Admin user management needed a first operational slice that could disable accounts safely without bundling the later audit and stewardship backlog items into the same change.
+**Decision**:
+
+- Added `isActive` and `deactivatedAt` on `User`.
+- Deactivation blocks credential login and rejects deactivated sessions from protected pages and APIs.
+- The first admin view at `/admin/users` focuses on browsing users, toggling activation, resending pending invites, checking verification state, and reviewing ownership/collaboration counts.
+
+**Alternatives considered**:
+
+- Login-only deactivation checks: rejected because existing sessions would keep access.
+- Folding ownership reassignment and audit history into this change: deferred to dedicated backlog items to keep scope tight.
 
 ---
 

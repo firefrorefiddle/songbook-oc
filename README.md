@@ -6,9 +6,12 @@ A songbook management application for managing songs, song versions, and songboo
 
 - **Songs**: Create, edit, archive songs with multiple versions
 - **Song Versions**: Fork and manage different versions of songs
+- **Version Review**: Compare song versions and mark a recommended version for reuse
 - **Songbooks**: Create songbooks with pinned song versions
 - **Search**: Filter songs and songbooks by title
+- **Taxonomy**: Imported songs can carry first-class categories and tags
 - **Validation**: Form validation with helpful error messages
+- **Transactional Email**: Invite delivery via configurable email transport with local logging fallback
 
 ## Tech Stack
 
@@ -39,6 +42,8 @@ pnpm db:seed -- --email <email> --password <password>
 
 The first user is created via the `/setup` page when no users exist. Alternatively, use the seed script with admin credentials.
 
+Admins can manage users from `/admin/users`, where they can review ownership and collaboration footprint, deactivate or reactivate accounts, and resend pending invite links.
+
 ### Development
 
 ```bash
@@ -48,18 +53,19 @@ pnpm dev
 
 ### Commands
 
-| Command          | Description                    |
-| ---------------- | ------------------------------ |
-| `pnpm dev`       | Start development server       |
-| `pnpm build`     | Build for production           |
-| `pnpm preview`   | Preview production build       |
-| `pnpm test`      | Run tests                      |
-| `pnpm check`     | Run TypeScript checks          |
-| `pnpm lint`      | Run ESLint                     |
-| `pnpm format`    | Format code with Prettier      |
-| `pnpm db:push`   | Push schema to database        |
-| `pnpm db:seed`   | Seed database with sample data |
-| `pnpm db:studio` | Open Prisma Studio             |
+| Command                   | Description                                                           |
+| ------------------------- | --------------------------------------------------------------------- |
+| `pnpm dev`                | Start development server                                              |
+| `pnpm build`              | Build for production                                                  |
+| `pnpm preview`            | Preview production build                                              |
+| `pnpm test`               | Run tests                                                             |
+| `pnpm check`              | Run TypeScript checks                                                 |
+| `pnpm lint`               | Run ESLint                                                            |
+| `pnpm format`             | Format code with Prettier                                             |
+| `pnpm db:push`            | Push schema to database                                               |
+| `pnpm db:seed`            | Seed database with sample data                                        |
+| `pnpm db:seed-from-files` | Import Liedermappe `.sng` files plus songbook-derived categories/tags |
+| `pnpm db:studio`          | Open Prisma Studio                                                    |
 
 ## Project Structure
 
@@ -82,6 +88,7 @@ prisma/
 ## Database Schema
 
 - **Song**: Main song entity with archived flag
+- **SongTag / SongCategory**: First-class taxonomy used for import and filtering
 - **SongVersion**: Individual versions with title, author, content, metadata
 - **Songbook**: Songbook entity with archived flag
 - **SongbookVersion**: Individual versions with title, description
@@ -202,7 +209,13 @@ AUTH_SECRET="<generate-a-secure-random-string>"
 GOOGLE_CLIENT_ID=""
 GOOGLE_CLIENT_SECRET=""
 EMAIL_VERIFICATION=false
+APP_BASE_URL="https://songbook.example.org"
+EMAIL_TRANSPORT="sendmail"
+EMAIL_FROM="Songbook <no-reply@example.org>"
+EMAIL_SENDMAIL_COMMAND="sendmail"
 ```
+
+For local development, set `EMAIL_TRANSPORT=log` to capture outgoing emails as `.eml` files in `storage/emails/` instead of attempting delivery.
 
 **Important**: Use an absolute path for the database, not a relative path. The working directory of the systemd service may differ from where the app is located.
 
@@ -215,6 +228,13 @@ Never commit secrets to git. The following are automatically ignored:
 - `.env.production` - production secrets
 - `*.db` - database files
 - `prisma/prod.db` - production database
+
+## Imported tags and categories
+
+The Liedermappe import (`pnpm db:seed-from-files`) now persists song taxonomy as relational data instead of only relying on free-form metadata.
+
+- Categories are inferred from the existing source collections such as `gemeinde_songs.tex`, `jugend_songs.tex`, `lager_songs.tex`, and related files.
+- Tags are inferred conservatively from song text and metadata for language (`German`, `English`) and a small starter set of worship-season/service labels such as `Christmas`, `Easter`, `Communion`, and `Opening`.
 
 ## License
 

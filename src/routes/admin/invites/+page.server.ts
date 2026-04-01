@@ -1,4 +1,10 @@
 import type { PageServerLoad, Actions } from "./$types";
+import { EMAIL_VERIFICATION } from "$env/static/private";
+import {
+  buildInviteSignupUrl,
+  resolvePublicBaseUrl,
+  sendInviteEmail,
+} from "$lib/server/email";
 import { prisma } from "$lib/server/prisma";
 import { redirect, fail } from "@sveltejs/kit";
 import { randomBytes } from "crypto";
@@ -31,7 +37,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 };
 
 export const actions: Actions = {
-  create: async ({ request, locals }) => {
+  create: async ({ request, locals, url }) => {
     const session = await locals.auth();
     if (!session?.user) throw redirect(302, "/login");
 
@@ -100,7 +106,7 @@ export const actions: Actions = {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
-    await prisma.invite.create({
+    const invite = await prisma.invite.create({
       data: {
         email: email.toLowerCase(),
         token,
@@ -117,8 +123,27 @@ export const actions: Actions = {
       },
     });
 
-    const signupUrl = `/signup?token=${token}&email=${encodeURIComponent(email)}`;
-    return { success: true, signupUrl };
+    const signupUrl = buildInviteSignupUrl(
+      resolvePublicBaseUrl(url.origin),
+      token,
+      email,
+    );
+    const emailDelivery = await sendInviteEmail({
+      inviteId: invite.id,
+      toEmail: invite.email,
+      signupUrl,
+      expiresAt: invite.expiresAt,
+      invitedByName: session.user.name ?? null,
+      requireEmailVerification: EMAIL_VERIFICATION === "true",
+    });
+
+    return {
+      success: true,
+      signupUrl,
+      emailStatus: emailDelivery.status,
+      emailTransport: emailDelivery.transport,
+      emailError: emailDelivery.errorMessage ?? null,
+    };
   },
 
   delete: async ({ request, locals }) => {

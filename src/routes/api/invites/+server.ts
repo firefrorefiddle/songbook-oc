@@ -1,7 +1,13 @@
 import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { prisma } from "$lib/server/prisma";
+import {
+  buildInviteSignupUrl,
+  resolvePublicBaseUrl,
+  sendInviteEmail,
+} from "$lib/server/email";
 import { randomBytes } from "crypto";
+import { EMAIL_VERIFICATION } from "$env/static/private";
 
 export const GET: RequestHandler = async ({ locals }) => {
   const session = await locals.auth();
@@ -18,7 +24,7 @@ export const GET: RequestHandler = async ({ locals }) => {
   return json(invites);
 };
 
-export const POST: RequestHandler = async ({ request, locals }) => {
+export const POST: RequestHandler = async ({ request, locals, url }) => {
   const session = await locals.auth();
   if (!session?.user) throw error(401, "Unauthorized");
   const userRole = (session.user as { role: string }).role;
@@ -97,7 +103,19 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     },
   });
 
-  const signupUrl = `/signup?token=${token}&email=${encodeURIComponent(email)}`;
+  const signupUrl = buildInviteSignupUrl(
+    resolvePublicBaseUrl(url.origin),
+    token,
+    email,
+  );
+  const emailDelivery = await sendInviteEmail({
+    inviteId: invite.id,
+    toEmail: invite.email,
+    signupUrl,
+    expiresAt: invite.expiresAt,
+    invitedByName: null,
+    requireEmailVerification: EMAIL_VERIFICATION === "true",
+  });
 
-  return json({ invite, signupUrl }, { status: 201 });
+  return json({ invite, signupUrl, emailDelivery }, { status: 201 });
 };

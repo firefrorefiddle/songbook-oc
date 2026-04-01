@@ -21,9 +21,11 @@ model User {
   // Deprecated: use firstName + lastName instead
   name         String?
   // null when the account was created via OAuth only
-  passwordHash String?
-  role         Role     @default(USER)
-  createdAt    DateTime @default(now())
+  passwordHash  String?
+  role          Role     @default(USER)
+  isActive      Boolean  @default(true)
+  deactivatedAt DateTime?
+  createdAt     DateTime @default(now())
 
   ownedSongs               Song[]                  @relation("SongOwner")
   ownedSongbooks           Songbook[]              @relation("SongbookOwner")
@@ -61,6 +63,7 @@ model Invite {
 
   // content to share with the invited user on sign-up
   inviteCollaborations InviteCollaboration[]
+  emailDeliveries      EmailDelivery[]
 }
 
 // ---------------------------------------------------------------------------
@@ -81,9 +84,13 @@ model Song {
   forkedFromId String?
   forkedFrom   Song?   @relation("SongForks", fields: [forkedFromId], references: [id])
   forks        Song[]  @relation("SongForks")
+  recommendedVersionId String?
+  recommendedVersion   SongVersion? @relation("RecommendedSongVersion", fields: [recommendedVersionId], references: [id], onDelete: SetNull)
 
   versions       SongVersion[]
   collaborations Collaboration[]
+  tags           SongTagOnSong[]
+  categories     SongCategoryOnSong[]
 }
 
 model SongVersion {
@@ -96,7 +103,42 @@ model SongVersion {
   metadata  String   @default("{}")
   createdAt DateTime @default(now())
 
+  recommendedForSongs Song[] @relation("RecommendedSongVersion")
   songbookSongs SongbookSong[]
+}
+
+model SongTag {
+  id   String @id @default(cuid())
+  name String @unique
+
+  songs SongTagOnSong[]
+}
+
+model SongTagOnSong {
+  songId String
+  tagId  String
+
+  song Song    @relation(fields: [songId], references: [id], onDelete: Cascade)
+  tag  SongTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([songId, tagId])
+}
+
+model SongCategory {
+  id   String @id @default(cuid())
+  name String @unique
+
+  songs SongCategoryOnSong[]
+}
+
+model SongCategoryOnSong {
+  songId     String
+  categoryId String
+
+  song     Song         @relation(fields: [songId], references: [id], onDelete: Cascade)
+  category SongCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([songId, categoryId])
 }
 
 // ---------------------------------------------------------------------------
@@ -192,4 +234,33 @@ model InviteCollaboration {
 
   inviteId String
   invite   Invite @relation(fields: [inviteId], references: [id], onDelete: Cascade)
+}
+
+// ---------------------------------------------------------------------------
+// Email Delivery
+// ---------------------------------------------------------------------------
+
+model EmailDelivery {
+  id        String              @id @default(cuid())
+  template  String
+  toEmail   String
+  fromEmail String
+  subject   String
+  transport String
+  status    EmailDeliveryStatus @default(PENDING)
+
+  metadata          String  @default("{}")
+  providerMessageId String?
+  errorMessage      String?
+  sentAt            DateTime?
+  createdAt         DateTime @default(now())
+
+  inviteId String?
+  invite   Invite? @relation(fields: [inviteId], references: [id], onDelete: SetNull)
+}
+
+enum EmailDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
 }

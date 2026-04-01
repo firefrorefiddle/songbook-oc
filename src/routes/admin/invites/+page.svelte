@@ -14,7 +14,10 @@
   let collabs = $state<CollabEntry[]>([]);
 
   let signupUrl = $derived(formAction?.success ? formAction.signupUrl : "");
-  let fullUrl = $derived(typeof window !== "undefined" ? window.location.origin + signupUrl : signupUrl);
+  let fullUrl = $derived(formAction?.success ? signupUrl : "");
+  let emailStatus = $derived(formAction?.success ? formAction.emailStatus : null);
+  let emailTransport = $derived(formAction?.success ? formAction.emailTransport : null);
+  let emailError = $derived(formAction?.success ? formAction.emailError : null);
 
   function copyLink() {
     if (fullUrl) {
@@ -269,13 +272,30 @@
 {#if showLinkModal}
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
     <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 p-6">
-      <h2 class="text-lg font-semibold text-gray-900 mb-2">Invite Sent</h2>
-      <div class="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded mb-4">
-        <p class="text-sm">
-          <strong>Email not configured.</strong> Sharing invitations by email is not yet available.
-          Please share the signup link below with the invited user through an alternative method.
-        </p>
-      </div>
+      <h2 class="text-lg font-semibold text-gray-900 mb-2">Invite Created</h2>
+      {#if emailStatus === "SENT" && emailTransport === "sendmail"}
+        <div class="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded mb-4">
+          <p class="text-sm">
+            <strong>Email sent.</strong> The invitation email was handed off to the configured sendmail transport.
+          </p>
+        </div>
+      {:else if emailStatus === "SENT" && emailTransport === "log"}
+        <div class="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded mb-4">
+          <p class="text-sm">
+            <strong>Log transport active.</strong> The email was captured locally instead of being delivered.
+            Share the signup link manually or inspect the logged `.eml` file in `storage/emails/`.
+          </p>
+        </div>
+      {:else}
+        <div class="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded mb-4">
+          <p class="text-sm">
+            <strong>Email delivery failed.</strong> Share the signup link manually for now.
+            {#if emailError}
+              {emailError}
+            {/if}
+          </p>
+        </div>
+      {/if}
       <div class="mb-4">
         <label for="signup-link" class="block text-sm font-medium text-gray-700 mb-1">
           Signup Link

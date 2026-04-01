@@ -213,6 +213,50 @@ Every architectural choice, tradeoff, or context that would be lost over time mu
 
 ---
 
+**Date**: 2026-04-01
+**Context**: Liedermappe import needed to preserve song taxonomy from the legacy source material without blocking on the full filtering UI. The app also needed a structure that can support future filtering instead of burying labels in free-form JSON metadata.
+**Decision**:
+
+- Store song tags and categories as first-class relational data on `Song`, not inside `SongVersion.metadata`.
+- During Liedermappe import, derive categories from the existing collection `.tex` files and derive a conservative starter set of tags from language and worship-related keywords.
+- Keep the inference logic in a pure shared module so both import scripts and tests use the same rules.
+
+**Alternatives considered**:
+
+- Putting tags/categories into `SongVersion.metadata`: rejected because filters and deduplication become awkward and version-specific taxonomy would create noise for a song-level concept.
+- Waiting for the full filtering UI before importing taxonomy: rejected because the legacy source already contains enough structure to preserve now, and delaying import would lose that signal.
+
+---
+
+**Date**: 2026-04-01
+**Context**: The app needed a reusable email-sending foundation for invites first, with password reset and notifications planned next. The solution had to work without committing to a third-party mail SDK and still provide delivery visibility for support.
+**Decision**:
+
+- Add a central server-side email module with two transports: `sendmail` for real delivery and `log` for development/local fallback.
+- Persist every transactional email attempt in a dedicated `EmailDelivery` table so invite-related delivery state is inspectable and reusable for future mail flows.
+- Start integration with invite creation first, using absolute signup URLs based on `APP_BASE_URL` or the current request origin.
+
+**Alternatives considered**:
+
+- Introducing a provider-specific SDK immediately: rejected because it would hard-code infrastructure choices too early.
+- Keeping invite links manual only: rejected because password reset and future notifications also need a real email abstraction and delivery tracking.
+
+---
+
+**Date**: 2026-04-01
+**Context**: Multiple song versions can exist at once, but songbook assembly previously defaulted to the newest version everywhere. Teams needed a stable way to keep a vetted version in reuse while still allowing newer drafts to be explored and compared.
+**Decision**:
+
+- Store the preferred reusable version on `Song.recommendedVersionId` instead of an `isRecommended` flag on `SongVersion`.
+- Keep recommendation selection explicit. Creating a new version does not automatically replace the recommendation.
+- Treat the recommended version as the default choice when reusing songs in songbooks, while preserving already pinned songbook entries.
+- Show comparison against the latest version in the song detail page with field-level and line-level diff output to make review practical before changing the recommendation.
+
+**Alternatives considered**:
+
+- Boolean flag on `SongVersion`: rejected because enforcing one recommended version per song would be harder and less clear.
+- Automatically recommending the newest version: rejected because it defeats the purpose of keeping a vetted printable version stable while drafts continue.
+
 **Date**: 2026-03-31
 **Context**: Adding users, authentication, and ownership to the application. Needed to decide on auth mechanism, invite flow, ownership/collaboration model, and visibility rules.
 **Decision**:
