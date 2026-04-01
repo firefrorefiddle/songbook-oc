@@ -5,6 +5,7 @@
 	import Input from '$lib/components/Input.svelte';
 	import Modal from '$lib/components/Modal.svelte';
 	import MetadataEditor from '$lib/components/MetadataEditor.svelte';
+	import AdvancedSongEditor from '$lib/components/AdvancedSongEditor.svelte';
 
 	let { data, form } = $props();
 
@@ -14,6 +15,7 @@
 	let editAuthor = $state('');
 	let editContent = $state('');
 	let editMetadata = $state<Record<string, string>>({});
+	let useAdvancedEditor = $state(false);
 
 	let previewPng = $state<string | null>(null);
 	let isGeneratingPreview = $state(false);
@@ -168,6 +170,23 @@
 	{#snippet children()}
 		<div class="flex gap-6 items-stretch h-full -m-6">
 			<div class="flex-1 min-w-0 flex flex-col p-6">
+				<div class="flex items-center justify-between mb-4">
+					<h2 class="text-lg font-semibold">Editor</h2>
+					<div class="flex gap-2">
+						<button
+							class="px-3 py-1 rounded text-sm {!useAdvancedEditor ? 'bg-indigo-600 text-white' : 'bg-gray-200 hover:bg-gray-300'}"
+							onclick={() => useAdvancedEditor = false}
+						>
+							Text Editor
+						</button>
+						<button
+							class="px-3 py-1 rounded text-sm {useAdvancedEditor ? 'bg-indigo-600 text-white' : 'bg-gray-200 hover:bg-gray-300'}"
+							onclick={() => useAdvancedEditor = true}
+						>
+							Advanced Editor
+						</button>
+					</div>
+				</div>
 				<form
 					method="POST"
 					action="?/update"
@@ -189,7 +208,22 @@
 
 					<Input label="Title" id="title" required bind:value={editTitle} />
 					<Input label="Author" id="author" bind:value={editAuthor} />
-					<Input label="Content" id="content" type="textarea" rows={30} required value={editContent} oninput={handleContentChange} />
+
+					{#if useAdvancedEditor}
+						<input type="hidden" name="content" value={editContent} />
+						<div class="flex-1 min-h-0">
+							<AdvancedSongEditor
+								content={editContent}
+								onContentChange={(newContent) => {
+									editContent = newContent;
+									updatePreview(newContent, editTitle, editAuthor, editMetadata);
+								}}
+							/>
+						</div>
+					{:else}
+						<Input label="Content" id="content" type="textarea" rows={30} required value={editContent} oninput={handleContentChange} />
+					{/if}
+
 					<MetadataEditor bind:metadata={editMetadata} />
 
 					<div class="flex justify-end gap-2 mt-6">

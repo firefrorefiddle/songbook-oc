@@ -33,7 +33,15 @@ export default ts.config(
       "svelte/no-navigation-without-resolve": "off",
       "svelte/no-useless-children-snippet": "off",
       "svelte/prefer-svelte-reactivity": "off",
-      "no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+      "no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+          ignoreRestSiblings: true,
+        },
+      ],
     },
   },
   {
