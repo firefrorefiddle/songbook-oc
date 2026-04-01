@@ -1,8 +1,15 @@
 import { PrismaClient } from "@prisma/client";
+import { existsSync } from "fs";
 import { readdir, readFile } from "fs/promises";
 import { basename } from "path";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
+
+import {
+  buildCollectionCategoryIndex,
+  inferSongTaxonomy,
+  normaliseSongFilename,
+} from "../src/lib/server/songTaxonomy";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -113,6 +120,31 @@ async function getSngFiles(dirPath: string): Promise<string[]> {
     .map((entry) => join(dirPath, entry.name));
 }
 
+async function getCollectionCategoryIndex(
+  sngDir: string,
+): Promise<Map<string, string[]>> {
+  const texDir = join(dirname(sngDir), "tex");
+  if (!existsSync(texDir)) {
+    return new Map();
+  }
+
+  const entries = await readdir(texDir, { withFileTypes: true });
+  const texFiles = entries.filter(
+    (entry) => entry.isFile() && entry.name.endsWith(".tex"),
+  );
+  const texContents = await Promise.all(
+    texFiles.map(
+      async (entry) =>
+        [
+          entry.name,
+          await readFile(join(texDir, entry.name), "utf-8"),
+        ] as const,
+    ),
+  );
+
+  return buildCollectionCategoryIndex(Object.fromEntries(texContents));
+}
+
 async function importSongs(
   sngDir: string,
   clearExisting: boolean = false,
@@ -130,6 +162,13 @@ async function importSongs(
   }
 
   const files = await getSngFiles(sngDir);
+  const collectionCategoryIndex = await getCollectionCategoryIndex(sngDir);
+  const admin = await prisma.user.findFirst({ where: { role: "ADMIN" } });
+  if (!admin) {
+    throw new Error(
+      "No admin user found. Run /setup first to create an admin.",
+    );
+  }
 
   console.log(`Found ${files.length} .sng files`);
 
@@ -149,9 +188,40 @@ async function importSongs(
 
       const author = parsed.metadata.author || parsed.metadata.lyricsBy;
       const metadata = buildMetadataJson(parsed.metadata);
+      const taxonomy = inferSongTaxonomy({
+        filename: basename(filePath),
+        title: parsed.metadata.title,
+        content: parsed.content,
+        metadata: parsed.metadata,
+        collectionCategories:
+          collectionCategoryIndex.get(
+            normaliseSongFilename(basename(filePath)),
+          ) ?? [],
+      });
 
       await prisma.song.create({
         data: {
+          ownerId: admin.id,
+          categories: {
+            create: taxonomy.categories.map((category) => ({
+              category: {
+                connectOrCreate: {
+                  where: { name: category },
+                  create: { name: category },
+                },
+              },
+            })),
+          },
+          tags: {
+            create: taxonomy.tags.map((tag) => ({
+              tag: {
+                connectOrCreate: {
+                  where: { name: tag },
+                  create: { name: tag },
+                },
+              },
+            })),
+          },
           versions: {
             create: {
               title: parsed.metadata.title,

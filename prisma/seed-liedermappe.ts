@@ -2,6 +2,12 @@ import { PrismaClient } from "@prisma/client";
 import { readFileSync, readdirSync, existsSync } from "fs";
 import { basename } from "path";
 
+import {
+  buildCollectionCategoryIndex,
+  inferSongTaxonomy,
+  normaliseSongFilename,
+} from "../src/lib/server/songTaxonomy";
+
 const prisma = new PrismaClient();
 
 interface SngMetadata {
@@ -109,7 +115,32 @@ function getSngFiles(dirPath: string): string[] {
     .map((entry) => join(dirPath, entry.name));
 }
 
-async function importSongs(sngDir: string, ownerId: string): Promise<void> {
+function getCollectionCategoryIndex(
+  liedermappeDir: string,
+): Map<string, string[]> {
+  const texDir = join(liedermappeDir, "tex");
+  if (!existsSync(texDir)) {
+    return new Map();
+  }
+
+  const texFiles = readdirSync(texDir).filter((entry) =>
+    entry.endsWith(".tex"),
+  );
+  const texContents = Object.fromEntries(
+    texFiles.map((entry) => [
+      entry,
+      readFileSync(join(texDir, entry), "utf-8"),
+    ]),
+  );
+
+  return buildCollectionCategoryIndex(texContents);
+}
+
+async function importSongs(
+  sngDir: string,
+  ownerId: string,
+  collectionCategoryIndex: Map<string, string[]>,
+): Promise<void> {
   const files = getSngFiles(sngDir);
 
   console.log(`Found ${files.length} .sng files`);
@@ -130,10 +161,40 @@ async function importSongs(sngDir: string, ownerId: string): Promise<void> {
 
       const author = parsed.metadata.author || parsed.metadata.lyricsBy;
       const metadata = buildMetadataJson(parsed.metadata);
+      const taxonomy = inferSongTaxonomy({
+        filename: basename(filePath),
+        title: parsed.metadata.title,
+        content: parsed.content,
+        metadata: parsed.metadata,
+        collectionCategories:
+          collectionCategoryIndex.get(
+            normaliseSongFilename(basename(filePath)),
+          ) ?? [],
+      });
 
       await prisma.song.create({
         data: {
           ownerId,
+          categories: {
+            create: taxonomy.categories.map((category) => ({
+              category: {
+                connectOrCreate: {
+                  where: { name: category },
+                  create: { name: category },
+                },
+              },
+            })),
+          },
+          tags: {
+            create: taxonomy.tags.map((tag) => ({
+              tag: {
+                connectOrCreate: {
+                  where: { name: tag },
+                  create: { name: tag },
+                },
+              },
+            })),
+          },
           versions: {
             create: {
               title: parsed.metadata.title,
@@ -380,10 +441,11 @@ async function main() {
     process.exit(1);
   }
   const ownerId = admin.id;
+  const collectionCategoryIndex = getCollectionCategoryIndex(liedermappeDir);
   console.log("Using admin user: " + admin.email);
 
   console.log("\n=== Importing Songs ===");
-  await importSongs(sngDir, ownerId);
+  await importSongs(sngDir, ownerId, collectionCategoryIndex);
 
   console.log("\n=== Creating Songbooks ===");
   await createSongbooks(liedermappeDir, ownerId);
