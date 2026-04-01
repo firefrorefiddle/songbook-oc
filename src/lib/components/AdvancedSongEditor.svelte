@@ -21,6 +21,8 @@
   let showChordInput = $state(false);
   let newChordValue = $state('');
   let selectedCharIndex = $state<number | null>(null);
+  let draggedChord = $state<{ lineIndex: number; chordIndex: number } | null>(null);
+  let dragOverWord = $state<number | null>(null);
 
   function getCurrentSection(): SongSection | null {
     return parsed.sections[currentSectionIndex] || null;
@@ -237,6 +239,72 @@
 
     onContentChange(buildContent());
   }
+
+  function handleDragStart(lineIndex: number, chordIndex: number) {
+    draggedChord = { lineIndex, chordIndex };
+  }
+
+  function handleDragOver(e: DragEvent, wordStart: number) {
+    e.preventDefault();
+    dragOverWord = wordStart;
+  }
+
+  function handleDragLeave() {
+    dragOverWord = null;
+  }
+
+  function handleDrop(lineIndex: number, wordStart: number, wordEnd: number) {
+    if (!draggedChord) return;
+
+    const section = getCurrentSection();
+    if (!section) return;
+
+    const sourceLine = section.lines[draggedChord.lineIndex];
+    const targetLine = section.lines[lineIndex];
+    
+    if (!sourceLine || !targetLine) return;
+
+    if (draggedChord.lineIndex === lineIndex) {
+      const chord = sourceLine.chords[draggedChord.chordIndex];
+      if (chord) {
+        chord.startChar = wordStart;
+        chord.endChar = wordEnd;
+        sourceLine.chords.sort((a, b) => a.startChar - b.startChar);
+        onContentChange(buildContent());
+      }
+    } else {
+      const chord = sourceLine.chords[draggedChord.chordIndex];
+      if (chord) {
+        sourceLine.chords.splice(draggedChord.chordIndex, 1);
+        const newChord: ChordPlacement = {
+          chord: chord.chord,
+          startChar: wordStart,
+          endChar: wordEnd,
+          isOptional: chord.isOptional,
+        };
+        targetLine.chords.push(newChord);
+        targetLine.chords.sort((a, b) => a.startChar - b.startChar);
+        onContentChange(buildContent());
+      }
+    }
+
+    draggedChord = null;
+    dragOverWord = null;
+  }
+
+  function handleDragEnd() {
+    draggedChord = null;
+    dragOverWord = null;
+  }
+
+  function getChordForWord(chords: ChordPlacement[], wordStart: number, wordEnd: number): ChordPlacement | null {
+    for (const chord of chords) {
+      if (chord.startChar >= wordStart && chord.startChar <= wordEnd) {
+        return chord;
+      }
+    }
+    return null;
+  }
 </script>
 
 <div class="flex flex-col h-full">
@@ -317,39 +385,43 @@
             </button>
           </div>
 
-          <div class="font-mono text-sm leading-relaxed relative">
-            {#if line.chords.length > 0}
-              <div class="flex flex-wrap gap-1 mb-1 min-h-[1.5rem]">
-                {#each line.chords as chord, chordIdx}
-                  <div
-                    class="relative group"
-                    style="margin-left: {chord.startChar === 0 ? 0 : chord.startChar - (line.chords[chordIdx - 1]?.endChar || 0) - 1}ch"
-                  >
-                    <span class="text-indigo-600 font-bold text-xs cursor-pointer hover:text-indigo-800">
-                      {chord.isOptional ? `(${chord.chord})` : chord.chord}
-                    </span>
-                    <button
-                      class="absolute -top-2 -right-2 w-4 h-4 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100"
-                      onclick={() => removeChord(lineIdx, chordIdx)}
-                    >
-                      ×
-                    </button>
-                  </div>
-                {/each}
-              </div>
-            {/if}
-
-            <div class="relative">
-              {#each getWordPositions(line.lyrics) as word, wordIdx}
-                <span
-                  class="cursor-pointer hover:bg-indigo-50"
-                  onclick={() => addChord(lineIdx, word.start)}
+          <div class="font-mono text-sm leading-relaxed">
+            <div class="flex flex-wrap">
+              {#each getWordPositions(line.lyrics) as word}
+                {@const chord = getChordForWord(line.chords, word.start, word.end)}
+                <div
+                  class="grid grid-rows-2 content-end h-7 gap-0.5 mx-0.5 {dragOverWord === word.start ? 'bg-indigo-200 rounded' : ''}"
+                  ondragover={(e) => handleDragOver(e, word.start)}
+                  ondragleave={handleDragLeave}
+                  ondrop={() => handleDrop(lineIdx, word.start, word.end)}
                 >
-                  {word.word}
-                </span>
-                {#if wordIdx < getWordPositions(line.lyrics).length - 1}
-                  <span>&nbsp;</span>
-                {/if}
+                  {#if chord}
+                    <div
+                      class="relative group cursor-grab"
+                      draggable="true"
+                      ondragstart={() => handleDragStart(lineIdx, line.chords.indexOf(chord))}
+                      ondragend={handleDragEnd}
+                    >
+                      <span class="text-indigo-600 font-bold text-xs hover:text-indigo-800 select-none">
+                        {chord.isOptional ? `(${chord.chord})` : chord.chord}
+                      </span>
+                      <button
+                        class="absolute -top-2 -right-2 w-4 h-4 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100"
+                        onclick={() => removeChord(lineIdx, line.chords.indexOf(chord))}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  {:else}
+                    <span>&nbsp;</span>
+                  {/if}
+                  <span
+                    class="cursor-pointer hover:bg-indigo-50"
+                    onclick={() => addChord(lineIdx, word.start)}
+                  >
+                    {word.word}
+                  </span>
+                </div>
               {/each}
             </div>
           </div>

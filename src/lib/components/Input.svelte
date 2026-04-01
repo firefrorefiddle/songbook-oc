@@ -7,7 +7,8 @@
 		error = '',
 		required = false,
 		rows = 4,
-		oninput
+		oninput,
+		class: className = ''
 	}: { 
 		label: string; 
 		id: string; 
@@ -17,6 +18,7 @@
 		required?: boolean;
 		rows?: number;
 		oninput?: (_e: Event) => void;
+		class?: string;
 	} = $props();
 </script>
 
@@ -32,7 +34,7 @@
 			bind:value
 			{rows}
 			{oninput}
-			class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm {error ? 'border-red-300' : 'border'}"
+			class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm {error ? 'border-red-300' : 'border'} {className}"
 		></textarea>
 	{:else}
 		<input
@@ -40,7 +42,7 @@
 			name={id}
 			{type}
 			bind:value
-			class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm {error ? 'border-red-300' : 'border'}"
+			class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm {error ? 'border-red-300' : 'border'} {className}"
 		/>
 	{/if}
 	{#if error}

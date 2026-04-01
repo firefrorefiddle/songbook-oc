@@ -214,21 +214,42 @@ function extractChordPlacements(
 ): ChordPlacement[] {
   const placements: ChordPlacement[] = [];
   const chordTokens = tokenizeChordLine(chordLine);
+  const trimmedChordLine = chordLine.trim();
 
   if (chordTokens.length === 0 || !lyricsLine.trim()) {
     return [];
   }
 
   const words = getWordPositions(lyricsLine);
+  if (words.length === 0) {
+    return [];
+  }
 
-  for (let i = 0; i < chordTokens.length && i < words.length; i++) {
-    const chord = chordTokens[i];
-    const word = words[i];
-    if (chord && word) {
+  for (const chord of chordTokens) {
+    const chordRelativePos = chord.chordLinePos;
+    const chordTotalLength = trimmedChordLine.length;
+    const lyricsLength = lyricsLine.length;
+
+    const relativePosition = chordRelativePos / chordTotalLength;
+    const targetCharPos = Math.round(relativePosition * lyricsLength);
+
+    let bestWord: { word: string; start: number; end: number } | null = null;
+    let minDistance = Infinity;
+
+    for (const word of words) {
+      const wordCenter = (word.start + word.end) / 2;
+      const distance = Math.abs(wordCenter - targetCharPos);
+      if (distance < minDistance) {
+        minDistance = distance;
+        bestWord = word;
+      }
+    }
+
+    if (bestWord) {
       placements.push({
         chord: chord.value,
-        startChar: word.start,
-        endChar: word.end,
+        startChar: bestWord.start,
+        endChar: bestWord.end,
         isOptional: chord.isOptional,
       });
     }
@@ -268,32 +289,50 @@ function getWordPositions(
 interface ChordToken {
   value: string;
   isOptional: boolean;
+  chordLinePos: number;
 }
 
 function tokenizeChordLine(line: string): ChordToken[] {
   const tokens: ChordToken[] = [];
-  const parts = line.trim().split(/\s+/);
+  const trimmed = line.trim();
+  const originalTrimmedStart = line.indexOf(trimmed[0]);
 
-  for (const part of parts) {
-    if (!part) continue;
+  let pos = 0;
+  let chordPos = 0;
 
-    const isOptional =
-      (part.startsWith("(") && part.endsWith(")")) ||
-      (part.startsWith("[") && part.endsWith("]"));
+  while (pos < trimmed.length) {
+    if (trimmed[pos].trim() === "") {
+      pos++;
+      chordPos++;
+      continue;
+    }
 
+    const isOptional = trimmed[pos] === "(" || trimmed[pos] === "[";
+
+    let end = pos;
+    while (end < trimmed.length && trimmed[end].trim() !== "") {
+      end++;
+    }
+
+    const part = trimmed.slice(pos, end);
     const cleanPart = part.replace(/^[\[\(]|[\]\)]$/g, "");
 
     if (cleanPart !== "^" && cleanPart) {
       tokens.push({
         value: cleanPart,
         isOptional,
+        chordLinePos: originalTrimmedStart + chordPos,
       });
     } else if (cleanPart === "^") {
       tokens.push({
         value: "^",
         isOptional: false,
+        chordLinePos: originalTrimmedStart + chordPos,
       });
     }
+
+    chordPos += end - pos;
+    pos = end;
   }
 
   return tokens;
@@ -421,36 +460,37 @@ function renderChordLine(line: ChordedLine): string {
     return "";
   }
 
-  const lyricsChars = line.lyrics.split("");
-  const result: { chord: string; isOptional: boolean }[] = [];
-
-  let currentChordIndex = 0;
-  let currentPos = 0;
-
-  while (
-    currentPos < lyricsChars.length &&
-    currentChordIndex < line.chords.length
-  ) {
-    const chord = line.chords[currentChordIndex];
-
-    while (currentPos < chord.startChar) {
-      if (lyricsChars[currentPos].trim() === "") {
-        result.push({ chord: "", isOptional: false });
-      }
-      currentPos++;
-    }
-
-    if (currentPos === chord.startChar) {
-      result.push({ chord: chord.chord, isOptional: chord.isOptional });
-      currentChordIndex++;
-      currentPos = chord.endChar + 1;
-    }
+  const lyricsLength = line.lyrics.length;
+  if (lyricsLength === 0) {
+    return line.chords
+      .map((c) => (c.isOptional ? `(${c.chord})` : c.chord))
+      .join(" ");
   }
 
-  return result
-    .map((item) => {
-      if (!item.chord) return "";
-      return item.isOptional ? `(${item.chord})` : item.chord;
-    })
-    .join(" ");
+  const chordLineLength = Math.max(lyricsLength, 20);
+  const chordPositions: { chord: string; isOptional: boolean; pos: number }[] =
+    [];
+
+  for (const chord of line.chords) {
+    const relativePos = chord.startChar / lyricsLength;
+    const chordLinePos = Math.round(relativePos * chordLineLength);
+    chordPositions.push({
+      chord: chord.chord,
+      isOptional: chord.isOptional,
+      pos: chordLinePos,
+    });
+  }
+
+  const result: string[] = [];
+  let lastPos = 0;
+
+  for (const cp of chordPositions) {
+    if (cp.pos > lastPos) {
+      result.push(" ".repeat(cp.pos - lastPos));
+    }
+    result.push(cp.isOptional ? `(${cp.chord})` : cp.chord);
+    lastPos = cp.pos + (cp.isOptional ? cp.chord.length + 2 : cp.chord.length);
+  }
+
+  return result.join("").trimEnd();
 }

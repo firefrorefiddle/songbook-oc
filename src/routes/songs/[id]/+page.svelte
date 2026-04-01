@@ -221,7 +221,7 @@
 							/>
 						</div>
 					{:else}
-						<Input label="Content" id="content" type="textarea" rows={30} required value={editContent} oninput={handleContentChange} />
+						<Input label="Content" id="content" type="textarea" rows={30} required value={editContent} oninput={handleContentChange} class="font-mono" />
 					{/if}
 
 					<MetadataEditor bind:metadata={editMetadata} />
