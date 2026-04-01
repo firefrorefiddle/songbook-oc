@@ -8,7 +8,7 @@ import { promisify } from "util";
 const execAsync = promisify(exec);
 
 const PROJECT_ROOT = process.cwd();
-const SONGMAKER_CLI = "/home/mike/.cabal/bin/songmaker-cli";
+const SONGMAKER_CLI = join(PROJECT_ROOT, "bin", "songmaker-cli");
 const LATEX_DIR = join(PROJECT_ROOT, "src/lib/server/latex");
 
 async function createTempDir(): Promise<string> {

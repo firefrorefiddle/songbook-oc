@@ -9,7 +9,7 @@ import { prisma } from "$lib/server/prisma";
 const execAsync = promisify(exec);
 
 const PROJECT_ROOT = process.cwd();
-const SONGMAKER_CLI = "/home/mike/.cabal/bin/songmaker-cli";
+const SONGMAKER_CLI = join(PROJECT_ROOT, "bin", "songmaker-cli");
 const LATEX_DIR = join(PROJECT_ROOT, "src/lib/server/latex");
 const PDF_STORAGE_DIR = join(PROJECT_ROOT, "storage", "pdfs");
 
@@ -54,6 +54,7 @@ interface SongMetadata {
   translationBy?: string;
   musicBy?: string;
   lyricsBy?: string;
+  numbering?: string;
 }
 
 function buildSongContent(
@@ -88,6 +89,9 @@ function buildSongContent(
   }
   if (metadata?.extraIndex?.trim()) {
     sngContent += `extra-index: ${metadata.extraIndex}\n`;
+  }
+  if (metadata?.numbering?.trim()) {
+    sngContent += `numbering: ${metadata.numbering}\n`;
   }
   sngContent += "***\n";
   sngContent += content;
