@@ -4,6 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "prisma:generate": "prisma generate",
+    "predev": "pnpm prisma:generate",
+    "prebuild": "pnpm prisma:generate",
+    "precheck": "pnpm prisma:generate",
+    "pretest": "pnpm prisma:generate",
+    "pretest:run": "pnpm prisma:generate",
     "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",

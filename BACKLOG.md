@@ -64,7 +64,7 @@ This file tracks the current state of work, improvements, and technical debt for
 
 - **Status**: completed
 - **Priority**: high
-- **Description**: Added a central transactional mail service with `sendmail` and local `log` transports, plus persisted `EmailDelivery` records for delivery tracking. Invite creation now uses this service and records whether the email was sent, logged locally, or failed.
+- **Description**: Added a central transactional mail service with `sendmail`, `mailgun`, and local `log` transports, plus persisted `EmailDelivery` records for delivery tracking. Invite creation now uses this service and records whether the email was sent, logged locally, or failed.
 - **Related**: This commit
 - **Follow-up**: Extend the same service to password reset, notifications, and ownership transfer emails.
 
@@ -228,6 +228,20 @@ This file tracks the current state of work, improvements, and technical debt for
 - **Description**: Allow users to explicitly publish selected songs or songbooks to the wider authenticated community while keeping other items private or selectively shared. This supports the "invite our friends and share songs" model without introducing separate workspaces.
 
 ## Decisions
+
+**Date**: 2026-04-02
+**Context**: Password reset started failing with a Prisma validation error for `User.isActive` even though the schema already contained the field. The generated client had fallen behind the checked-in schema, so runtime queries could reference valid schema fields that the local client did not know about yet.
+**Decision**:
+
+- Add an explicit `pnpm prisma:generate` script and run it automatically before `dev`, `build`, `check`, and test commands.
+- Treat Prisma client generation as part of normal app startup and verification, not as a one-time install-only side effect.
+
+**Alternatives considered**:
+
+- Relying on `postinstall` alone: rejected because existing working copies and some deploy/update flows can continue using a stale generated client without reinstalling dependencies.
+- Removing `isActive` checks from password reset: rejected because deactivated-account safeguards are intentional and the problem was operational drift, not the query itself.
+
+---
 
 **Date**: 2026-04-01
 **Context**: Admin user management needed a first operational slice that could disable accounts safely without bundling the later audit and stewardship backlog items into the same change.

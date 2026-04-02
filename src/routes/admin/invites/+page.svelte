@@ -273,10 +273,10 @@
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
     <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 p-6">
       <h2 class="text-lg font-semibold text-gray-900 mb-2">Invite Created</h2>
-      {#if emailStatus === "SENT" && emailTransport === "sendmail"}
+      {#if emailStatus === "SENT" && emailTransport !== "log"}
         <div class="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded mb-4">
           <p class="text-sm">
-            <strong>Email sent.</strong> The invitation email was handed off to the configured sendmail transport.
+            <strong>Email sent.</strong> The invitation email was handed off to the configured delivery transport.
           </p>
         </div>
       {:else if emailStatus === "SENT" && emailTransport === "log"}

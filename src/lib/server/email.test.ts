@@ -1,4 +1,19 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const mockEnv = vi.hoisted(() => ({
+  APP_BASE_URL: "",
+  EMAIL_FROM: "",
+  EMAIL_LOG_DIR: "",
+  EMAIL_SENDMAIL_COMMAND: "",
+  EMAIL_TRANSPORT: "",
+  MAILGUN_API_KEY: "",
+  MAILGUN_BASE_URL: "",
+  MAILGUN_DOMAIN: "",
+}));
+
+vi.mock("$env/dynamic/private", () => ({
+  env: mockEnv,
+}));
 
 vi.mock("./prisma", () => ({
   prisma: {
@@ -15,9 +30,28 @@ import {
   buildPasswordResetEmail,
   buildPasswordResetUrl,
   resolvePublicBaseUrl,
+  sendInviteEmail,
 } from "./email";
 
 describe("email helpers", () => {
+  const originalFetch = global.fetch;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockEnv.APP_BASE_URL = "";
+    mockEnv.EMAIL_FROM = "";
+    mockEnv.EMAIL_LOG_DIR = "";
+    mockEnv.EMAIL_SENDMAIL_COMMAND = "";
+    mockEnv.EMAIL_TRANSPORT = "";
+    mockEnv.MAILGUN_API_KEY = "";
+    mockEnv.MAILGUN_BASE_URL = "";
+    mockEnv.MAILGUN_DOMAIN = "";
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
   it("builds an absolute signup URL with encoded query params", () => {
     const signupUrl = buildInviteSignupUrl(
       "https://songbook.example.org",
@@ -84,5 +118,46 @@ describe("email helpers", () => {
     expect(message.text).toContain(
       "https://songbook.example.org/reset-password?token=abc",
     );
+  });
+
+  it("sends email through Mailgun when configured", async () => {
+    mockEnv.EMAIL_TRANSPORT = "mailgun";
+    mockEnv.MAILGUN_API_KEY = "test-key";
+    mockEnv.MAILGUN_DOMAIN = "sandbox.example.mailgun.org";
+    mockEnv.MAILGUN_BASE_URL = "https://api.mailgun.net";
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      text: vi.fn().mockResolvedValue(
+        JSON.stringify({ id: "<message-id@example.mailgun.org>" }),
+      ),
+    });
+    global.fetch = fetchMock as typeof fetch;
+
+    const { prisma } = await import("./prisma");
+    vi.mocked(prisma.emailDelivery.create).mockResolvedValue({
+      id: "delivery-1",
+    } as never);
+    vi.mocked(prisma.emailDelivery.update).mockResolvedValue({} as never);
+
+    const result = await sendInviteEmail({
+      inviteId: "invite-1",
+      toEmail: "user@example.org",
+      signupUrl: "https://songbook.example.org/signup?token=abc",
+      expiresAt: new Date("2026-04-08T12:00:00Z"),
+      requireEmailVerification: false,
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.mailgun.net/v3/sandbox.example.mailgun.org/messages",
+      expect.objectContaining({
+        method: "POST",
+      }),
+    );
+    expect(result).toEqual({
+      status: "SENT",
+      transport: "mailgun",
+      providerMessageId: "<message-id@example.mailgun.org>",
+    });
   });
 });

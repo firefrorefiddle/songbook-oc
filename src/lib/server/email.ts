@@ -6,7 +6,7 @@ import { spawn } from "node:child_process";
 import { prisma } from "./prisma";
 
 type EmailTemplate = "invite" | "password_reset";
-type EmailTransport = "log" | "sendmail";
+type EmailTransport = "log" | "mailgun" | "sendmail";
 
 interface EmailMessage {
   from: string;
@@ -40,7 +40,15 @@ interface SendEmailResult {
 }
 
 function getEmailTransport(): EmailTransport {
-  return env.EMAIL_TRANSPORT === "sendmail" ? "sendmail" : "log";
+  if (env.EMAIL_TRANSPORT === "mailgun") {
+    return "mailgun";
+  }
+
+  if (env.EMAIL_TRANSPORT === "sendmail") {
+    return "sendmail";
+  }
+
+  return "log";
 }
 
 function getFromAddress() {
@@ -53,6 +61,26 @@ function getLogDirectory() {
 
 function getSendmailCommand() {
   return env.EMAIL_SENDMAIL_COMMAND?.trim() || "sendmail";
+}
+
+function getMailgunConfig() {
+  const apiKey = env.MAILGUN_API_KEY?.trim();
+  const domain = env.MAILGUN_DOMAIN?.trim();
+  const baseUrl = (env.MAILGUN_BASE_URL?.trim() || "https://api.mailgun.net").replace(/\/+$/u, "");
+
+  if (!apiKey) {
+    throw new Error("MAILGUN_API_KEY is required when EMAIL_TRANSPORT=mailgun");
+  }
+
+  if (!domain) {
+    throw new Error("MAILGUN_DOMAIN is required when EMAIL_TRANSPORT=mailgun");
+  }
+
+  return {
+    apiKey,
+    domain,
+    baseUrl,
+  };
 }
 
 function sanitiseFilePart(value: string) {
@@ -116,11 +144,50 @@ async function sendViaSendmail(message: EmailMessage) {
   return { providerMessageId: randomUUID() };
 }
 
+async function sendViaMailgun(message: EmailMessage) {
+  const config = getMailgunConfig();
+  const response = await fetch(`${config.baseUrl}/v3/${config.domain}/messages`, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${Buffer.from(`api:${config.apiKey}`).toString("base64")}`,
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+    },
+    body: new URLSearchParams({
+      from: message.from,
+      to: message.to,
+      subject: message.subject,
+      text: message.text,
+    }),
+  });
+
+  const responseText = await response.text();
+
+  if (!response.ok) {
+    throw new Error(responseText.trim() || `Mailgun request failed with status ${response.status}`);
+  }
+
+  let providerMessageId: string | undefined;
+
+  try {
+    const payload = JSON.parse(responseText) as { id?: string };
+    providerMessageId = payload.id;
+  } catch {
+    providerMessageId = undefined;
+  }
+
+  return { providerMessageId };
+}
+
 async function dispatchEmail(message: EmailMessage): Promise<{
   transport: EmailTransport;
   providerMessageId?: string;
 }> {
   const transport = getEmailTransport();
+
+  if (transport === "mailgun") {
+    const result = await sendViaMailgun(message);
+    return { transport, providerMessageId: result.providerMessageId };
+  }
 
   if (transport === "sendmail") {
     const result = await sendViaSendmail(message);

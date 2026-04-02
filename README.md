@@ -53,6 +53,8 @@ Users who forget their password can request a reset link from `/forgot-password`
 pnpm dev
 ```
 
+The `dev`, `build`, `check`, and test scripts regenerate the Prisma client first. That keeps the generated client aligned with `prisma/schema.prisma` after schema changes such as adding `User.isActive`, even if `node_modules` was already present.
+
 ### Commands
 
 | Command                   | Description                                                           |
@@ -64,6 +66,7 @@ pnpm dev
 | `pnpm check`              | Run TypeScript checks                                                 |
 | `pnpm lint`               | Run ESLint                                                            |
 | `pnpm format`             | Format code with Prettier                                             |
+| `pnpm prisma:generate`    | Regenerate the Prisma client from the current schema                  |
 | `pnpm db:push`            | Push schema to database                                               |
 | `pnpm db:seed`            | Seed database with sample data                                        |
 | `pnpm db:seed-from-files` | Import Liedermappe `.sng` files plus songbook-derived categories/tags |
@@ -212,12 +215,14 @@ GOOGLE_CLIENT_ID=""
 GOOGLE_CLIENT_SECRET=""
 EMAIL_VERIFICATION=false
 APP_BASE_URL="https://songbook.example.org"
-EMAIL_TRANSPORT="sendmail"
+EMAIL_TRANSPORT="mailgun"
 EMAIL_FROM="Songbook <no-reply@example.org>"
-EMAIL_SENDMAIL_COMMAND="sendmail"
+MAILGUN_API_KEY="<mailgun-api-key>"
+MAILGUN_DOMAIN="sandbox-example.mailgun.org"
+MAILGUN_BASE_URL="https://api.mailgun.net"
 ```
 
-For local development, set `EMAIL_TRANSPORT=log` to capture outgoing emails as `.eml` files in `storage/emails/` instead of attempting delivery.
+For local development, set `EMAIL_TRANSPORT=log` to capture outgoing emails as `.eml` files in `storage/emails/` instead of attempting delivery. If you prefer a local MTA instead, switch to `EMAIL_TRANSPORT=sendmail` and set `EMAIL_SENDMAIL_COMMAND`.
 
 **Important**: Use an absolute path for the database, not a relative path. The working directory of the systemd service may differ from where the app is located.
 
@@ -228,6 +233,7 @@ Never commit secrets to git. The following are automatically ignored:
 - `.env` - local development
 - `.envrc` - deploy script variables (server, domain)
 - `.env.production` - production secrets
+- `.env.production.local` - machine-specific production overrides
 - `*.db` - database files
 - `prisma/prod.db` - production database
 
