@@ -25,6 +25,12 @@ This file tracks the current state of work, improvements, and technical debt for
 - **Description**: Fixed ESLint config to use typescript-eslint properly, added browser globals, disabled overly strict Svelte rules, fixed unused variable warnings.
 - **Related**: 842cb6a
 
+### Unify song create and edit editor UI
+
+- **Status**: completed
+- **Priority**: medium
+- **Description**: Extracted the song version editor into a shared component so song creation and version editing now use the same text/advanced editor, metadata fields, and live preview.
+
 ### Add users, authentication, and ownership (phase 1)
 
 - **Status**: completed

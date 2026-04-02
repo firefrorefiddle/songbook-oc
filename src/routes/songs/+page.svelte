@@ -3,9 +3,8 @@
   import { goto } from "$app/navigation";
   import { getPreferredSongVersion } from "$lib/songVersions";
   import Button from "$lib/components/Button.svelte";
-  import Input from "$lib/components/Input.svelte";
   import Modal from "$lib/components/Modal.svelte";
-  import MetadataEditor from "$lib/components/MetadataEditor.svelte";
+  import SongVersionEditorForm from "$lib/components/SongVersionEditorForm.svelte";
 
   let { data, form } = $props();
 
@@ -151,44 +150,26 @@
   bind:open={showCreateModal}
   title="Create Song"
   onclose={() => (showCreateModal = false)}
+  fullscreen
 >
   {#snippet children()}
-    <form
-      method="POST"
+    <SongVersionEditorForm
       action="?/create"
-      use:enhance={() => {
+      error={form?.error}
+      bind:title={createTitle}
+      bind:author={createAuthor}
+      bind:content={createContent}
+      bind:metadata={createMetadata}
+      submitLabel="Create"
+      onCancel={() => (showCreateModal = false)}
+      enhanceSubmit={() => {
         return ({ result }) => {
           if (result.type === "success") {
             handleCreateSuccess();
           }
         };
       }}
-    >
-      {#if form?.error}
-        <div class="mb-4 p-3 bg-red-50 text-red-700 rounded-md text-sm">
-          {form.error}
-        </div>
-      {/if}
-
-      <Input label="Title" id="title" required bind:value={createTitle} />
-      <Input label="Author" id="author" bind:value={createAuthor} />
-      <Input
-        label="Content"
-        id="content"
-        type="textarea"
-        rows={10}
-        required
-        bind:value={createContent}
-      />
-      <MetadataEditor bind:metadata={createMetadata} />
-
-      <div class="flex justify-end gap-2 mt-6">
-        <Button variant="secondary" onclick={() => (showCreateModal = false)}
-          >Cancel</Button
-        >
-        <Button type="submit">Create</Button>
-      </div>
-    </form>
+    />
   {/snippet}
 </Modal>
 

@@ -6,11 +6,9 @@
     getPreferredSongVersion,
     parseSongMetadata,
   } from "$lib/songVersions";
-  import AdvancedSongEditor from "$lib/components/AdvancedSongEditor.svelte";
   import Button from "$lib/components/Button.svelte";
-  import Input from "$lib/components/Input.svelte";
-  import MetadataEditor from "$lib/components/MetadataEditor.svelte";
   import Modal from "$lib/components/Modal.svelte";
+  import SongVersionEditorForm from "$lib/components/SongVersionEditorForm.svelte";
 
   let { data, form } = $props();
 
@@ -27,12 +25,7 @@
   let editAuthor = $state("");
   let editContent = $state("");
   let editMetadata = $state<Record<string, string>>({});
-  let useAdvancedEditor = $state(false);
   let compareVersionId = $state("");
-
-  let previewPng = $state<string | null>(null);
-  let isGeneratingPreview = $state(false);
-  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   $effect(() => {
     if (!compareVersionId || !data.song.versions.some((version) => version.id === compareVersionId)) {
@@ -85,37 +78,6 @@
     };
   }
 
-  async function updatePreview(
-    content: string,
-    title: string,
-    author: string,
-    metadata: Record<string, string>,
-  ) {
-    if (debounceTimer) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(async () => {
-      if (!content.trim()) {
-        previewPng = null;
-        return;
-      }
-      isGeneratingPreview = true;
-      try {
-        const res = await fetch("/api/songs/preview", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content, title, author, metadata }),
-        });
-        const resData = await res.json();
-        if (resData.png) {
-          previewPng = resData.png;
-        }
-      } catch (e) {
-        console.error("Preview error:", e);
-      } finally {
-        isGeneratingPreview = false;
-      }
-    }, 300);
-  }
-
   function openEdit(versionIndex: number) {
     editingVersion = data.song.versions[versionIndex];
     const parsed = parseSongMetadata(editingVersion.metadata);
@@ -123,15 +85,7 @@
     editAuthor = editingVersion.author || "";
     editContent = editingVersion.content;
     editMetadata = parsed;
-    previewPng = null;
     showEditModal = true;
-    updatePreview(editingVersion.content, editTitle, editAuthor, editMetadata);
-  }
-
-  function handleContentChange(e: Event) {
-    const target = e.target as HTMLTextAreaElement;
-    editContent = target.value;
-    updatePreview(target.value, editTitle, editAuthor, editMetadata);
   }
 </script>
 
@@ -397,99 +351,16 @@
   fullscreen
 >
   {#snippet children()}
-    <div class="flex gap-6 items-stretch h-full -m-6">
-      <div class="flex-1 min-w-0 flex flex-col p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-semibold">Editor</h2>
-          <div class="flex gap-2">
-            <button
-              class="px-3 py-1 rounded text-sm {!useAdvancedEditor
-                ? 'bg-indigo-600 text-white'
-                : 'bg-gray-200 hover:bg-gray-300'}"
-              onclick={() => (useAdvancedEditor = false)}
-            >
-              Text Editor
-            </button>
-            <button
-              class="px-3 py-1 rounded text-sm {useAdvancedEditor
-                ? 'bg-indigo-600 text-white'
-                : 'bg-gray-200 hover:bg-gray-300'}"
-              onclick={() => (useAdvancedEditor = true)}
-            >
-              Advanced Editor
-            </button>
-          </div>
-        </div>
-        <form
-          method="POST"
-          action="?/update"
-          use:enhance={() => refreshOnSuccess(true)}
-          class="flex-1 flex flex-col"
-        >
-          {#if form?.error}
-            <div class="mb-4 p-3 bg-red-50 text-red-700 rounded-md text-sm">
-              {form.error}
-            </div>
-          {/if}
-
-          <Input label="Title" id="title" required bind:value={editTitle} />
-          <Input label="Author" id="author" bind:value={editAuthor} />
-
-          {#if useAdvancedEditor}
-            <input type="hidden" name="content" value={editContent} />
-            <div class="flex-1 min-h-0">
-              <AdvancedSongEditor
-                content={editContent}
-                onContentChange={(newContent) => {
-                  editContent = newContent;
-                  updatePreview(
-                    newContent,
-                    editTitle,
-                    editAuthor,
-                    editMetadata,
-                  );
-                }}
-              />
-            </div>
-          {:else}
-            <Input
-              label="Content"
-              id="content"
-              type="textarea"
-              rows={30}
-              required
-              value={editContent}
-              oninput={handleContentChange}
-              class="font-mono"
-            />
-          {/if}
-
-          <MetadataEditor bind:metadata={editMetadata} />
-
-          <div class="flex justify-end gap-2 mt-6">
-            <Button variant="secondary" onclick={() => (showEditModal = false)}
-              >Cancel</Button
-            >
-            <Button type="submit">Save Version</Button>
-          </div>
-        </form>
-      </div>
-      <div class="w-3/5 bg-gray-50 p-6 flex flex-col">
-        <h3 class="text-sm font-medium text-gray-700 mb-3">Preview</h3>
-        <div class="flex-1 flex items-center justify-center overflow-auto">
-          {#if isGeneratingPreview}
-            <div class="text-gray-400">Generating preview...</div>
-          {:else if previewPng}
-            <img
-              src={previewPng}
-              alt="Song preview"
-              class="max-h-full object-contain border border-gray-200 rounded"
-            />
-          {:else}
-            <div class="text-gray-400 text-sm">Start typing to see preview</div>
-          {/if}
-        </div>
-      </div>
-    </div>
+    <SongVersionEditorForm
+      action="?/update"
+      error={form?.error}
+      bind:title={editTitle}
+      bind:author={editAuthor}
+      bind:content={editContent}
+      bind:metadata={editMetadata}
+      submitLabel="Save Version"
+      onCancel={() => (showEditModal = false)}
+      enhanceSubmit={() => refreshOnSuccess(true)}
+    />
   {/snippet}
 </Modal>

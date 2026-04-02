@@ -5,6 +5,7 @@ A songbook management application for managing songs, song versions, and songboo
 ## Features
 
 - **Songs**: Create, edit, archive songs with multiple versions
+- **Song Editing**: Shared create/edit song editor with live printable preview
 - **Song Versions**: Fork and manage different versions of songs
 - **Version Review**: Compare song versions and mark a recommended version for reuse
 - **Songbooks**: Create songbooks with pinned song versions
