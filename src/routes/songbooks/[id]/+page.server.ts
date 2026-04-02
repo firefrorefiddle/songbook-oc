@@ -31,6 +31,7 @@ export const load: PageServerLoad = async ({ params }) => {
   const availableSongs = await prisma.song.findMany({
     where: { isArchived: false },
     include: {
+      recommendedVersion: true,
       versions: {
         orderBy: { createdAt: "desc" },
         take: 1,

@@ -21,6 +21,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
       versions: search ? { some: { title: { contains: search } } } : undefined,
     },
     include: {
+      recommendedVersion: true,
       versions: {
         orderBy: { createdAt: "desc" },
         take: 1,
@@ -69,7 +70,7 @@ export const actions: Actions = {
       }
     }
 
-    await prisma.song.create({
+    const song = await prisma.song.create({
       data: {
         ownerId: session.user.id!,
         versions: {
@@ -81,7 +82,20 @@ export const actions: Actions = {
           },
         },
       },
+      include: {
+        versions: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
+      },
     });
+
+    if (song.versions[0]) {
+      await prisma.song.update({
+        where: { id: song.id },
+        data: { recommendedVersionId: song.versions[0].id },
+      });
+    }
 
     return { success: true };
   },

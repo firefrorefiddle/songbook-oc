@@ -6,6 +6,7 @@ export const load: PageServerLoad = async ({ params }) => {
   const song = await prisma.song.findUnique({
     where: { id: params.id },
     include: {
+      recommendedVersion: true,
       versions: {
         orderBy: { createdAt: "desc" },
       },
@@ -51,6 +52,47 @@ export const actions: Actions = {
         content: content.trim(),
         metadata: JSON.stringify(metadata),
       },
+    });
+
+    return { success: true };
+  },
+
+  setRecommended: async ({ params, request }) => {
+    const formData = await request.formData();
+    const versionId = formData.get("versionId") as string;
+
+    if (!versionId) {
+      return fail(400, { error: "Version ID is required" });
+    }
+
+    const version = await prisma.songVersion.findFirst({
+      where: {
+        id: versionId,
+        songId: params.id,
+      },
+    });
+
+    if (!version) {
+      return fail(404, { error: "Version not found" });
+    }
+
+    await prisma.song.update({
+      where: { id: params.id },
+      data: { recommendedVersionId: versionId },
+    });
+
+    return { success: true };
+  },
+
+  clearRecommended: async ({ params }) => {
+    const latestVersion = await prisma.songVersion.findFirst({
+      where: { songId: params.id },
+      orderBy: { createdAt: "desc" },
+    });
+
+    await prisma.song.update({
+      where: { id: params.id },
+      data: { recommendedVersionId: latestVersion?.id ?? null },
     });
 
     return { success: true };
@@ -118,8 +160,22 @@ export const actions: Actions = {
       return fail(400, { error: "Cannot delete the current version" });
     }
 
-    await prisma.songVersion.delete({
-      where: { id: versionId },
+    await prisma.$transaction(async (tx) => {
+      const songRecord = await tx.song.findUnique({
+        where: { id: params.id },
+        select: { recommendedVersionId: true },
+      });
+
+      if (songRecord?.recommendedVersionId === versionId) {
+        await tx.song.update({
+          where: { id: params.id },
+          data: { recommendedVersionId: null },
+        });
+      }
+
+      await tx.songVersion.delete({
+        where: { id: versionId },
+      });
     });
 
     return { success: true };
