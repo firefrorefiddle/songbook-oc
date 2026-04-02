@@ -231,8 +231,10 @@ For local development, set `EMAIL_TRANSPORT=log` to capture outgoing emails as `
 Never commit secrets to git. The following are automatically ignored:
 
 - `.env` - local development
+- `.env.local` - local development overrides and secrets
 - `.envrc` - deploy script variables (server, domain)
 - `.env.production` - production secrets
+- `.env.*.local` - environment-specific local overrides
 - `.env.production.local` - machine-specific production overrides
 - `*.db` - database files
 - `prisma/prod.db` - production database

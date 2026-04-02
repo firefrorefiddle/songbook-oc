@@ -3,8 +3,10 @@ node_modules
 tmp
 *.db
 .env
+.env.local
 .envrc
 .env.production
+.env.*.local
 .env.production.local
 build
 prisma/prod.db
