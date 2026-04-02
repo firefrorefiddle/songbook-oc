@@ -73,8 +73,9 @@
 			</div>
 
 			<div>
-				<label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
+				<label for="role" class="block text-sm font-medium text-gray-700 mb-1">Role</label>
 				<input
+					id="role"
 					type="text"
 					disabled
 					value={data.user?.role ?? ''}

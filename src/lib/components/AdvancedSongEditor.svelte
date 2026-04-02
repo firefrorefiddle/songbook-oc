@@ -310,15 +310,24 @@
 <div class="flex flex-col h-full">
   <div class="flex gap-2 mb-4">
     {#each parsed.sections as section, idx}
-      <button
-        class="px-3 py-1 rounded-md text-sm {idx === currentSectionIndex ? 'bg-indigo-600 text-white' : 'bg-gray-200 hover:bg-gray-300'}"
-        onclick={() => currentSectionIndex = idx}
-      >
-        {section.type === 'custom' ? (section.label || `Section ${idx + 1}`) : section.type} {idx + 1}
+      <div class="flex items-center gap-1">
+        <button
+          class="px-3 py-1 rounded-md text-sm {idx === currentSectionIndex ? 'bg-indigo-600 text-white' : 'bg-gray-200 hover:bg-gray-300'}"
+          onclick={() => currentSectionIndex = idx}
+        >
+          {section.type === 'custom' ? (section.label || `Section ${idx + 1}`) : section.type} {idx + 1}
+        </button>
         {#if parsed.sections.length > 1}
-          <span class="ml-1 text-xs opacity-70 cursor-pointer" onclick={(e) => { e.stopPropagation(); removeSection(idx); }}>×</span>
+          <button
+            type="button"
+            class="px-2 py-1 rounded-md text-xs text-gray-500 hover:text-red-600 hover:bg-red-50"
+            onclick={() => removeSection(idx)}
+            aria-label={`Remove section ${idx + 1}`}
+          >
+            ×
+          </button>
         {/if}
-      </button>
+      </div>
     {/each}
     <button
       class="px-3 py-1 rounded-md text-sm bg-gray-200 hover:bg-gray-300"
@@ -333,8 +342,9 @@
       {@const section = getCurrentSection()}
       <div class="flex items-center gap-4 mb-4 pb-3 border-b">
         <div class="flex items-center gap-2">
-          <label class="text-sm font-medium">Type:</label>
+          <label for="section-type" class="text-sm font-medium">Type:</label>
           <select
+            id="section-type"
             class="px-2 py-1 border rounded text-sm"
             value={section?.type}
             onchange={(e) => setSectionType(e.currentTarget.value as SongSection['type'])}
@@ -390,6 +400,8 @@
               {#each getWordPositions(line.lyrics) as word}
                 {@const chord = getChordForWord(line.chords, word.start, word.end)}
                 <div
+                  role="group"
+                  aria-label={`Word ${word.word}`}
                   class="grid grid-rows-2 content-end h-7 gap-0.5 mx-0.5 {dragOverWord === word.start ? 'bg-indigo-200 rounded' : ''}"
                   ondragover={(e) => handleDragOver(e, word.start)}
                   ondragleave={handleDragLeave}
@@ -397,6 +409,8 @@
                 >
                   {#if chord}
                     <div
+                      role="group"
+                      aria-label={`Chord ${chord.chord}`}
                       class="relative group cursor-grab"
                       draggable="true"
                       ondragstart={() => handleDragStart(lineIdx, line.chords.indexOf(chord))}
@@ -415,12 +429,13 @@
                   {:else}
                     <span>&nbsp;</span>
                   {/if}
-                  <span
-                    class="cursor-pointer hover:bg-indigo-50"
+                  <button
+                    type="button"
+                    class="cursor-pointer hover:bg-indigo-50 text-left"
                     onclick={() => addChord(lineIdx, word.start)}
                   >
                     {word.word}
-                  </span>
+                  </button>
                 </div>
               {/each}
             </div>

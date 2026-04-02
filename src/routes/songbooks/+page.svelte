@@ -10,8 +10,13 @@
 	let showCreateModal = $state(false);
 	let showDeleteConfirm = $state(false);
 	let songbookToDelete = $state<{ id: string; title: string } | null>(null);
-	let searchInput = $state(data.search);
-	let includeArchived = $state(data.includeArchived);
+	let searchInput = $state('');
+	let includeArchived = $state(false);
+
+	$effect(() => {
+		searchInput = data.search;
+		includeArchived = data.includeArchived;
+	});
 
 	function handleSearch() {
 		const params = new URLSearchParams();

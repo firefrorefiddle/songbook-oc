@@ -146,8 +146,9 @@
               <div class="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-md px-3 py-2">
                 <div class="flex-1 grid grid-cols-2 gap-3">
                   <div>
-                    <label class="block text-xs text-gray-500 mb-1">Owner</label>
+                    <label for={`collab-owner-${i}`} class="block text-xs text-gray-500 mb-1">Owner</label>
                     <select
+                      id={`collab-owner-${i}`}
                       class="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                       bind:value={entry.ownerId}
                     >
@@ -158,8 +159,9 @@
                   </div>
 
                   <div>
-                    <label class="block text-xs text-gray-500 mb-1">Resource</label>
+                    <label for={`collab-resource-${i}`} class="block text-xs text-gray-500 mb-1">Resource</label>
                     <select
+                      id={`collab-resource-${i}`}
                       class="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                       bind:value={entry.resourceType}
                     >
@@ -273,10 +275,10 @@
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
     <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 p-6">
       <h2 class="text-lg font-semibold text-gray-900 mb-2">Invite Created</h2>
-      {#if emailStatus === "SENT" && emailTransport !== "log"}
+      {#if emailStatus === "SENT" && emailTransport === "sendmail"}
         <div class="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded mb-4">
           <p class="text-sm">
-            <strong>Email sent.</strong> The invitation email was handed off to the configured delivery transport.
+            <strong>Email sent.</strong> The invitation email was handed off to the configured sendmail transport.
           </p>
         </div>
       {:else if emailStatus === "SENT" && emailTransport === "log"}
