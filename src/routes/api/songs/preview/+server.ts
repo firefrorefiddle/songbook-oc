@@ -72,13 +72,16 @@ export const POST: RequestHandler = async ({ request }) => {
       author,
       finalMetadata,
     );
-    const pngBase64 = await generatePreview(sngContent);
-    return json({ png: pngBase64 });
+    const result = await generatePreview(sngContent);
+    if (result.error) {
+      return json({ error: result.error }, { status: 500 });
+    }
+    return json({ png: result.png });
   } catch (error) {
     console.error("Preview generation error:", error);
     const message = error instanceof Error ? error.message : String(error);
     return json(
-      { error: "Failed to generate preview", details: message },
+      { error: { stage: "unknown", message, logs: undefined } },
       { status: 500 },
     );
   }

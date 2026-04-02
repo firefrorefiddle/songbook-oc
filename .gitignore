@@ -11,3 +11,4 @@ tmp
 .env.production.local
 build
 prisma/prod.db
+storage/pdfs/

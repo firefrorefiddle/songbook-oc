@@ -38,7 +38,24 @@ async function cleanupTempDir(tempDir: string): Promise<void> {
   } catch {}
 }
 
-export async function convertToLatex(songContent: string): Promise<string> {
+export interface PreviewError {
+  stage: "songmaker" | "pdflatex";
+  message: string;
+  logs?: string;
+}
+
+export function isPreviewError(result: unknown): result is PreviewError {
+  return (
+    typeof result === "object" &&
+    result !== null &&
+    "stage" in result &&
+    "message" in result
+  );
+}
+
+export async function convertToLatex(
+  songContent: string,
+): Promise<string | PreviewError> {
   const tempDir = await createTempDir();
   await setupLatexFiles(tempDir);
 
@@ -47,18 +64,32 @@ export async function convertToLatex(songContent: string): Promise<string> {
   await writeFile(sngPath, songContent, "utf-8");
 
   try {
-    await execAsync(`${SONGMAKER_CLI} ${sngPath}`, {
+    const { stdout, stderr } = await execAsync(`${SONGMAKER_CLI} ${sngPath}`, {
       cwd: tempDir,
     });
+    if (stderr?.trim()) {
+      return {
+        stage: "songmaker",
+        message: stderr.trim(),
+      };
+    }
     const texPath = sngPath.replace(".sng", ".tex");
     const { readFile } = await import("fs/promises");
     return await readFile(texPath, "utf-8");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      stage: "songmaker",
+      message,
+    };
   } finally {
     await cleanupTempDir(tempDir);
   }
 }
 
-export async function renderPdf(latexContent: string): Promise<string> {
+export async function renderPdf(
+  latexContent: string,
+): Promise<string | PreviewError> {
   const tempDir = await createTempDir();
   await setupLatexFiles(tempDir);
 
@@ -68,16 +99,45 @@ export async function renderPdf(latexContent: string): Promise<string> {
   await writeFile(generatedPath, latexContent, "utf-8");
 
   try {
-    await execAsync(
+    const { stdout, stderr: pdflatexStderr } = await execAsync(
       `pdflatex -interaction=batchmode -output-directory=${tempDir} ${texPath}`,
       {
         cwd: tempDir,
       },
     );
+
+    const logPath = join(tempDir, "single-song.log");
+    let logs: string | undefined;
+    if (existsSync(logPath)) {
+      const { readFile } = await import("fs/promises");
+      logs = await readFile(logPath, "utf-8");
+    }
+
+    if (pdflatexStderr?.trim()) {
+      return {
+        stage: "pdflatex",
+        message: pdflatexStderr.trim(),
+        logs,
+      };
+    }
+
     const outputDir = await ensureOutputDir();
     const outputPdfPath = join(outputDir, `${randomUUID()}.pdf`);
     await copyFile(join(tempDir, "single-song.pdf"), outputPdfPath);
     return outputPdfPath;
+  } catch (error) {
+    const logPath = join(tempDir, "single-song.log");
+    let logs: string | undefined;
+    if (existsSync(logPath)) {
+      const { readFile } = await import("fs/promises");
+      logs = await readFile(logPath, "utf-8");
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      stage: "pdflatex",
+      message,
+      logs,
+    };
   } finally {
     await cleanupTempDir(tempDir);
   }
@@ -104,9 +164,24 @@ export async function renderPng(pdfPath: string): Promise<string> {
   }
 }
 
-export async function generatePreview(songContent: string): Promise<string> {
-  const latex = await convertToLatex(songContent);
-  const pdfPath = await renderPdf(latex);
-  const pngBase64 = await renderPng(pdfPath);
-  return pngBase64;
+export interface PreviewResult {
+  png?: string;
+  error?: PreviewError;
+}
+
+export async function generatePreview(
+  songContent: string,
+): Promise<PreviewResult> {
+  const latexResult = await convertToLatex(songContent);
+  if (isPreviewError(latexResult)) {
+    return { error: latexResult };
+  }
+
+  const pdfResult = await renderPdf(latexResult);
+  if (isPreviewError(pdfResult)) {
+    return { error: pdfResult };
+  }
+
+  const pngBase64 = await renderPng(pdfResult);
+  return { png: pngBase64 };
 }

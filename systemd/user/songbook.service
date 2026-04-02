@@ -8,6 +8,7 @@ WorkingDirectory=%h/songbook-oc
 Environment=NODE_ENV=production
 Environment=PORT=3000
 Environment=PATH=%h/songbook-oc/bin:/usr/local/bin:/usr/bin:/bin
+EnvironmentFile=%h/songbook-oc/.env.production
 ExecStart=/usr/bin/node build/index.js
 Restart=always
 RestartSec=10

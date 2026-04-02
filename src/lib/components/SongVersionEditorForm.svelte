@@ -37,6 +37,7 @@
 
   let useAdvancedEditor = $state(false);
   let previewPng = $state<string | null>(null);
+  let previewError = $state<{ stage: string; message: string; logs?: string } | null>(null);
   let isGeneratingPreview = $state(false);
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -55,6 +56,7 @@
 
     if (!canGenerateSongPreview(previewInput)) {
       previewPng = null;
+      previewError = null;
       return;
     }
 
@@ -66,9 +68,16 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(buildSongPreviewPayload(previewInput))
       });
-      const responseData = await response.json();
+    const responseData = await response.json();
 
-      previewPng = response.ok && responseData.png ? responseData.png : null;
+    if (responseData.error) {
+      previewError = responseData.error;
+      previewPng = null;
+      return;
+    }
+
+    previewError = null;
+    previewPng = response.ok && responseData.png ? responseData.png : null;
     } catch (error) {
       console.error('Preview error:', error);
       previewPng = null;
@@ -172,6 +181,19 @@
     <div class="flex-1 flex items-center justify-center overflow-auto">
       {#if isGeneratingPreview}
         <div class="text-gray-400">Generating preview...</div>
+      {:else if previewError}
+        <div class="text-center p-4">
+          <div class="text-red-600 font-medium mb-2">
+            {previewError.stage === 'songmaker' ? 'Songmaker Error' : 'LaTeX Error'}
+          </div>
+          <div class="text-gray-700 text-sm mb-3 whitespace-pre-wrap">{previewError.message}</div>
+          {#if previewError.logs}
+            <details class="text-left">
+              <summary class="text-sm text-gray-500 cursor-pointer hover:text-gray-700">View logs</summary>
+              <pre class="mt-2 text-xs bg-gray-100 p-2 rounded overflow-auto max-h-40 text-gray-600">{previewError.logs}</pre>
+            </details>
+          {/if}
+        </div>
       {:else if previewPng}
         <img
           src={previewPng}

@@ -4,6 +4,7 @@ import {
   renderPdf,
   renderPng,
   generatePreview,
+  isPreviewError,
 } from "./songPreview";
 
 const TEST_SONG = `title: Test Song
@@ -18,27 +19,42 @@ Wie du warst vor aller Zeit, so bleibst du in E-wigkeit.`;
 describe("songPreview", () => {
   describe("convertToLatex", () => {
     it("converts .sng content to LaTeX", async () => {
-      const latex = await convertToLatex(TEST_SONG);
+      const result = await convertToLatex(TEST_SONG);
 
-      expect(latex).toContain("\\beginsong");
-      expect(latex).toContain("Großer Gott");
+      expect(isPreviewError(result)).toBe(false);
+      if (!isPreviewError(result)) {
+        expect(result).toContain("\\beginsong");
+        expect(result).toContain("Großer Gott");
+      }
     });
   });
 
   describe("renderPdf", () => {
     it("renders LaTeX to PDF", async () => {
-      const latex = await convertToLatex(TEST_SONG);
-      const pdfPath = await renderPdf(latex);
+      const latexResult = await convertToLatex(TEST_SONG);
+      expect(isPreviewError(latexResult)).toBe(false);
 
-      expect(pdfPath).toContain(".pdf");
+      if (isPreviewError(latexResult)) return;
+      const pdfResult = await renderPdf(latexResult);
+
+      expect(isPreviewError(pdfResult)).toBe(false);
+      if (!isPreviewError(pdfResult)) {
+        expect(pdfResult).toContain(".pdf");
+      }
     });
   });
 
   describe("renderPng", () => {
     it("converts PDF to PNG base64", async () => {
-      const latex = await convertToLatex(TEST_SONG);
-      const pdfPath = await renderPdf(latex);
-      const pngBase64 = await renderPng(pdfPath);
+      const latexResult = await convertToLatex(TEST_SONG);
+      expect(isPreviewError(latexResult)).toBe(false);
+
+      if (isPreviewError(latexResult)) return;
+      const pdfResult = await renderPdf(latexResult);
+      expect(isPreviewError(pdfResult)).toBe(false);
+
+      if (isPreviewError(pdfResult)) return;
+      const pngBase64 = await renderPng(pdfResult);
 
       expect(pngBase64).toMatch(/^data:image\/png;base64,/);
     });
@@ -46,10 +62,14 @@ describe("songPreview", () => {
 
   describe("generatePreview", () => {
     it("generates PNG preview from song content", async () => {
-      const pngBase64 = await generatePreview(TEST_SONG);
+      const result = await generatePreview(TEST_SONG);
 
-      expect(pngBase64).toMatch(/^data:image\/png;base64,/);
-      expect(pngBase64.length).toBeGreaterThan(10000);
+      expect(result.error).toBeUndefined();
+      expect(result.png).toBeDefined();
+      if (result.png) {
+        expect(result.png).toMatch(/^data:image\/png;base64,/);
+        expect(result.png.length).toBeGreaterThan(10000);
+      }
     });
   });
 });
