@@ -55,6 +55,36 @@ function getFromAddress() {
   return env.EMAIL_FROM?.trim() || "Songbook <no-reply@songbook.local>";
 }
 
+export interface EmailTransportConfig {
+  transport: EmailTransport;
+  fromAddress: string;
+  sendmailCommand?: string;
+  mailgunDomain?: string;
+  mailgunBaseUrl?: string;
+}
+
+export function getEmailTransportConfig(): EmailTransportConfig {
+  const transport = getEmailTransport();
+  const fromAddress = getFromAddress();
+
+  const config: EmailTransportConfig = {
+    transport,
+    fromAddress,
+  };
+
+  if (transport === "sendmail") {
+    config.sendmailCommand = getSendmailCommand();
+  }
+
+  if (transport === "mailgun") {
+    const mailgun = getMailgunConfig();
+    config.mailgunDomain = mailgun.domain;
+    config.mailgunBaseUrl = mailgun.baseUrl;
+  }
+
+  return config;
+}
+
 function getLogDirectory() {
   return env.EMAIL_LOG_DIR?.trim() || path.join("storage", "emails");
 }
@@ -66,7 +96,9 @@ function getSendmailCommand() {
 function getMailgunConfig() {
   const apiKey = env.MAILGUN_API_KEY?.trim();
   const domain = env.MAILGUN_DOMAIN?.trim();
-  const baseUrl = (env.MAILGUN_BASE_URL?.trim() || "https://api.mailgun.net").replace(/\/+$/u, "");
+  const baseUrl = (
+    env.MAILGUN_BASE_URL?.trim() || "https://api.mailgun.net"
+  ).replace(/\/+$/u, "");
 
   if (!apiKey) {
     throw new Error("MAILGUN_API_KEY is required when EMAIL_TRANSPORT=mailgun");
@@ -84,7 +116,10 @@ function getMailgunConfig() {
 }
 
 function sanitiseFilePart(value: string) {
-  return value.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase();
+  return value
+    .replace(/[^a-z0-9]+/gi, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase();
 }
 
 function buildRawMessage(message: EmailMessage) {
@@ -146,24 +181,30 @@ async function sendViaSendmail(message: EmailMessage) {
 
 async function sendViaMailgun(message: EmailMessage) {
   const config = getMailgunConfig();
-  const response = await fetch(`${config.baseUrl}/v3/${config.domain}/messages`, {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${Buffer.from(`api:${config.apiKey}`).toString("base64")}`,
-      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+  const response = await fetch(
+    `${config.baseUrl}/v3/${config.domain}/messages`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${Buffer.from(`api:${config.apiKey}`).toString("base64")}`,
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      },
+      body: new URLSearchParams({
+        from: message.from,
+        to: message.to,
+        subject: message.subject,
+        text: message.text,
+      }),
     },
-    body: new URLSearchParams({
-      from: message.from,
-      to: message.to,
-      subject: message.subject,
-      text: message.text,
-    }),
-  });
+  );
 
   const responseText = await response.text();
 
   if (!response.ok) {
-    throw new Error(responseText.trim() || `Mailgun request failed with status ${response.status}`);
+    throw new Error(
+      responseText.trim() ||
+        `Mailgun request failed with status ${response.status}`,
+    );
   }
 
   let providerMessageId: string | undefined;
@@ -204,7 +245,11 @@ export function resolvePublicBaseUrl(origin: string) {
   return baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
 }
 
-export function buildInviteSignupUrl(baseUrl: string, token: string, email: string) {
+export function buildInviteSignupUrl(
+  baseUrl: string,
+  token: string,
+  email: string,
+) {
   const url = new URL("/signup", baseUrl);
   url.searchParams.set("token", token);
   url.searchParams.set("email", email);
@@ -217,7 +262,9 @@ export function buildPasswordResetUrl(baseUrl: string, token: string) {
   return url.toString();
 }
 
-export function buildInviteEmail(input: Omit<InviteEmailInput, "inviteId" | "toEmail">) {
+export function buildInviteEmail(
+  input: Omit<InviteEmailInput, "inviteId" | "toEmail">,
+) {
   const inviterLine = input.invitedByName
     ? `${input.invitedByName} invited you to join Songbook.`
     : "You were invited to join Songbook.";
@@ -311,7 +358,8 @@ async function sendTrackedEmail(input: {
       providerMessageId: dispatch.providerMessageId,
     };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown email delivery failure";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown email delivery failure";
 
     await prisma.emailDelivery.update({
       where: { id: delivery.id },
@@ -329,7 +377,9 @@ async function sendTrackedEmail(input: {
   }
 }
 
-export async function sendInviteEmail(input: InviteEmailInput): Promise<SendEmailResult> {
+export async function sendInviteEmail(
+  input: InviteEmailInput,
+): Promise<SendEmailResult> {
   const rendered = buildInviteEmail(input);
 
   return sendTrackedEmail({

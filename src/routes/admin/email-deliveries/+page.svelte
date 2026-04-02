@@ -8,6 +8,19 @@
 
     return new Date(value).toLocaleString();
   }
+
+  function getTransportLabel(transport: string): string {
+    switch (transport) {
+      case "mailgun":
+        return "Mailgun";
+      case "sendmail":
+        return "Sendmail";
+      case "log":
+        return "Log (development)";
+      default:
+        return transport;
+    }
+  }
 </script>
 
 <svelte:head>
@@ -15,6 +28,42 @@
 </svelte:head>
 
 <div class="space-y-8">
+  <section class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+    <div class="flex flex-col gap-1">
+      <h2 class="text-lg font-semibold text-gray-900">Mail transport</h2>
+      <p class="text-sm text-gray-600">
+        Current configuration: <span class="font-medium text-gray-900">{getTransportLabel(data.transportConfig.transport)}</span>
+        {#if data.transportConfig.transport === "log"}
+          <span class="ml-1 text-xs text-gray-500">(emails are logged to disk, not sent)</span>
+        {/if}
+      </p>
+      <dl class="mt-2 grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
+        <div>
+          <dt class="text-xs font-medium text-gray-500">From address</dt>
+          <dd class="text-sm text-gray-900">{data.transportConfig.fromAddress}</dd>
+        </div>
+        {#if data.transportConfig.sendmailCommand}
+          <div>
+            <dt class="text-xs font-medium text-gray-500">Command</dt>
+            <dd class="text-sm text-gray-900 font-mono">{data.transportConfig.sendmailCommand}</dd>
+          </div>
+        {/if}
+        {#if data.transportConfig.mailgunDomain}
+          <div>
+            <dt class="text-xs font-medium text-gray-500">Mailgun domain</dt>
+            <dd class="text-sm text-gray-900">{data.transportConfig.mailgunDomain}</dd>
+          </div>
+        {/if}
+        {#if data.transportConfig.mailgunBaseUrl}
+          <div>
+            <dt class="text-xs font-medium text-gray-500">Mailgun API</dt>
+            <dd class="text-sm text-gray-900 font-mono">{data.transportConfig.mailgunBaseUrl}</dd>
+          </div>
+        {/if}
+      </dl>
+    </div>
+  </section>
+
   <section
     class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"
   >
