@@ -169,6 +169,53 @@ Use seed_data as reference for:
 - lint: `pnpm lint`
 - format: `pnpm format`
 
+## Database Workflow (CRITICAL)
+
+### ALWAYS use migrations, NEVER use db push
+
+**Never run `pnpm db:push`** - it will wipe your database and lose all data!
+
+When you change the schema, create a migration instead:
+
+```bash
+# Create migration (will prompt for name)
+pnpm prisma migrate dev --name <migration_name>
+
+# Or apply pending migrations without prompting
+pnpm prisma migrate dev
+```
+
+### Why this matters
+
+- `db push` - DANGER: pushes schema directly, drops tables if needed, **destroys data**
+- `migrate dev` - SAFE: creates/applies migrations, preserves existing data
+- `migrate deploy` - SAFE: applies migrations only (used in production)
+
+### Workflow for schema changes
+
+1. Edit `prisma/schema.prisma`
+2. Run `pnpm prisma migrate dev --name <descriptive_name>`
+3. Verify migration SQL looks correct
+4. Test that data is preserved
+
+### Recovering from a wiped database
+
+If you accidentally run `db:push` and lose data, you can often recover:
+
+1. Check if there's a backup: `git stash` may have uncommitted db files
+2. The production database (`prisma/prod.db`) may have recent data - sync from there
+3. If you had run migrations before the wipe, you may be able to reset the dev db state
+
+### Verifying migration status
+
+```bash
+# Check current dev DB status
+DATABASE_URL="file:./dev.db" pnpm prisma migrate status
+
+# Check specific DB
+DATABASE_URL="file:./prisma/prod.db" pnpm prisma migrate status
+```
+
 ## Architecture rules
 
 - Keep server and UI logic separate.

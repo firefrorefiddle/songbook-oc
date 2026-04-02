@@ -1,6 +1,7 @@
 node_modules
 .svelte-kit
 tmp
+.codex
 *.db
 .env
 .env.local

@@ -33,8 +33,8 @@ A songbook management application for managing songs, song versions, and songboo
 # Install dependencies
 pnpm install
 
-# Initialize the database
-pnpm db:push
+# Initialize the database (create migrations, apply to dev DB)
+pnpm prisma migrate dev
 
 # Seed with sample data (requires admin credentials)
 pnpm db:seed -- --email <email> --password <password>
@@ -67,7 +67,7 @@ The `dev`, `build`, `check`, and test scripts regenerate the Prisma client first
 | `pnpm lint`               | Run ESLint                                                            |
 | `pnpm format`             | Format code with Prettier                                             |
 | `pnpm prisma:generate`    | Regenerate the Prisma client from the current schema                  |
-| `pnpm db:push`            | Push schema to database                                               |
+| `pnpm prisma migrate dev` | Create and apply migrations (use instead of db push!)                 |
 | `pnpm db:seed`            | Seed database with sample data                                        |
 | `pnpm db:seed-from-files` | Import Liedermappe `.sng` files plus songbook-derived categories/tags |
 | `pnpm db:studio`          | Open Prisma Studio                                                    |
@@ -202,7 +202,10 @@ The deploy script:
 - Syncs the seed database to the server (with --seed)
 - Syncs the build folder
 - Runs `pnpm install` on the server
+- Runs `pnpm prisma migrate deploy` on the server against the production database configured in `.env`
 - Restarts the user service
+
+Production deploys now apply pending Prisma migrations automatically before the service restarts. This uses `migrate deploy`, which applies checked-in migrations in order and preserves existing data. It does not perform `db push`.
 
 ### Environment Variables
 

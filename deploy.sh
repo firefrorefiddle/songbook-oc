@@ -6,7 +6,11 @@ if [ -f .envrc ]; then
   source .envrc
 fi
 
-SERVER="${SERVER:-152.53.251.51}"
+if [ -z "${SERVER:-}" ]; then
+  echo "Error: SERVER is not set. Define it in .envrc or your shell environment."
+  exit 1
+fi
+
 DOMAIN="${DOMAIN:-liedermappe.upscale-automation.com}"
 APP_DIR="/home/$USER/songbook-oc"
 USER="${USER:-$USER}"
