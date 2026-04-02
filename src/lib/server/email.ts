@@ -273,13 +273,14 @@ async function sendTrackedEmail(input: {
   passwordResetTokenId?: string;
 }): Promise<SendEmailResult> {
   const from = getFromAddress();
+  const transport = getEmailTransport();
   const delivery = await prisma.emailDelivery.create({
     data: {
       template: input.template,
       toEmail: input.toEmail,
       fromEmail: from,
       subject: input.subject,
-      transport: getEmailTransport(),
+      transport,
       metadata: input.metadata,
       inviteId: input.inviteId,
       passwordResetTokenId: input.passwordResetTokenId,
@@ -322,7 +323,7 @@ async function sendTrackedEmail(input: {
 
     return {
       status: "FAILED",
-      transport: getEmailTransport(),
+      transport,
       errorMessage,
     };
   }

@@ -22,10 +22,19 @@ export const actions: Actions = {
       });
     }
 
-    await createPasswordResetRequest(prisma, {
+    const result = await createPasswordResetRequest(prisma, {
       email,
       baseUrl: resolvePublicBaseUrl(url.origin),
     });
+
+    if (result.status === "created" && result.emailDelivery.status === "FAILED") {
+      return fail(502, {
+        error:
+          result.emailDelivery.errorMessage ||
+          "The password reset email could not be sent. Please try again later.",
+        fields,
+      });
+    }
 
     return {
       success: GENERIC_SUCCESS_MESSAGE,
