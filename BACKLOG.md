@@ -205,6 +205,20 @@ This file tracks the current state of work, improvements, and technical debt for
 - **Priority**: high
 - **Description**: Add a new output mode for song collections intended for on-screen presentation using the overhead LaTeX layout and a clickable table of contents at the beginning. This should be optimized for projection use and navigation rather than simply reusing the print flow.
 
+### Configurable songbook output modes
+
+- **Status**: pending
+- **Priority**: medium
+- **Description**: Allow users to configure songbooks for different output modes: chorded (with chords), text-only (lyrics without chords), and overhead/projection. Each mode maps to different LaTeX configurations that control how content is rendered.
+- **Details**:
+  - Output modes: chorded (default), text-only, overhead/projection
+  - Font size options: small, medium, large, extra-large
+  - Paper sizes: A4, A5, letter
+  - Mode-specific LaTeX templates that toggle chord visibility, font scaling, and page layout
+  - Store output settings as JSON on Songbook so they persist with the collection
+  - Generate the correct LaTeX template based on stored settings at PDF generation time
+- **Follow-up**: Add presentation mode in app (item above) after output modes are configurable.
+
 ### Presentation mode in the app
 
 - **Status**: pending
