@@ -42,7 +42,7 @@ pnpm db:seed -- --email <email> --password <password>
 
 The first user is created via the `/setup` page when no users exist. Alternatively, use the seed script with admin credentials.
 
-Admins can manage users from `/admin/users`, where they can review ownership and collaboration footprint, deactivate or reactivate accounts, and resend pending invite links.
+Admins can manage users from `/admin/users`, where they can review ownership and collaboration footprint, deactivate or reactivate accounts, and resend pending invite links. They can also inspect recent transactional email attempts at `/admin/email-deliveries`, including invite and password reset deliveries, transport details, and failures.
 
 Users who forget their password can request a reset link from `/forgot-password`.
 

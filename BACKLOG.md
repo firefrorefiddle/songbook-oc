@@ -156,9 +156,10 @@ This file tracks the current state of work, improvements, and technical debt for
 
 ### Mail delivery and audit visibility
 
-- **Status**: pending
+- **Status**: completed
 - **Priority**: medium
-- **Description**: Add admin-level visibility into whether system emails were queued, sent, failed, or bounced, and keep audit records for key account and permission events. This is necessary for real support work when users report that they never received an email.
+- **Description**: Added `/admin/email-deliveries` so admins can inspect recent transactional email attempts, filter by template or status, and review linked invite/reset context, transport identifiers, metadata, and failure messages.
+- **Related**: This commit
 
 ### Better search and filtering
 
@@ -228,6 +229,20 @@ This file tracks the current state of work, improvements, and technical debt for
 - **Description**: Allow users to explicitly publish selected songs or songbooks to the wider authenticated community while keeping other items private or selectively shared. This supports the "invite our friends and share songs" model without introducing separate workspaces.
 
 ## Decisions
+
+**Date**: 2026-04-02
+**Context**: Transactional email attempts were already persisted in `EmailDelivery`, but admins still had no operational UI for answering whether an invite or password reset was sent, logged locally, or failed. Support work required direct database access.
+**Decision**:
+
+- Add an admin page at `/admin/email-deliveries` that lists the most recent delivery records with status, transport, recipient, related invite or reset context, and parsed metadata such as signup/reset URLs and expiry timestamps.
+- Keep filtering simple and server-side at the page layer using recent-record retrieval plus in-memory filtering, which avoids coupling the first operational slice to database-specific search behavior.
+
+**Alternatives considered**:
+
+- Exposing raw `EmailDelivery` rows directly in the page load: rejected because the admin page needs stable display labels and parsed metadata rather than leaking storage format details into the UI.
+- Building a broader audit log at the same time: rejected because mail-delivery troubleshooting is already a concrete operational need and can ship independently of the wider audit backlog.
+
+---
 
 **Date**: 2026-04-02
 **Context**: The deployment script previously updated code and restarted the production service without applying pending Prisma migrations on the server. That left production vulnerable to code/schema drift after deploys and required a manual migration step.
