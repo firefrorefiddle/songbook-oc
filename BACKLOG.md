@@ -67,7 +67,7 @@ This file tracks the current state of work, improvements, and technical debt for
 
 ### Fork songs and songbooks
 
-- **Status**: pending
+- **Status**: completed
 - **Priority**: medium
 - **Description**: API + UI for forking a song/songbook. Show forked-from reference.
 
