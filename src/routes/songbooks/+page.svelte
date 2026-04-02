@@ -35,10 +35,27 @@
 		showDeleteConfirm = true;
 	}
 
-	function cancelDelete() {
-		songbookToDelete = null;
-		showDeleteConfirm = false;
-	}
+ 	function cancelDelete() {
+ 		songbookToDelete = null;
+ 		showDeleteConfirm = false;
+ 	}
+
+ 	async function forkSongbook(songbook: { id: string; versions: { title: string }[] }) {
+ 		const title = prompt('Enter new songbook title:', songbook.versions[0]?.title);
+ 		if (!title) return;
+ 		try {
+ 			const response = await fetch(`/api/songbooks/${songbook.id}/fork`, {
+ 				method: 'POST',
+ 				headers: { 'Content-Type': 'application/json' },
+ 				body: JSON.stringify({ title }),
+ 			});
+ 			if (!response.ok) throw new Error('Failed to fork');
+ 			const forked = await response.json();
+ 			goto(`/songbooks/${forked.id}`);
+ 		} catch (_e) {
+ 			alert('Failed to fork songbook');
+ 		}
+ 	}
 </script>
 
 <svelte:head>
@@ -104,6 +121,7 @@
 					<div class="mt-4 flex gap-2">
 						<Button variant="secondary" onclick={() => goto(`/songbooks/${songbook.id}`)}>View</Button>
 						{#if !songbook.isArchived}
+							<Button variant="secondary" onclick={() => forkSongbook(songbook)}>Fork</Button>
 							<Button variant="danger" onclick={() => confirmDelete({ id: songbook.id, title: songbook.versions[0]?.title || 'Untitled' })}>
 								Archive
 							</Button>

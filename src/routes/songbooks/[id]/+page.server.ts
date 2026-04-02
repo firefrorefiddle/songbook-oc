@@ -6,6 +6,11 @@ export const load: PageServerLoad = async ({ params }) => {
   const songbook = await prisma.songbook.findUnique({
     where: { id: params.id },
     include: {
+      forkedFrom: {
+        include: {
+          versions: { orderBy: { createdAt: "desc" }, take: 1 },
+        },
+      },
       versions: {
         orderBy: { createdAt: "desc" },
         include: {

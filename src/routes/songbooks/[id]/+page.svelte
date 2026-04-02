@@ -150,6 +150,9 @@
 
   let isGeneratingPdf = $state(false);
   let isDownloadingPdf = $state(false);
+  let showForkModal = $state(false);
+  let forkTitle = $state("");
+  let isForking = $state(false);
 
   async function generatePdf() {
     if (isGeneratingPdf) return;
@@ -207,6 +210,30 @@
       logWindow.document.write(`<pre>${logContent}</pre>`);
     }
   }
+
+  function openFork() {
+    forkTitle = getCurrentVersion()?.title || "";
+    showForkModal = true;
+  }
+
+  async function submitFork() {
+    isForking = true;
+    try {
+      const response = await fetch(`/api/songbooks/${data.songbook.id}/fork`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: forkTitle }),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to fork songbook");
+      }
+      const forkedSongbook = await response.json();
+      window.location.href = `/songbooks/${forkedSongbook.id}`;
+    } catch (e) {
+      console.error("Fork error:", e);
+      isForking = false;
+    }
+  }
 </script>
 
 <svelte:head>
@@ -233,6 +260,13 @@
       </h1>
       {#if getCurrentVersion()?.description}
         <p class="text-gray-500 mt-1">{getCurrentVersion().description}</p>
+      {/if}
+      {#if (data.songbook as { forkedFrom?: { id: string; versions: { title: string }[] } }).forkedFrom}
+        {@const forked = (data.songbook as { forkedFrom?: { id: string; versions: { title: string }[] } }).forkedFrom}
+        <p class="mt-1 text-sm text-gray-500">
+          Forked from <a href="/songbooks/{forked!.id}" class="text-indigo-600 hover:text-indigo-800">{forked!.versions[0]?.title || "original"}</a
+          >
+        </p>
       {/if}
     </div>
     <div class="flex gap-2">
@@ -262,6 +296,7 @@
       <Button variant="secondary" onclick={() => (showNewVersionModal = true)}
         >New Version</Button
       >
+      <Button variant="secondary" onclick={openFork}>Fork</Button>
     </div>
   </div>
 
@@ -560,5 +595,32 @@
         <Button type="submit">Create Version</Button>
       </div>
     </form>
+  {/snippet}
+</Modal>
+
+<Modal bind:open={showForkModal} title="Fork Songbook" onclose={() => (showForkModal = false)}>
+  {#snippet children()}
+    <div class="space-y-4">
+      <p class="text-sm text-gray-600">
+        Create a copy of this songbook that you can edit independently.
+      </p>
+      <div>
+        <label for="fork-title" class="block text-sm font-medium text-gray-700">
+          New Songbook Title
+        </label>
+        <input
+          id="fork-title"
+          type="text"
+          bind:value={forkTitle}
+          class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+        />
+      </div>
+      <div class="flex justify-end gap-2">
+        <Button variant="secondary" onclick={() => (showForkModal = false)}>Cancel</Button>
+        <Button onclick={submitFork} disabled={isForking || !forkTitle.trim()}>
+          {isForking ? "Forking..." : "Fork Songbook"}
+        </Button>
+      </div>
+    </div>
   {/snippet}
 </Modal>
