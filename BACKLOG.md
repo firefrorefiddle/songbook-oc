@@ -230,6 +230,20 @@ This file tracks the current state of work, improvements, and technical debt for
 ## Decisions
 
 **Date**: 2026-04-02
+**Context**: The deployment script previously updated code and restarted the production service without applying pending Prisma migrations on the server. That left production vulnerable to code/schema drift after deploys and required a manual migration step.
+**Decision**:
+
+- Update `deploy.sh` to run `pnpm prisma migrate deploy` on the server after syncing `.env` and installing dependencies, but before restarting the app.
+- Keep production schema changes in checked-in Prisma migrations and continue avoiding `db push` in deploy flows.
+
+**Alternatives considered**:
+
+- Relying on manual production migration commands: rejected because it is easy to forget and can leave production code running against an outdated schema.
+- Using `prisma db push` during deploy: rejected because it bypasses the migration history and is explicitly unsafe for this project.
+
+---
+
+**Date**: 2026-04-02
 **Context**: Password reset started failing with a Prisma validation error for `User.isActive` even though the schema already contained the field. The generated client had fallen behind the checked-in schema, so runtime queries could reference valid schema fields that the local client did not know about yet.
 **Decision**:
 

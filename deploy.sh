@@ -83,6 +83,9 @@ scp $SSH_OPTS .env.production "$USER@$SERVER:$APP_DIR/.env"
 echo "=== Running post-install on server ==="
 ssh $SSH_OPTS "$USER@$SERVER" "cd $APP_DIR && pnpm install"
 
+echo "=== Applying production database migrations ==="
+ssh $SSH_OPTS "$USER@$SERVER" "cd $APP_DIR && pnpm prisma migrate deploy"
+
 echo "=== Restarting app ==="
 ssh $SSH_OPTS "$USER@$SERVER" "
   systemctl --user restart songbook
