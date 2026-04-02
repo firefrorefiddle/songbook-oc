@@ -281,6 +281,12 @@
             <strong>Email sent.</strong> The invitation email was handed off to the configured sendmail transport.
           </p>
         </div>
+      {:else if emailStatus === "SENT" && emailTransport === "mailgun"}
+        <div class="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded mb-4">
+          <p class="text-sm">
+            <strong>Email sent.</strong> The invitation email was sent via the configured mail provider.
+          </p>
+        </div>
       {:else if emailStatus === "SENT" && emailTransport === "log"}
         <div class="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded mb-4">
           <p class="text-sm">
