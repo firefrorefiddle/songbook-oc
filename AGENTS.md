@@ -260,6 +260,23 @@ Every architectural choice, tradeoff, or context that would be lost over time mu
 
 ---
 
+**Date**: 2026-04-02
+**Context**: The production deployment needed a repeatable backup flow for the SQLite database that matches the documented home-directory deployment layout and avoids storing duplicate snapshots when the database rarely changes.
+**Decision**:
+
+- Standardize production automation around the `~/songbook-oc` deployment path described in the README, including the user-level systemd setup script.
+- Add a user-level `songbook-backup.timer` that runs a local backup script once per day.
+- Use `sqlite3 .backup` to produce a consistent snapshot without stopping the app, and keep a new compressed archive only when the raw snapshot hash differs from the latest retained backup.
+- Leave off-site replication out of the initial implementation so the local backup format and cadence are stable before choosing a storage target.
+
+**Alternatives considered**:
+
+- Copying `songbook.db` directly with `cp` or `rsync`: rejected because SQLite file copies are less defensible than `.backup` while the app is live.
+- Keeping backup setup outside the repository: rejected because the deployment path and unit files would drift again and become harder to review.
+- Writing every scheduled snapshot regardless of content: rejected because the expected write rate is low and duplicate archives would add noise without improving recovery.
+
+---
+
 **Date**: 2026-04-01
 **Context**: Liedermappe import needed to preserve song taxonomy from the legacy source material without blocking on the full filtering UI. The app also needed a structure that can support future filtering instead of burying labels in free-form JSON metadata.
 **Decision**:

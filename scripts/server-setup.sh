@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 if [ -f .envrc ]; then
   source .envrc
@@ -10,44 +10,34 @@ if [ -z "${SERVER:-}" ]; then
   exit 1
 fi
 
-USER="root"
-APP_DIR="/opt/songbook-oc"
+REMOTE_USER="${REMOTE_USER:-${USER}}"
+APP_DIR="/home/$REMOTE_USER/songbook-oc"
+SYSTEMD_DIR=".config/systemd/user"
 
 echo "=== Creating app directory ==="
-ssh "$USER@$SERVER" "mkdir -p $APP_DIR/data $APP_DIR/bin"
+ssh "$REMOTE_USER@$SERVER" "mkdir -p $APP_DIR/data $APP_DIR/bin ~/$SYSTEMD_DIR"
 
-echo "=== Installing songmaker-cli ==="
-scp bin/songmaker-cli "$USER@$SERVER:$APP_DIR/bin/"
-ssh "$USER@$SERVER" "chmod +x $APP_DIR/bin/songmaker-cli"
+echo "=== Installing executable scripts ==="
+scp bin/songmaker-cli bin/songbook-backup "$REMOTE_USER@$SERVER:$APP_DIR/bin/"
+ssh "$REMOTE_USER@$SERVER" \
+  "chmod +x $APP_DIR/bin/songmaker-cli $APP_DIR/bin/songbook-backup"
 
-echo "=== Creating systemd service ==="
-ssh "$USER@$SERVER" sudo tee /etc/systemd/system/songbook.service > /dev/null <<'EOF'
-[Unit]
-Description=Songbook-OC SvelteKit App
-After=network.target
-
-[Service]
-Type=exec
-WorkingDirectory=/opt/songbook-oc
-Environment=NODE_ENV=production
-Environment=PORT=3000
-Environment="PATH=/opt/songbook-oc/bin:/usr/local/bin:/usr/bin:/bin"
-ExecStart=/usr/bin/node build/index.js
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-EOF
+echo "=== Installing systemd user units ==="
+scp systemd/user/songbook.service \
+  systemd/user/songbook-backup.service \
+  systemd/user/songbook-backup.timer \
+  "$REMOTE_USER@$SERVER:~/$SYSTEMD_DIR/"
 
 echo "=== Reloading systemd ==="
-ssh "$USER@$SERVER" sudo systemctl daemon-reload
+ssh "$REMOTE_USER@$SERVER" "systemctl --user daemon-reload"
 
-echo "=== Enabling service ==="
-ssh "$USER@$SERVER" sudo systemctl enable songbook
+echo "=== Enabling timer and app service ==="
+ssh "$REMOTE_USER@$SERVER" \
+  "systemctl --user enable songbook && systemctl --user enable --now songbook-backup.timer"
 
 echo "=== Setup complete ==="
 echo "Next steps:"
 echo "1. Create $APP_DIR/.env with production values"
 echo "2. Run ./deploy.sh to deploy the app"
-echo "3. sudo systemctl start songbook to start the app"
+echo "3. systemctl --user start songbook to start the app"
+echo "4. systemctl --user list-timers songbook-backup.timer to confirm the backup schedule"

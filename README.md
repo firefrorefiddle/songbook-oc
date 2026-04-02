@@ -138,6 +138,7 @@ und alle Schönheit kommt von dir, o Gott!
 
 - SSH access to the server
 - Node.js 20+ and pnpm installed on server
+- `sqlite3`, `gzip`, and `sha256sum` available on the server for backups
 - User-level systemd service for the app
 
 ### Initial Setup
@@ -152,36 +153,10 @@ und alle Schönheit kommt von dir, o Gott!
    DATABASE_URL="file:./prisma/prod.db" pnpm db:seed -- --email <email> --password <password>
    ```
 
-2. **Set up user service on server:**
+2. **Set up user services on server:**
 
    ```bash
-   # SSH to server
-   ssh user@server
-
-   # Create systemd user service
-   mkdir -p ~/.config/systemd/user
-   cat > ~/.config/systemd/user/songbook.service << 'EOF'
-   [Unit]
-   Description=Songbook-OC SvelteKit App
-   After=network.target
-
-   [Service]
-   Type=exec
-   WorkingDirectory=%h/songbook-oc
-   Environment=NODE_ENV=production
-   Environment=PORT=3000
-   ExecStart=/usr/bin/node build/index.js
-   Restart=always
-   RestartSec=10
-
-   [Install]
-   WantedBy=default.target
-   EOF
-
-   # Enable and start service
-   systemctl --user daemon-reload
-   systemctl --user enable songbook
-   systemctl --user start songbook
+   ./scripts/server-setup.sh
    ```
 
 3. **Configure reverse proxy (nginx):** Point nginx to `localhost:3000`
@@ -204,6 +179,7 @@ The deploy script:
 - Syncs the build folder
 - Runs `pnpm install` on the server
 - Runs `pnpm prisma migrate deploy` on the server against the production database configured in `.env`
+- Reloads user-level systemd units from `systemd/user/`
 - Restarts the user service
 
 Production deploys now apply pending Prisma migrations automatically before the service restarts. This uses `migrate deploy`, which applies checked-in migrations in order and preserves existing data. It does not perform `db push`.
@@ -229,6 +205,27 @@ MAILGUN_BASE_URL="https://api.mailgun.net"
 For local development, set `EMAIL_TRANSPORT=log` to capture outgoing emails as `.eml` files in `storage/emails/` instead of attempting delivery. If you prefer a local MTA instead, switch to `EMAIL_TRANSPORT=sendmail` and set `EMAIL_SENDMAIL_COMMAND`.
 
 **Important**: Use an absolute path for the database, not a relative path. The working directory of the systemd service may differ from where the app is located.
+
+### Production Database Backups
+
+`scripts/server-setup.sh` installs and enables a user-level `songbook-backup.timer` alongside the app service.
+
+- The timer runs once per day at `03:17` local time with up to 30 minutes of randomized delay.
+- The backup job uses `sqlite3 .backup` to create a transactionally consistent snapshot of `data/songbook.db` while the app stays online.
+- Backups are written to `~/songbook-oc/backups/db/`.
+- A new compressed archive is kept only when the SQLite snapshot hash changed since the last retained backup.
+- Each retained backup gets matching `.sha256` and `.meta` sidecar files for later verification and off-site replication.
+
+Useful commands:
+
+```bash
+systemctl --user status songbook-backup.timer
+systemctl --user list-timers songbook-backup.timer
+systemctl --user start songbook-backup.service
+ls -lh ~/songbook-oc/backups/db
+```
+
+The current setup keeps local backups only. Off-site replication is intentionally left open until a storage target is chosen.
 
 ### Secrets
 

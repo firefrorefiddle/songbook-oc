@@ -25,6 +25,13 @@ This file tracks the current state of work, improvements, and technical debt for
 - **Description**: Fixed ESLint config to use typescript-eslint properly, added browser globals, disabled overly strict Svelte rules, fixed unused variable warnings.
 - **Related**: 842cb6a
 
+### Add production database backup automation
+
+- **Status**: completed
+- **Priority**: high
+- **Description**: Added a daily user-level systemd timer plus a SQLite-safe backup script for production. Backups now land under `~/songbook-oc/backups/db/` and only retain a new archive when the snapshot content actually changed.
+- **Follow-up**: Add off-site replication once the storage target is chosen.
+
 ### Unify song create and edit editor UI
 
 - **Status**: completed

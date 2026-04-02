@@ -1,0 +1,7 @@
+[Unit]
+Description=Songbook-OC SQLite backup
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/songbook-oc
+ExecStart=%h/songbook-oc/bin/songbook-backup

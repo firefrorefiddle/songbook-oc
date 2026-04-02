@@ -1,0 +1,16 @@
+[Unit]
+Description=Songbook-OC SvelteKit App
+After=network.target
+
+[Service]
+Type=exec
+WorkingDirectory=%h/songbook-oc
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=PATH=%h/songbook-oc/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/bin/node build/index.js
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

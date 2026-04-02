@@ -79,7 +79,8 @@ echo "=== Syncing build folder ==="
 rsync -avz -e "$RSYNC_SSH" build/ "$USER@$SERVER:$APP_DIR/build/"
 
 echo "=== Ensuring songmaker-cli is executable ==="
-ssh $SSH_OPTS "$USER@$SERVER" "chmod +x $APP_DIR/bin/songmaker-cli"
+ssh $SSH_OPTS "$USER@$SERVER" \
+  "chmod +x $APP_DIR/bin/songmaker-cli $APP_DIR/bin/songbook-backup"
 
 echo "=== Syncing environment file ==="
 scp $SSH_OPTS .env.production "$USER@$SERVER:$APP_DIR/.env"
@@ -92,6 +93,7 @@ ssh $SSH_OPTS "$USER@$SERVER" "cd $APP_DIR && pnpm prisma migrate deploy"
 
 echo "=== Restarting app ==="
 ssh $SSH_OPTS "$USER@$SERVER" "
+  systemctl --user daemon-reload
   systemctl --user restart songbook
   sleep 2
   if systemctl --user is-active --quiet songbook; then
