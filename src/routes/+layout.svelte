@@ -39,12 +39,18 @@
           >
             Songs
           </a>
-          <a
-            href="/songbooks"
-            class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900"
-          >
-            Songbooks
-          </a>
+<a
+  href="/songbooks"
+  class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900"
+>
+  Songbooks
+</a>
+<a
+  href="/people"
+  class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900"
+>
+  People
+</a>
           {#if isAdmin}
             <a
               href="/admin/users"

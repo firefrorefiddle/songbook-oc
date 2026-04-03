@@ -89,9 +89,10 @@ This file tracks the current state of work, improvements, and technical debt for
 
 ### User directory
 
-- **Status**: pending
+- **Status**: completed
 - **Priority**: high
 - **Description**: Add a "People" page where users can search for others by name or email and quickly understand who is part of the community. This should become the main entry point for sharing and collaboration without requiring users to remember exact email addresses.
+- **Implementation notes**: Added `/people` page with user search and a "Shared with me" section showing songs and songbooks shared with the current user. Navigation link added for all authenticated users.
 
 ### Shared with me dashboard
 
