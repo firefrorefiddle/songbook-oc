@@ -29,6 +29,22 @@
   let showForkModal = $state(false);
   let forkTitle = $state("");
   let isForking = $state(false);
+  let showCollabModal = $state(false);
+  let selectedUserId = $state("");
+  let selectedRole = $state<"EDITOR" | "ADMIN">("EDITOR");
+  let availableUsers = $state<{ id: string; displayName: string; email: string }[]>([]);
+
+  async function openCollabModal() {
+    const response = await fetch("?/loadUsers", { method: "POST" });
+    const result = await response.json();
+    if (result.type === "success") {
+      availableUsers = result.data.users.filter(
+        (u: { id: string }) =>
+          u.id !== (data as any).owner?.id && !(data as any).collaborators?.some((c: { id: string }) => c.id === u.id),
+      );
+    }
+    showCollabModal = true;
+  }
 
   $effect(() => {
     if (!compareVersionId || !data.song.versions.some((version) => version.id === compareVersionId)) {
@@ -141,13 +157,21 @@
       {#if getLatestVersion()?.author}
         <p class="text-gray-500">{getLatestVersion()?.author}</p>
       {/if}
-      {#if (data.song as { forkedFrom?: { id: string; versions: { title: string }[] } }).forkedFrom}
-        {@const forked = (data.song as { forkedFrom?: { id: string; versions: { title: string }[] } }).forkedFrom}
-        <p class="mt-1 text-sm text-gray-500">
-          Forked from <a href="/songs/{forked!.id}" class="text-indigo-600 hover:text-indigo-800">{forked!.versions[0]?.title || 'original'}</a
-          >
-        </p>
-      {/if}
+{#if (data.song as { forkedFrom?: { id: string; versions: { title: string }[] } }).forkedFrom}
+{@const forked = (data.song as { forkedFrom?: { id: string; versions: { title: string }[] } }).forkedFrom}
+<p class="mt-1 text-sm text-gray-500">
+Forked from <a href="/songs/{forked!.id}" class="text-indigo-600 hover:text-indigo-800">{forked!.versions[0]?.title || 'original'}</a
+>
+</p>
+{/if}
+<p class="mt-1 text-sm text-gray-500">
+Owner: <span class="font-medium text-gray-700">{data.owner.displayName}</span>
+</p>
+{#if data.collaborators.length > 0}
+<p class="mt-1 text-sm text-gray-500">
+Collaborators: {data.collaborators.map((c) => c.displayName).join(", ")}
+</p>
+{/if}
       {#if getRecommendedVersion()}
         <p class="mt-2 text-sm text-gray-600">
           Recommended for reuse and songbook printing:
@@ -170,8 +194,11 @@
           >
         </form>
       {/if}
-      <Button onclick={() => openEdit(0)}>Edit Current Version</Button>
-      <Button variant="secondary" onclick={openFork}>Fork</Button>
+<Button onclick={() => openEdit(0)}>Edit Current Version</Button>
+  <Button variant="secondary" onclick={openFork}>Fork</Button>
+  {#if data.isOwner}
+    <Button variant="secondary" onclick={openCollabModal}>Manage</Button>
+  {/if}
     </div>
   </div>
 
@@ -401,28 +428,109 @@
 </Modal>
 
 <Modal bind:open={showForkModal} title="Fork Song" onclose={() => (showForkModal = false)}>
-  {#snippet children()}
-    <div class="space-y-4">
-      <p class="text-sm text-gray-600">
-        Create a copy of this song that you can edit independently.
-      </p>
-      <div>
-        <label for="fork-title" class="block text-sm font-medium text-gray-700">
-          New Song Title
-        </label>
-        <input
-          id="fork-title"
-          type="text"
-          bind:value={forkTitle}
-          class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
-        />
-      </div>
-      <div class="flex justify-end gap-2">
-        <Button variant="secondary" onclick={() => (showForkModal = false)}>Cancel</Button>
-        <Button onclick={submitFork} disabled={isForking || !forkTitle.trim()}>
-          {isForking ? "Forking..." : "Fork Song"}
-        </Button>
-      </div>
-    </div>
-  {/snippet}
+{#snippet children()}
+<div class="space-y-4">
+<p class="text-sm text-gray-600">
+Create a copy of this song that you can edit independently.
+</p>
+<div>
+<label for="fork-title" class="block text-sm font-medium text-gray-700">
+New Song Title
+</label>
+<input
+id="fork-title"
+type="text"
+bind:value={forkTitle}
+class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+/>
+</div>
+<div class="flex justify-end gap-2">
+<Button variant="secondary" onclick={() => (showForkModal = false)}>Cancel</Button>
+<Button onclick={submitFork} disabled={isForking || !forkTitle.trim()}>
+{isForking ? "Forking..." : "Fork Song"}
+</Button>
+</div>
+</div>
+{/snippet}
+</Modal>
+
+<Modal bind:open={showCollabModal} title="Manage Collaborators" onclose={() => (showCollabModal = false)}>
+{#snippet children()}
+<div class="space-y-6">
+<div>
+<h4 class="text-sm font-medium text-gray-700 mb-2">Owner</h4>
+<p class="text-sm text-gray-900">{(data as any).owner?.displayName || "Unknown"} ({(data as any).owner?.email})</p>
+</div>
+
+<div>
+<h4 class="text-sm font-medium text-gray-700 mb-2">Collaborators</h4>
+{#if (data as any).collaborators?.length === 0}
+<p class="text-sm text-gray-500">No collaborators yet</p>
+{:else}
+<ul class="divide-y divide-gray-200 border rounded-md">
+{#each (data as any).collaborators || [] as collab}
+<li class="px-3 py-2 flex justify-between items-center">
+<span class="text-sm">{collab.displayName} ({collab.email})</span>
+<span class="text-xs text-gray-500 mr-2">{collab.role}</span>
+{#if data.isOwner}
+<form method="POST" action="?/removeCollaborator" use:enhance={() => refreshOnSuccess()}>
+<input type="hidden" name="userId" value={collab.id} />
+<Button variant="danger" type="submit" onclick={() => (showCollabModal = false)}>Remove</Button>
+</form>
+{/if}
+</li>
+{/each}
+</ul>
+{/if}
+</div>
+
+{#if data.isOwner}
+<div>
+<h4 class="text-sm font-medium text-gray-700 mb-2">Add Collaborator</h4>
+<form method="POST" action="?/addCollaborator" use:enhance={() => refreshOnSuccess(true)}>
+<div class="flex gap-2 mb-2">
+<select
+name="userId"
+bind:value={selectedUserId}
+class="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
+>
+<option value="">Select a user...</option>
+{#each availableUsers as user}
+<option value={user.id}>{user.displayName} ({user.email})</option>
+{/each}
+</select>
+<select
+name="role"
+bind:value={selectedRole}
+class="rounded-md border border-gray-300 px-3 py-2 text-sm"
+>
+<option value="EDITOR">Editor</option>
+<option value="ADMIN">Admin</option>
+</select>
+</div>
+<Button type="submit" disabled={!selectedUserId}>Add</Button>
+</form>
+</div>
+
+<div class="border-t pt-4">
+<h4 class="text-sm font-medium text-gray-700 mb-2">Transfer Ownership</h4>
+<form method="POST" action="?/transferOwnership" use:enhance={() => refreshOnSuccess(true)}>
+<div class="flex gap-2">
+<select
+name="newOwnerId"
+bind:value={selectedUserId}
+class="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
+>
+<option value="">Select new owner...</option>
+{#each (data as any).collaborators || [] as collab}
+<option value={collab.id}>{collab.displayName} ({collab.email})</option>
+{/each}
+</select>
+<Button type="submit" variant="danger" disabled={!selectedUserId}>Transfer</Button>
+</div>
+</form>
+</div>
+{/if}
+</div>
+{/snippet}
 </Modal>

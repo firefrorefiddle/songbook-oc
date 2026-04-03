@@ -61,9 +61,10 @@ This file tracks the current state of work, improvements, and technical debt for
 
 ### Collaboration & ownership transfer UI
 
-- **Status**: pending
+- **Status**: completed
 - **Priority**: medium
 - **Description**: UI for adding collaborators, transferring ownership (single + bulk), viewing forked-from attribution.
+- **Implementation notes**: Added /lib/server/collaborations.ts module with functions for managing collaborators. Updated song detail page to show owner and collaborators, with a "Manage" button for owners to add/remove collaborators and transfer ownership. Forked-from attribution was already displayed.
 
 ### Fork songs and songbooks
 
@@ -96,9 +97,10 @@ This file tracks the current state of work, improvements, and technical debt for
 
 ### Shared with me dashboard
 
-- **Status**: pending
+- **Status**: completed
 - **Priority**: high
-- **Description**: Create a dedicated view listing all songs and songbooks others have shared with the current user, with filters for recent items, editable items, and owner. Users should not need to search the entire library just to find content that was explicitly shared with them.
+- **Description**: Created a dedicated view at `/shared` listing all songs and songbooks others have shared with the current user, with filters for songs/songbooks and showing owner and role.
+- **Implementation notes**: Added `/shared` page with collaboration filter, owner info display, and role badges. Navigation link added in header.
 
 ### Sharing management UI with clear roles
 
@@ -150,9 +152,10 @@ This file tracks the current state of work, improvements, and technical debt for
 
 ### Activity log
 
-- **Status**: pending
+- **Status**: completed
 - **Priority**: high
 - **Description**: Add an activity feed for important events such as create, edit, fork, share, archive, ownership change, and invite acceptance. Shared systems work better when users and admins can answer "what happened?" without guessing.
+- **Implementation notes**: Added `ActivityLog` model with `actorId`, `action`, `resourceType`, `resourceId`, `sourceResourceId`, and `sourceResourceType` for tracking forks. Actions include SONG_CREATED, SONG_VERSION_CREATED, SONG_ARCHIVED, SONG_FORKED, SONG_MADE_PUBLIC/PRIVATE, COLLABORATOR_ADDED/REMOVED, OWNERSHIP_TRANSFERRED, INVITE_SENT, INVITE_ACCEPTED. Added activity log server module with `logActivity`, `getActivityLogs`, and `getRecentActivity` functions. Integrated logging into song/songbook creation, versioning, forking, archiving, collaboration changes, invites, and signup.
 
 ### Notifications
 
@@ -202,13 +205,14 @@ This file tracks the current state of work, improvements, and technical debt for
 
 ### Song collection presentation generation
 
-- **Status**: pending
+- **Status**: completed
 - **Priority**: high
 - **Description**: Add a new output mode for song collections intended for on-screen presentation using the overhead LaTeX layout and a clickable table of contents at the beginning. This should be optimized for projection use and navigation rather than simply reusing the print flow.
+- **Note**: Implemented as part of "Configurable songbook output modes" - users can now select "overhead/projection" mode in songbook settings.
 
 ### Configurable songbook output modes
 
-- **Status**: pending
+- **Status**: completed
 - **Priority**: medium
 - **Description**: Allow users to configure songbooks for different output modes: chorded (with chords), text-only (lyrics without chords), and overhead/projection. Each mode maps to different LaTeX configurations that control how content is rendered.
 - **Details**:

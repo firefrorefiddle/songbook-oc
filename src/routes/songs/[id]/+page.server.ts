@@ -1,8 +1,21 @@
 import type { PageServerLoad, Actions } from "./$types";
 import { prisma } from "$lib/server/prisma";
-import { fail } from "@sveltejs/kit";
+import { fail, redirect } from "@sveltejs/kit";
+import {
+  getSongCollaborators,
+  getOwnerInfo,
+  getActiveUsers,
+  addSongCollaborator,
+  removeSongCollaborator,
+  transferSongOwnership,
+} from "$lib/server/collaborations";
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async ({ params, locals }) => {
+  const session = await locals.auth();
+  if (!session?.user) throw redirect(302, "/login");
+
+  const currentUserId = session.user.id;
+
   const song = await prisma.song.findUnique({
     where: { id: params.id },
     include: {
@@ -22,7 +35,21 @@ export const load: PageServerLoad = async ({ params }) => {
     throw new Error("Song not found");
   }
 
-  return { song };
+  const [owner, collaborators] = await Promise.all([
+    getOwnerInfo(prisma, song.ownerId),
+    getSongCollaborators(prisma, params.id),
+  ]);
+
+  const isOwner = song.ownerId === currentUserId;
+
+  return {
+    song,
+    owner,
+    collaborators,
+    isOwner,
+    canManage: isOwner,
+    currentUserId,
+  };
 };
 
 export const actions: Actions = {
@@ -184,5 +211,184 @@ export const actions: Actions = {
     });
 
     return { success: true };
+  },
+
+  addCollaborator: async ({ params, request, locals }) => {
+    const session = await locals.auth();
+    if (!session?.user) throw redirect(302, "/login");
+
+    const song = await prisma.song.findUnique({
+      where: { id: params.id },
+      select: { ownerId: true },
+    });
+
+    if (!song) {
+      return fail(404, { error: "Song not found" });
+    }
+
+    if (song.ownerId !== session.user.id) {
+      return fail(403, { error: "Only the owner can add collaborators" });
+    }
+
+    const formData = await request.formData();
+    const userId = formData.get("userId") as string;
+    const role = (formData.get("role") as "EDITOR" | "ADMIN") || "EDITOR";
+
+    if (!userId) {
+      return fail(400, { error: "User is required" });
+    }
+
+    try {
+      const targetUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { firstName: true, lastName: true, email: true },
+      });
+      if (!targetUser) {
+        return fail(400, { error: "User not found" });
+      }
+      const targetUserDisplayName =
+        [targetUser.firstName, targetUser.lastName]
+          .filter(Boolean)
+          .join(" ")
+          .trim() || targetUser.email;
+
+      await addSongCollaborator(prisma, {
+        actorId: session.user.id,
+        songId: params.id,
+        targetUserId: userId,
+        targetUserDisplayName,
+        role,
+      });
+      return { success: true };
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Could not add collaborator";
+      return fail(400, { error: message });
+    }
+  },
+
+  removeCollaborator: async ({ params, request, locals }) => {
+    const session = await locals.auth();
+    if (!session?.user) throw redirect(302, "/login");
+
+    const song = await prisma.song.findUnique({
+      where: { id: params.id },
+      select: { ownerId: true },
+    });
+
+    if (!song) {
+      return fail(404, { error: "Song not found" });
+    }
+
+    if (song.ownerId !== session.user.id) {
+      return fail(403, { error: "Only the owner can remove collaborators" });
+    }
+
+    const formData = await request.formData();
+    const userId = formData.get("userId") as string;
+
+    if (!userId) {
+      return fail(400, { error: "User is required" });
+    }
+
+    try {
+      const targetUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { firstName: true, lastName: true, email: true },
+      });
+      if (!targetUser) {
+        return fail(400, { error: "User not found" });
+      }
+      const targetUserDisplayName =
+        [targetUser.firstName, targetUser.lastName]
+          .filter(Boolean)
+          .join(" ")
+          .trim() || targetUser.email;
+
+      await removeSongCollaborator(prisma, {
+        actorId: session.user.id,
+        songId: params.id,
+        targetUserId: userId,
+        targetUserDisplayName,
+      });
+      return { success: true };
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Could not remove collaborator";
+      return fail(400, { error: message });
+    }
+  },
+
+  transferOwnership: async ({ params, request, locals }) => {
+    const session = await locals.auth();
+    if (!session?.user) throw redirect(302, "/login");
+
+    const song = await prisma.song.findUnique({
+      where: { id: params.id },
+      select: { ownerId: true },
+    });
+
+    if (!song) {
+      return fail(404, { error: "Song not found" });
+    }
+
+    if (song.ownerId !== session.user.id) {
+      return fail(403, { error: "Only the owner can transfer ownership" });
+    }
+
+    const formData = await request.formData();
+    const newOwnerId = formData.get("newOwnerId") as string;
+
+    if (!newOwnerId) {
+      return fail(400, { error: "New owner is required" });
+    }
+
+    try {
+      const currentOwner = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { firstName: true, lastName: true, email: true },
+      });
+      const newOwner = await prisma.user.findUnique({
+        where: { id: newOwnerId },
+        select: { firstName: true, lastName: true, email: true },
+      });
+      if (!currentOwner || !newOwner) {
+        return fail(400, { error: "User not found" });
+      }
+      const currentOwnerDisplayName =
+        [currentOwner.firstName, currentOwner.lastName]
+          .filter(Boolean)
+          .join(" ")
+          .trim() || currentOwner.email;
+      const newOwnerDisplayName =
+        [newOwner.firstName, newOwner.lastName]
+          .filter(Boolean)
+          .join(" ")
+          .trim() || newOwner.email;
+
+      await transferSongOwnership(prisma, {
+        actorId: session.user.id,
+        songId: params.id,
+        currentOwnerId: session.user.id,
+        currentOwnerDisplayName,
+        newOwnerId,
+        newOwnerDisplayName,
+      });
+      return { success: true };
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Could not transfer ownership";
+      return fail(400, { error: message });
+    }
+  },
+
+  loadUsers: async ({ locals }) => {
+    const session = await locals.auth();
+    if (!session?.user) throw redirect(302, "/login");
+
+    const users = await getActiveUsers(prisma);
+    return { users };
   },
 };

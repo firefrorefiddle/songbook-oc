@@ -46,11 +46,17 @@
   Songbooks
 </a>
 <a
-  href="/people"
-  class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900"
->
-  People
-</a>
+      href="/people"
+      class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900"
+    >
+      People
+    </a>
+    <a
+      href="/shared"
+      class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900"
+    >
+      Shared
+    </a>
           {#if isAdmin}
             <a
               href="/admin/users"
