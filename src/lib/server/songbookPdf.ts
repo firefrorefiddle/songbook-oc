@@ -9,6 +9,10 @@ import {
   applyLayoutPlaceholders,
   type OutputSettings,
 } from "$lib/server/latexLayout";
+import {
+  buildSongContentForPdf,
+  type SongPdfPipelineMetadata,
+} from "$lib/utils/songPdfPipelineSafety";
 
 const execAsync = promisify(exec);
 
@@ -87,57 +91,6 @@ async function cleanupTempDir(tempDir: string): Promise<void> {
   } catch {}
 }
 
-interface SongMetadata {
-  copyright?: string;
-  reference?: string;
-  extraIndex?: string;
-  translationBy?: string;
-  musicBy?: string;
-  lyricsBy?: string;
-  numbering?: string;
-}
-
-function buildSongContent(
-  title: string,
-  content: string,
-  author?: string | null,
-  metadata?: SongMetadata,
-): string {
-  if (content.trim().startsWith("title:")) {
-    return content;
-  }
-  let sngContent = `title: ${title}\n`;
-  if (author?.trim()) {
-    sngContent += `author: ${author}\n`;
-  }
-  if (metadata?.lyricsBy?.trim()) {
-    sngContent += `lyricsBy: ${metadata.lyricsBy}\n`;
-  }
-  if (metadata?.musicBy?.trim()) {
-    sngContent += `musicBy: ${metadata.musicBy}\n`;
-  }
-  if (metadata?.translationBy?.trim()) {
-    sngContent += `translationBy: ${metadata.translationBy}\n`;
-  }
-  if (metadata?.copyright?.trim()) {
-    sngContent += `copyright: ${metadata.copyright}\n`;
-  }
-  if (metadata?.reference?.trim()) {
-    sngContent += `reference: ${metadata.reference}\n`;
-  } else {
-    sngContent += "reference:\n";
-  }
-  if (metadata?.extraIndex?.trim()) {
-    sngContent += `extra-index: ${metadata.extraIndex}\n`;
-  }
-  if (metadata?.numbering?.trim()) {
-    sngContent += `numbering: ${metadata.numbering}\n`;
-  }
-  sngContent += "***\n";
-  sngContent += content;
-  return sngContent;
-}
-
 async function convertSongToLatex(
   title: string,
   content: string,
@@ -145,8 +98,8 @@ async function convertSongToLatex(
   metadata: string,
   tempDir: string,
 ): Promise<string> {
-  const parsed = JSON.parse(metadata || "{}") as SongMetadata;
-  const sngContent = buildSongContent(title, content, author, parsed);
+  const parsed = JSON.parse(metadata || "{}") as SongPdfPipelineMetadata;
+  const sngContent = buildSongContentForPdf(title, content, author, parsed);
 
   const sngPath = join(tempDir, `${randomUUID()}.sng`);
   await writeFile(sngPath, sngContent, "utf-8");

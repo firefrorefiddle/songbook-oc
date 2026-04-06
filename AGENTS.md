@@ -261,6 +261,20 @@ Every architectural choice, tradeoff, or context that would be lost over time mu
 ---
 
 **Date**: 2026-04-06
+**Context**: Song PDF generation uses songmaker to emit LaTeX `\\beginsong{...}` from `.sng` headers. Characters such as `&`, `$`, and `%` broke pdflatex when copied verbatim; `%` also truncates songmaker header lines. CRLF and NUL bytes caused fragile tooling behavior.
+**Decision**:
+
+- Centralize `buildSongContentForPdf` in `songPdfPipelineSafety.ts`, escaping structured `title` / `author` / known metadata fields for songmaker while leaving user-supplied raw `.sng` text (leading `title:`) unchanged aside from newline normalization and control stripping.
+- On create/update, normalize chord body text (CRLF to LF, strip NUL and other C0 controls except tab/LF) and reject header fields that contain line breaks, NUL, or other disallowed controls; surface the same rules in the preview API and the song editor notice (including existing ChordPro `^` replay checks).
+
+**Alternatives considered**:
+
+- Reject titles containing any LaTeX special without escaping: worse UX for common cases such as "Smith & Jones".
+- Silent stripping of `^` or other lyric markers: would corrupt user music notation.
+
+---
+
+**Date**: 2026-04-06
 **Context**: Song list search only matched version titles; users expect to find songs by lyric fragments, author lines, or stored metadata (e.g. copyright) without a separate query shape.
 **Decision**:
 

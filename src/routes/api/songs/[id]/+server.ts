@@ -3,6 +3,11 @@ import type { RequestHandler } from "./$types";
 import { prisma } from "$lib/server/prisma";
 import { updateSongVersionSchema } from "$lib/schemas";
 import { logActivity } from "$lib/server/activityLog";
+import {
+  enforceSongPdfPipelineOrThrow,
+  normalizedSongVersionWritePayload,
+  parseMetadataRecord,
+} from "$lib/server/songPdfPipelineGuard";
 
 export const GET: RequestHandler = async ({ params }) => {
   const song = await prisma.song.findUnique({
@@ -53,13 +58,36 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
   const latestVersion = song.versions[0];
 
   if (title || author || content || metadata) {
+    const effectiveTitle = (title ?? latestVersion?.title ?? "").trim();
+    const effectiveAuthor =
+      author !== undefined ? author : latestVersion?.author ?? null;
+    const effectiveContent = content ?? latestVersion?.content ?? "";
+    const effectiveMetadata =
+      metadata !== undefined
+        ? metadata
+        : parseMetadataRecord(latestVersion?.metadata);
+
+    enforceSongPdfPipelineOrThrow({
+      title: effectiveTitle,
+      author: effectiveAuthor,
+      content: effectiveContent,
+      metadata: effectiveMetadata,
+    });
+
+    const normalized = normalizedSongVersionWritePayload({
+      title: effectiveTitle,
+      author: effectiveAuthor,
+      content: effectiveContent,
+      metadata: effectiveMetadata,
+    });
+
     await prisma.songVersion.create({
       data: {
         songId: params.id,
-        title: title || latestVersion?.title || "",
-        author: author !== undefined ? author : latestVersion?.author,
-        content: content || latestVersion?.content || "",
-        metadata: JSON.stringify(metadata || {}),
+        title: normalized.title,
+        author: normalized.author,
+        content: normalized.content,
+        metadata: normalized.metadata,
       },
     });
 
@@ -68,7 +96,7 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
       action: "SONG_VERSION_CREATED",
       resourceType: "SONG",
       resourceId: params.id,
-      metadata: { title },
+      metadata: { title: normalized.title },
     });
   }
 

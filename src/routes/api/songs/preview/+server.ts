@@ -1,53 +1,12 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { generatePreview } from "$lib/server/songPreview";
-
-interface SongMetadata {
-  copyright?: string;
-  reference?: string;
-  extraIndex?: string;
-  translationBy?: string;
-  musicBy?: string;
-  lyricsBy?: string;
-}
-
-function buildSongContent(
-  title: string,
-  content: string,
-  author?: string,
-  metadata?: SongMetadata,
-): string {
-  if (content.trim().startsWith("title:")) {
-    return content;
-  }
-  let sngContent = `title: ${title}\n`;
-  if (author?.trim()) {
-    sngContent += `author: ${author}\n`;
-  }
-  if (metadata?.lyricsBy?.trim()) {
-    sngContent += `lyricsBy: ${metadata.lyricsBy}\n`;
-  }
-  if (metadata?.musicBy?.trim()) {
-    sngContent += `musicBy: ${metadata.musicBy}\n`;
-  }
-  if (metadata?.translationBy?.trim()) {
-    sngContent += `translationBy: ${metadata.translationBy}\n`;
-  }
-  if (metadata?.copyright?.trim()) {
-    sngContent += `copyright: ${metadata.copyright}\n`;
-  }
-  if (metadata?.reference?.trim()) {
-    sngContent += `reference: ${metadata.reference}\n`;
-  } else {
-    sngContent += "reference:\n";
-  }
-  if (metadata?.extraIndex?.trim()) {
-    sngContent += `extra-index: ${metadata.extraIndex}\n`;
-  }
-  sngContent += "***\n";
-  sngContent += content;
-  return sngContent;
-}
+import {
+  buildSongContentForPdf,
+  formatSongPdfPipelineIssues,
+  validateSongPdfPipelineInput,
+  type SongPdfPipelineMetadata,
+} from "$lib/utils/songPdfPipelineSafety";
 
 export const POST: RequestHandler = async ({ request }) => {
   const body = await request.json();
@@ -76,12 +35,32 @@ export const POST: RequestHandler = async ({ request }) => {
 
   const finalMetadata = metadata || (copyright ? { copyright } : undefined);
 
+  const pipelineIssues = validateSongPdfPipelineInput({
+    title: (title || "Untitled").trim(),
+    author: author ?? "",
+    content,
+    metadata: finalMetadata as Record<string, string> | undefined,
+  });
+  if (pipelineIssues.length > 0) {
+    return json(
+      {
+        error: {
+          stage: "validation",
+          message: formatSongPdfPipelineIssues(pipelineIssues),
+        },
+      },
+      { status: 400 },
+    );
+  }
+
+  const finalMetadataTyped = finalMetadata as SongPdfPipelineMetadata | undefined;
+
   try {
-    const sngContent = buildSongContent(
+    const sngContent = buildSongContentForPdf(
       title || "Untitled",
       content,
       author,
-      finalMetadata,
+      finalMetadataTyped,
     );
     const result = await generatePreview(sngContent);
     if (result.error) {

@@ -270,9 +270,10 @@ This file tracks the current state of work, improvements, and technical debt for
 
 ### Validate and clean song input for LaTeX safety
 
-- **Status**: pending
+- **Status**: completed
 - **Priority**: medium
 - **Description**: Validate and normalize song text (and related metadata passed into the PDF pipeline) to reduce LaTeX build failures: encoding issues, unescaped special characters, and other inputs that break `pdflatex` or songmaker output. Prefer clear user-facing validation errors where possible, and conservative sanitization where automatic cleanup is acceptable.
+- **Implementation notes**: Added `src/lib/utils/songPdfPipelineSafety.ts` (normalization, structured-header escaping for songmaker, composite validation including replay carets and raw `.sng` `***` rule) plus `src/lib/server/songPdfPipelineGuard.ts` for API enforcement and persisted normalization. Integrated into song create/version/fork API routes (already on branch), `PUT /api/songs/[id]`, preview endpoint, `songbookPdf` via `buildSongContentForPdf`, form actions (already on branch), and `SongVersionEditorForm` notice.
 
 ### Editor: replayed-chord (`^`) sanity check
 

@@ -11,9 +11,9 @@
     songPreviewErrorHeading
   } from '$lib/songEditorPreview';
   import {
-    formatReplayCaretSummary,
-    validateReplayCarets
-  } from '$lib/utils/replayCaretValidation';
+    formatSongPdfPipelineIssues,
+    validateSongPdfPipelineInput
+  } from '$lib/utils/songPdfPipelineSafety';
 
   type EnhanceSubmit = Parameters<typeof enhance>[1];
 
@@ -47,7 +47,16 @@
   let isGeneratingPreview = $state(false);
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-  let replayCaretWarning = $derived(formatReplayCaretSummary(validateReplayCarets(content)));
+  let pdfPipelineNotice = $derived(
+    formatSongPdfPipelineIssues(
+      validateSongPdfPipelineInput({
+        title,
+        author,
+        content,
+        metadata
+      })
+    )
+  );
 
   async function generatePreview(
     currentContent: string,
@@ -162,18 +171,19 @@
         </div>
       {/if}
 
-      {#if replayCaretWarning}
+      {#if pdfPipelineNotice}
         <div
           class="mb-4 p-3 bg-amber-50 text-amber-950 rounded-md text-sm border border-amber-200"
           role="status"
         >
-          <div class="font-medium mb-1">Chord replay markers (^)</div>
+          <div class="font-medium mb-1">PDF and song file checks</div>
           <p class="text-sm whitespace-pre-wrap">
-            In the LaTeX songs package, each <code class="bg-amber-100 px-1 rounded">^</code> in a lyric line
-            replays a chord from the line above. Too many carets, or carets used for syllable breaks (e.g.
-            <code class="bg-amber-100 px-1 rounded">be^halt</code>), can break PDF preview.
+            Some inputs break the PDF pipeline (songmaker / LaTeX): line breaks or control characters in
+            titles or metadata, missing <code class="bg-amber-100 px-1 rounded">***</code> in raw song files, or
+            ChordPro replay markers (<code class="bg-amber-100 px-1 rounded">^</code>) that do not match the chord
+            line above (e.g. syllable breaks like <code class="bg-amber-100 px-1 rounded">be^halt</code>).
           </p>
-          <p class="mt-2 text-sm font-mono whitespace-pre-wrap">{replayCaretWarning}</p>
+          <p class="mt-2 text-sm font-mono whitespace-pre-wrap">{pdfPipelineNotice}</p>
         </div>
       {/if}
 
