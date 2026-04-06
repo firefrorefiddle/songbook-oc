@@ -1,5 +1,14 @@
 import type { PageServerLoad, Actions } from "./$types";
 import { prisma } from "$lib/server/prisma";
+import { userCanEditSong } from "$lib/server/songEditAccess";
+import {
+  addCategoryToSong,
+  addTagToSong,
+  deleteSongCategoryGlobally,
+  deleteSongTagGlobally,
+  removeCategoryFromSong,
+  removeTagFromSong,
+} from "$lib/server/songTaxonomyMutations";
 import { fail, redirect } from "@sveltejs/kit";
 import {
   getSongCollaborators,
@@ -28,6 +37,8 @@ export const load: PageServerLoad = async ({ params, locals }) => {
       versions: {
         orderBy: { createdAt: "desc" },
       },
+      tags: { include: { tag: true } },
+      categories: { include: { category: true } },
     },
   });
 
@@ -41,6 +52,54 @@ export const load: PageServerLoad = async ({ params, locals }) => {
   ]);
 
   const isOwner = song.ownerId === currentUserId;
+  const isAdmin = session.user.role === "ADMIN";
+  const canEditSong = await userCanEditSong(prisma, currentUserId, params.id);
+
+  let allTags: { id: string; name: string }[] = [];
+  let allCategories: { id: string; name: string }[] = [];
+  let tagLibrary: { id: string; name: string; songCount: number }[] = [];
+  let categoryLibrary: { id: string; name: string; songCount: number }[] = [];
+
+  if (isAdmin) {
+    const [tagRows, categoryRows] = await Promise.all([
+      prisma.songTag.findMany({
+        orderBy: { name: "asc" },
+        include: { _count: { select: { songs: true } } },
+      }),
+      prisma.songCategory.findMany({
+        orderBy: { name: "asc" },
+        include: { _count: { select: { songs: true } } },
+      }),
+    ]);
+    tagLibrary = tagRows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      songCount: r._count.songs,
+    }));
+    categoryLibrary = categoryRows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      songCount: r._count.songs,
+    }));
+  }
+
+  if (canEditSong) {
+    if (isAdmin) {
+      allTags = tagLibrary.map(({ id, name }) => ({ id, name }));
+      allCategories = categoryLibrary.map(({ id, name }) => ({ id, name }));
+    } else {
+      [allTags, allCategories] = await Promise.all([
+        prisma.songTag.findMany({
+          orderBy: { name: "asc" },
+          select: { id: true, name: true },
+        }),
+        prisma.songCategory.findMany({
+          orderBy: { name: "asc" },
+          select: { id: true, name: true },
+        }),
+      ]);
+    }
+  }
 
   return {
     song,
@@ -48,6 +107,12 @@ export const load: PageServerLoad = async ({ params, locals }) => {
     collaborators,
     isOwner,
     canManage: isOwner,
+    canEditSong,
+    isAdmin,
+    allTags,
+    allCategories,
+    tagLibrary,
+    categoryLibrary,
     currentUserId,
   };
 };
@@ -390,5 +455,100 @@ export const actions: Actions = {
 
     const users = await getActiveUsers(prisma);
     return { users };
+  },
+
+  addSongTag: async ({ params, request, locals }) => {
+    const session = await locals.auth();
+    if (!session?.user) throw redirect(302, "/login");
+    if (!(await userCanEditSong(prisma, session.user.id, params.id))) {
+      return fail(403, { taxonomyError: "You cannot edit this song." });
+    }
+    const formData = await request.formData();
+    const name = (formData.get("name") as string) ?? "";
+    const result = await addTagToSong(prisma, params.id, name);
+    if (!result.ok) {
+      return fail(400, { taxonomyError: result.error });
+    }
+    return { success: true };
+  },
+
+  removeSongTag: async ({ params, request, locals }) => {
+    const session = await locals.auth();
+    if (!session?.user) throw redirect(302, "/login");
+    if (!(await userCanEditSong(prisma, session.user.id, params.id))) {
+      return fail(403, { taxonomyError: "You cannot edit this song." });
+    }
+    const formData = await request.formData();
+    const tagId = formData.get("tagId") as string;
+    if (!tagId?.trim()) {
+      return fail(400, { taxonomyError: "Tag is required." });
+    }
+    await removeTagFromSong(prisma, params.id, tagId);
+    return { success: true };
+  },
+
+  addSongCategory: async ({ params, request, locals }) => {
+    const session = await locals.auth();
+    if (!session?.user) throw redirect(302, "/login");
+    if (!(await userCanEditSong(prisma, session.user.id, params.id))) {
+      return fail(403, { taxonomyError: "You cannot edit this song." });
+    }
+    const formData = await request.formData();
+    const name = (formData.get("name") as string) ?? "";
+    const result = await addCategoryToSong(prisma, params.id, name);
+    if (!result.ok) {
+      return fail(400, { taxonomyError: result.error });
+    }
+    return { success: true };
+  },
+
+  removeSongCategory: async ({ params, request, locals }) => {
+    const session = await locals.auth();
+    if (!session?.user) throw redirect(302, "/login");
+    if (!(await userCanEditSong(prisma, session.user.id, params.id))) {
+      return fail(403, { taxonomyError: "You cannot edit this song." });
+    }
+    const formData = await request.formData();
+    const categoryId = formData.get("categoryId") as string;
+    if (!categoryId?.trim()) {
+      return fail(400, { taxonomyError: "Category is required." });
+    }
+    await removeCategoryFromSong(prisma, params.id, categoryId);
+    return { success: true };
+  },
+
+  deleteTagGlobally: async ({ request, locals }) => {
+    const session = await locals.auth();
+    if (!session?.user) throw redirect(302, "/login");
+    if (session.user.role !== "ADMIN") {
+      return fail(403, {
+        taxonomyError: "Only administrators can remove a tag from the whole library.",
+      });
+    }
+    const formData = await request.formData();
+    const tagId = formData.get("tagId") as string;
+    if (!tagId?.trim()) {
+      return fail(400, { taxonomyError: "Tag is required." });
+    }
+    await deleteSongTagGlobally(prisma, tagId);
+    return { success: true };
+  },
+
+  deleteCategoryGlobally: async ({ request, locals }) => {
+    const session = await locals.auth();
+    if (!session?.user) throw redirect(302, "/login");
+    if (session.user.role !== "ADMIN") {
+      return fail(403, {
+        taxonomyError:
+          "Only administrators can remove a category from the whole library.",
+      });
+    }
+    const formData = await request.formData();
+    const categoryId = formData.get("categoryId") as string;
+    if (!categoryId?.trim()) {
+      return fail(400, { taxonomyError: "Category is required." });
+    }
+    await deleteSongCategoryGlobally(prisma, categoryId);
+    return { success: true };
   },
 };

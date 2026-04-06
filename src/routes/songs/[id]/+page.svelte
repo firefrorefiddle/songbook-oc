@@ -234,12 +234,234 @@ Collaborators: {data.collaborators.map((c) => c.displayName).join(", ")}
     </div>
   {/if}
 
+  <div class="px-6 py-4 border-b border-gray-200 bg-white">
+    <h2 class="text-sm font-semibold text-gray-900 mb-2">Tags &amp; categories</h2>
+    {#if form?.taxonomyError}
+      <p class="mb-3 text-sm text-red-600" role="alert">{form.taxonomyError}</p>
+    {/if}
+    <div class="flex flex-wrap gap-4 mb-4">
+      <div class="min-w-[10rem] flex-1">
+        <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+          Tags
+        </p>
+        <div class="flex flex-wrap gap-1 min-h-[1.75rem]">
+          {#each [...data.song.tags].sort((a, b) => a.tag.name.localeCompare(b.tag.name)) as row (row.tagId)}
+            <span
+              class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-900"
+            >
+              {row.tag.name}
+              {#if data.canEditSong}
+                <form
+                  method="POST"
+                  action="?/removeSongTag"
+                  class="inline"
+                  use:enhance={() => refreshOnSuccess()}
+                >
+                  <input type="hidden" name="tagId" value={row.tagId} />
+                  <button
+                    type="submit"
+                    class="rounded p-0.5 hover:bg-indigo-100 text-indigo-700"
+                    title="Remove tag from this song"
+                    aria-label="Remove tag {row.tag.name}"
+                  >&times;</button>
+                </form>
+              {/if}
+            </span>
+          {:else}
+            <span class="text-sm text-gray-400">None</span>
+          {/each}
+        </div>
+      </div>
+      <div class="min-w-[10rem] flex-1">
+        <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+          Categories
+        </p>
+        <div class="flex flex-wrap gap-1 min-h-[1.75rem]">
+          {#each [...data.song.categories].sort((a, b) =>
+            a.category.name.localeCompare(b.category.name),
+          ) as row (row.categoryId)}
+            <span
+              class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-900"
+            >
+              {row.category.name}
+              {#if data.canEditSong}
+                <form
+                  method="POST"
+                  action="?/removeSongCategory"
+                  class="inline"
+                  use:enhance={() => refreshOnSuccess()}
+                >
+                  <input type="hidden" name="categoryId" value={row.categoryId} />
+                  <button
+                    type="submit"
+                    class="rounded p-0.5 hover:bg-emerald-100 text-emerald-800"
+                    title="Remove category from this song"
+                    aria-label="Remove category {row.category.name}"
+                  >&times;</button>
+                </form>
+              {/if}
+            </span>
+          {:else}
+            <span class="text-sm text-gray-400">None</span>
+          {/each}
+        </div>
+      </div>
+    </div>
+    {#if data.canEditSong}
+      <div class="grid gap-4 sm:grid-cols-2">
+        <form
+          method="POST"
+          action="?/addSongTag"
+          class="flex flex-col gap-2"
+          use:enhance={() => refreshOnSuccess()}
+        >
+          <label for="new-tag" class="text-sm text-gray-700">Add tag</label>
+          <div class="flex gap-2">
+            <input
+              id="new-tag"
+              name="name"
+              type="text"
+              list="song-tag-suggestions"
+              autocomplete="off"
+              placeholder="Existing or new tag name"
+              class="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
+            />
+            <Button type="submit" variant="secondary">Add</Button>
+          </div>
+          <datalist id="song-tag-suggestions">
+            {#each data.allTags as t (t.id)}
+              <option value={t.name}></option>
+            {/each}
+          </datalist>
+        </form>
+        <form
+          method="POST"
+          action="?/addSongCategory"
+          class="flex flex-col gap-2"
+          use:enhance={() => refreshOnSuccess()}
+        >
+          <label for="new-cat" class="text-sm text-gray-700">Add category</label>
+          <div class="flex gap-2">
+            <input
+              id="new-cat"
+              name="name"
+              type="text"
+              list="song-category-suggestions"
+              autocomplete="off"
+              placeholder="Existing or new category name"
+              class="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
+            />
+            <Button type="submit" variant="secondary">Add</Button>
+          </div>
+          <datalist id="song-category-suggestions">
+            {#each data.allCategories as c (c.id)}
+              <option value={c.name}></option>
+            {/each}
+          </datalist>
+        </form>
+      </div>
+    {:else}
+      <p class="text-sm text-gray-500">
+        Only the owner and collaborators can change tags and categories.
+      </p>
+    {/if}
+  </div>
+
   <div class="px-6 py-4">
     <pre
       class="whitespace-pre-wrap font-mono text-sm text-gray-800">{getLatestVersion()
         ?.content || ""}</pre>
   </div>
 </div>
+
+{#if data.isAdmin}
+  <div class="mt-6 bg-white shadow rounded-lg overflow-hidden">
+    <details class="px-6 py-4">
+      <summary
+        class="cursor-pointer text-sm font-semibold text-gray-900 marker:content-['']"
+      >
+        Tag &amp; category library (admin)
+      </summary>
+      <p class="mt-2 text-sm text-gray-600 mb-4">
+        Delete a tag or category everywhere it is used. This cannot be undone.
+      </p>
+      <div class="grid gap-6 md:grid-cols-2">
+        <div>
+          <h3 class="text-xs font-medium text-gray-500 uppercase mb-2">All tags</h3>
+          {#if data.tagLibrary.length === 0}
+            <p class="text-sm text-gray-500">No tags in the library.</p>
+          {:else}
+            <ul class="divide-y divide-gray-200 border border-gray-200 rounded-md text-sm">
+              {#each data.tagLibrary as t (t.id)}
+                <li class="flex items-center justify-between gap-2 px-3 py-2">
+                  <span class="text-gray-900">{t.name}</span>
+                  <span class="text-gray-500 text-xs shrink-0"
+                    >{t.songCount} song{t.songCount === 1 ? "" : "s"}</span
+                  >
+                  <form
+                    method="POST"
+                    action="?/deleteTagGlobally"
+                    class="shrink-0"
+                    use:enhance={() => refreshOnSuccess()}
+                    onsubmit={(e) => {
+                      if (
+                        !confirm(
+                          `Delete tag "${t.name}" from all songs? This cannot be undone.`,
+                        )
+                      ) {
+                        e.preventDefault();
+                      }
+                    }}
+                  >
+                    <input type="hidden" name="tagId" value={t.id} />
+                    <Button type="submit" variant="danger">Delete</Button>
+                  </form>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
+        <div>
+          <h3 class="text-xs font-medium text-gray-500 uppercase mb-2">
+            All categories
+          </h3>
+          {#if data.categoryLibrary.length === 0}
+            <p class="text-sm text-gray-500">No categories in the library.</p>
+          {:else}
+            <ul class="divide-y divide-gray-200 border border-gray-200 rounded-md text-sm">
+              {#each data.categoryLibrary as c (c.id)}
+                <li class="flex items-center justify-between gap-2 px-3 py-2">
+                  <span class="text-gray-900">{c.name}</span>
+                  <span class="text-gray-500 text-xs shrink-0"
+                    >{c.songCount} song{c.songCount === 1 ? "" : "s"}</span
+                  >
+                  <form
+                    method="POST"
+                    action="?/deleteCategoryGlobally"
+                    class="shrink-0"
+                    use:enhance={() => refreshOnSuccess()}
+                    onsubmit={(e) => {
+                      if (
+                        !confirm(
+                          `Delete category "${c.name}" from all songs? This cannot be undone.`,
+                        )
+                      ) {
+                        e.preventDefault();
+                      }
+                    }}
+                  >
+                    <input type="hidden" name="categoryId" value={c.id} />
+                    <Button type="submit" variant="danger">Delete</Button>
+                  </form>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
+      </div>
+    </details>
+  </div>
+{/if}
 
 {#if data.song.versions.length > 1}
   <div class="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
