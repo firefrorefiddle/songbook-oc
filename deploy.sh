@@ -78,6 +78,11 @@ fi
 echo "=== Syncing build folder ==="
 rsync -avz -e "$RSYNC_SSH" build/ "$USER@$SERVER:$APP_DIR/build/"
 
+echo "=== Syncing Prisma postinstall helper (postinstall runs scripts/link-pnpm-prisma-client.sh) ==="
+ssh $SSH_OPTS "$USER@$SERVER" "mkdir -p $APP_DIR/scripts"
+scp $SSH_OPTS scripts/link-pnpm-prisma-client.sh "$USER@$SERVER:$APP_DIR/scripts/link-pnpm-prisma-client.sh"
+ssh $SSH_OPTS "$USER@$SERVER" "chmod +x $APP_DIR/scripts/link-pnpm-prisma-client.sh"
+
 echo "=== Ensuring songmaker-cli is executable ==="
 ssh $SSH_OPTS "$USER@$SERVER" \
   "chmod +x $APP_DIR/bin/songmaker-cli $APP_DIR/bin/songbook-backup"
