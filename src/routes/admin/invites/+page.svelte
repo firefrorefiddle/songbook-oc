@@ -52,8 +52,8 @@
   <title>Manage Invites – Songbook</title>
 </svelte:head>
 
-<div class="max-w-4xl mx-auto py-8 px-4">
-  <div class="flex items-center justify-between mb-8">
+<div class="w-full min-w-0 space-y-8">
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
     <h1 class="text-2xl font-bold text-gray-900">Manage Invites</h1>
     <button
       onclick={() => (showCreate = !showCreate)}
@@ -76,7 +76,7 @@
           }
         };
       }}
-      class="bg-white shadow rounded-lg p-6 mb-8 space-y-6"
+      class="space-y-6 rounded-lg bg-white p-6 shadow"
     >
       {#if formAction?.error}
         <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
@@ -196,27 +196,41 @@
     </form>
   {/if}
 
-  <!-- Invite table -->
-  <div class="bg-white shadow rounded-lg overflow-hidden">
-    <div class="overflow-x-auto">
-    <table class="min-w-full divide-y divide-gray-200">
+  <!-- Invite table: full admin width + horizontal scroll when needed -->
+  <section class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+    <div class="overflow-x-auto overscroll-x-contain">
+    <table class="w-full min-w-[56rem] divide-y divide-gray-200">
       <thead class="bg-gray-50">
         <tr>
-          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sent By</th>
-          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shared Content</th>
-          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expires</th>
-          <th class="px-6 py-3"></th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">
+            Email
+          </th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">
+            Role
+          </th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">
+            Status
+          </th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">
+            Sent By
+          </th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">
+            Shared Content
+          </th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-6">
+            Expires
+          </th>
+          <th class="px-4 py-3 sm:px-6"></th>
         </tr>
       </thead>
       <tbody class="bg-white divide-y divide-gray-200">
         {#each data.invites as invite}
           <tr>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{invite.email}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{invite.role}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm">
+            <td class="max-w-[14rem] px-4 py-4 text-sm break-words text-gray-900 sm:max-w-xs sm:px-6">
+              {invite.email}
+            </td>
+            <td class="whitespace-nowrap px-4 py-4 text-sm text-gray-500 sm:px-6">{invite.role}</td>
+            <td class="whitespace-nowrap px-4 py-4 text-sm sm:px-6">
               {#if invite.usedAt}
                 <span class="text-green-600">Used</span>
               {:else if invite.emailVerifiedAt}
@@ -227,10 +241,10 @@
                 <span class="text-yellow-600">Pending</span>
               {/if}
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+            <td class="max-w-[12rem] px-4 py-4 text-sm break-words text-gray-500 sm:max-w-none sm:whitespace-nowrap sm:px-6">
               {invite.sentBy.name || invite.sentBy.email}
             </td>
-            <td class="px-6 py-4 text-sm text-gray-500">
+            <td class="max-w-[18rem] px-4 py-4 text-sm break-words text-gray-500 sm:max-w-md sm:px-6">
               {#if invite.inviteCollaborations.length === 0}
                 <span class="text-gray-400 italic">None</span>
               {:else}
@@ -244,10 +258,10 @@
                 </ul>
               {/if}
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+            <td class="whitespace-nowrap px-4 py-4 text-sm text-gray-500 sm:px-6">
               {new Date(invite.expiresAt).toLocaleDateString()}
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-right">
+            <td class="whitespace-nowrap px-4 py-4 text-sm sm:px-6 sm:text-right">
               {#if !invite.usedAt}
                 <form method="POST" action="?/delete" use:enhance>
                   <input type="hidden" name="id" value={invite.id} />
@@ -262,7 +276,7 @@
 
         {#if data.invites.length === 0}
           <tr>
-            <td colspan="7" class="px-6 py-8 text-center text-gray-500">
+            <td colspan="7" class="px-4 py-8 text-center text-gray-500 sm:px-6">
               No invites yet. Send one to get started.
             </td>
           </tr>
@@ -270,7 +284,7 @@
       </tbody>
     </table>
     </div>
-  </div>
+  </section>
 </div>
 
 {#if showLinkModal}
