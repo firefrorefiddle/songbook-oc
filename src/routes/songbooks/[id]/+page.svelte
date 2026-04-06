@@ -153,6 +153,19 @@
   let showForkModal = $state(false);
   let forkTitle = $state("");
   let isForking = $state(false);
+  let showSettingsModal = $state(false);
+
+  let outputMode = $state("chorded");
+  let outputFontSize = $state("medium");
+  let outputPaperSize = $state("a4");
+
+  function openSettings() {
+    const settings = JSON.parse(data.songbook.outputSettings || "{}");
+    outputMode = settings.mode || "chorded";
+    outputFontSize = settings.fontSize || "medium";
+    outputPaperSize = settings.paperSize || "a4";
+    showSettingsModal = true;
+  }
 
   async function generatePdf() {
     if (isGeneratingPdf) return;
@@ -283,9 +296,13 @@
         >
           {isDownloadingPdf ? "Downloading..." : "Download PDF"}
           {#if getCurrentVersion()?.pdfGeneratedAt}
-            ({new Date(
-              getCurrentVersion()!.pdfGeneratedAt!,
-            ).toLocaleDateString()})
+            ({new Date(getCurrentVersion()!.pdfGeneratedAt!).toLocaleString(undefined, {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })})
           {/if}
         </Button>
       {/if}
@@ -297,6 +314,7 @@
         >New Version</Button
       >
       <Button variant="secondary" onclick={openFork}>Fork</Button>
+      <Button variant="secondary" onclick={openSettings}>Settings</Button>
     </div>
   </div>
 
@@ -622,5 +640,78 @@
         </Button>
       </div>
     </div>
+  {/snippet}
+</Modal>
+
+<Modal bind:open={showSettingsModal} title="Songbook Settings" onclose={() => (showSettingsModal = false)}>
+  {#snippet children()}
+    <form
+      method="POST"
+      action="?/updateSettings"
+      use:enhance={() => {
+        return async ({ result }) => {
+          if (result.type === "success") {
+            showSettingsModal = false;
+            await invalidateAll();
+          }
+        };
+      }}
+    >
+      <div class="space-y-4">
+        <div>
+          <label for="output-mode" class="block text-sm font-medium text-gray-700">
+            Output Mode
+          </label>
+          <select
+            id="output-mode"
+            name="mode"
+            bind:value={outputMode}
+            class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+          >
+            <option value="chorded">Chorded (with chords)</option>
+            <option value="text-only">Text Only (no chords)</option>
+            <option value="overhead">Overhead/Projection</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="output-fontsize" class="block text-sm font-medium text-gray-700">
+            Font Size
+          </label>
+          <select
+            id="output-fontsize"
+            name="fontSize"
+            bind:value={outputFontSize}
+            class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+          >
+            <option value="small">Small (14pt)</option>
+            <option value="medium">Medium (16pt)</option>
+            <option value="large">Large (20pt)</option>
+            <option value="extra-large">Extra Large (24pt)</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="output-papersize" class="block text-sm font-medium text-gray-700">
+            Paper Size
+          </label>
+          <select
+            id="output-papersize"
+            name="paperSize"
+            bind:value={outputPaperSize}
+            class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+          >
+            <option value="a4">A4</option>
+            <option value="a5">A5</option>
+            <option value="letter">Letter</option>
+          </select>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-4">
+          <Button variant="secondary" onclick={() => (showSettingsModal = false)}>Cancel</Button>
+          <Button type="submit">Save Settings</Button>
+        </div>
+      </div>
+    </form>
   {/snippet}
 </Modal>

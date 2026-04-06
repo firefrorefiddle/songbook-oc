@@ -34,7 +34,8 @@ model User {
   invite                    Invite?               @relation("InviteUser")
   // InviteCollaborations where this user is the resource owner
   inviteCollaborationsOwned InviteCollaboration[] @relation("InviteCollabOwner")
-  passwordResetTokens       PasswordResetToken[]
+passwordResetTokens PasswordResetToken[]
+  activityLogs ActivityLog[] @relation("ActivityLogActor")
 }
 
 enum Role {
@@ -161,6 +162,9 @@ model Songbook {
   forkedFrom   Songbook?  @relation("SongbookForks", fields: [forkedFromId], references: [id])
   forks        Songbook[] @relation("SongbookForks")
 
+  // JSON configuration for PDF output: mode, fontSize, paperSize
+  outputSettings String @default("{}")
+
   versions       SongbookVersion[]
   collaborations Collaboration[]
 }
@@ -270,16 +274,89 @@ enum EmailDeliveryStatus {
 }
 
 model PasswordResetToken {
-  id        String   @id @default(cuid())
-  tokenHash String   @unique
+  id String @id @default(cuid())
+  tokenHash String @unique
   expiresAt DateTime
-  usedAt    DateTime?
+  usedAt DateTime?
   createdAt DateTime @default(now())
 
   userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   emailDeliveries EmailDelivery[]
 
   @@index([userId, usedAt, expiresAt])
+}
+
+// ---------------------------------------------------------------------------
+// Activity Log
+// ---------------------------------------------------------------------------
+
+model ActivityLog {
+  id String @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  // Who performed the action
+  actorId String
+  actor User @relation("ActivityLogActor", fields: [actorId], references: [id], onDelete: Cascade)
+
+  // Type of activity
+  action ActivityAction
+
+  // Resource type and ID
+  resourceType ResourceType
+  resourceId String
+
+  // For fork: the original resource that was forked
+  sourceResourceId String?
+  sourceResourceType ResourceType?
+
+  // Additional context (JSON)
+  metadata String @default("{}")
+
+  @@index([resourceType, resourceId])
+  @@index([actorId])
+  @@index([createdAt])
+}
+
+enum ActivityAction {
+  // Song actions
+  SONG_CREATED
+  SONG_VERSION_CREATED
+  SONG_ARCHIVED
+  SONG_RESTORED
+  SONG_MADE_PUBLIC
+  SONG_MADE_PRIVATE
+  SONG_RECOMMENDED_VERSION_CHANGED
+  SONG_FORKED
+
+  // Songbook actions
+  SONGBOOK_CREATED
+  SONGBOOK_VERSION_CREATED
+  SONGBOOK_ARCHIVED
+  SONGBOOK_RESTORED
+  SONGBOOK_MADE_PUBLIC
+  SONGBOOK_MADE_PRIVATE
+  SONGBOOK_FORKED
+  SONGBOOK_SONG_ADDED
+  SONGBOOK_SONG_REMOVED
+
+  // Collaboration actions
+  COLLABORATOR_ADDED
+  COLLABORATOR_REMOVED
+  OWNERSHIP_TRANSFERRED
+
+  // Invite actions
+  INVITE_SENT
+  INVITE_ACCEPTED
+
+  // User actions
+  USER_JOINED
+}
+
+enum ResourceType {
+  SONG
+  SONGBOOK
+  USER
+  INVITE
 }

@@ -1,9 +1,14 @@
-import { writeFile, unlink, mkdir, copyFile, readdir, rm } from "fs/promises";
+import { writeFile, readFile, unlink, mkdir, copyFile, rm } from "fs/promises";
 import { existsSync } from "fs";
-import { join, dirname } from "path";
+import { join } from "path";
 import { randomUUID } from "crypto";
 import { exec } from "child_process";
 import { promisify } from "util";
+import {
+  applyLayoutPlaceholders,
+  PREVIEW_OUTPUT_SETTINGS,
+} from "$lib/server/latexLayout";
+import { extractPdflatexUserMessage } from "$lib/server/latexLog";
 
 const execAsync = promisify(exec);
 
@@ -26,8 +31,13 @@ async function ensureOutputDir(): Promise<string> {
 }
 
 async function setupLatexFiles(tempDir: string): Promise<void> {
-  const files = ["layout.tex", "font.tex", "songs.sty", "single-song.tex"];
-  for (const file of files) {
+  const layoutContent = await readFile(join(LATEX_DIR, "layout.tex"), "utf-8");
+  const layoutWritten = applyLayoutPlaceholders(
+    layoutContent,
+    PREVIEW_OUTPUT_SETTINGS,
+  );
+  await writeFile(join(tempDir, "layout.tex"), layoutWritten, "utf-8");
+  for (const file of ["font.tex", "songs.sty", "single-song.tex"]) {
     await copyFile(join(LATEX_DIR, file), join(tempDir, file));
   }
 }
@@ -74,7 +84,6 @@ export async function convertToLatex(
       };
     }
     const texPath = sngPath.replace(".sng", ".tex");
-    const { readFile } = await import("fs/promises");
     return await readFile(texPath, "utf-8");
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -99,8 +108,8 @@ export async function renderPdf(
   await writeFile(generatedPath, latexContent, "utf-8");
 
   try {
-    const { stdout, stderr: pdflatexStderr } = await execAsync(
-      `pdflatex -interaction=batchmode -output-directory=${tempDir} ${texPath}`,
+    await execAsync(
+      `pdflatex -interaction=batchmode -halt-on-error -file-line-error -output-directory=${tempDir} ${texPath}`,
       {
         cwd: tempDir,
       },
@@ -109,30 +118,36 @@ export async function renderPdf(
     const logPath = join(tempDir, "single-song.log");
     let logs: string | undefined;
     if (existsSync(logPath)) {
-      const { readFile } = await import("fs/promises");
       logs = await readFile(logPath, "utf-8");
     }
 
-    if (pdflatexStderr?.trim()) {
+    const builtPdf = join(tempDir, "single-song.pdf");
+    if (!existsSync(builtPdf)) {
       return {
         stage: "pdflatex",
-        message: pdflatexStderr.trim(),
+        message:
+          logs && logs.trim().length > 0
+            ? extractPdflatexUserMessage(logs)
+            : "pdflatex finished without producing single-song.pdf",
         logs,
       };
     }
 
     const outputDir = await ensureOutputDir();
     const outputPdfPath = join(outputDir, `${randomUUID()}.pdf`);
-    await copyFile(join(tempDir, "single-song.pdf"), outputPdfPath);
+    await copyFile(builtPdf, outputPdfPath);
     return outputPdfPath;
   } catch (error) {
     const logPath = join(tempDir, "single-song.log");
     let logs: string | undefined;
     if (existsSync(logPath)) {
-      const { readFile } = await import("fs/promises");
       logs = await readFile(logPath, "utf-8");
     }
-    const message = error instanceof Error ? error.message : String(error);
+    const execMsg = error instanceof Error ? error.message : String(error);
+    const message =
+      logs && logs.trim().length > 0
+        ? extractPdflatexUserMessage(logs)
+        : execMsg;
     return {
       stage: "pdflatex",
       message,
@@ -151,7 +166,6 @@ export async function renderPng(pdfPath: string): Promise<string> {
   );
 
   try {
-    const { readFile } = await import("fs/promises");
     const pngBuffer = await readFile(pngPath);
     return `data:image/png;base64,${pngBuffer.toString("base64")}`;
   } finally {

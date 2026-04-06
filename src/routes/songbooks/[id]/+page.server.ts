@@ -177,4 +177,28 @@ export const actions: Actions = {
 
     return { success: true };
   },
+
+  updateSettings: async ({ params, request }) => {
+    const formData = await request.formData();
+    const mode = formData.get("mode") as "chorded" | "text-only" | "overhead";
+    const fontSize = formData.get("fontSize") as
+      | "small"
+      | "medium"
+      | "large"
+      | "extra-large";
+    const paperSize = formData.get("paperSize") as "a4" | "a5" | "letter";
+
+    const outputSettings = JSON.stringify({
+      mode: mode || "chorded",
+      fontSize: fontSize || "medium",
+      paperSize: paperSize || "a4",
+    });
+
+    await prisma.songbook.update({
+      where: { id: params.id },
+      data: { outputSettings },
+    });
+
+    return { success: true };
+  },
 };

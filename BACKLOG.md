@@ -189,7 +189,7 @@ This file tracks the current state of work, improvements, and technical debt for
 - **Status**: in progress
 - **Priority**: medium
 - **Description**: Support tags like `Christmas`, `Easter`, `Youth`, `Opening`, `Communion`, `German`, or `English`, with filters in song and songbook flows. This matches how churches think about songs and will make collection building much faster.
-- **Progress**: Liedermappe import now persists first-class song tags and categories, inferred from source collections plus conservative language/keyword rules. Song and songbook filtering UI still needs to be built.
+- **Progress**: Liedermappe import now persists first-class song tags and categories, inferred from source collections plus conservative language/keyword rules. The songs list (`/songs`) supports URL-driven tag and category filters (`?tag=…`, `?category=…`), shows tags/categories on each row, and the songs API accepts the same query params. On the song detail page, owners and collaborators can add or remove tags and categories (creating new labels by name via upsert), and admins get a collapsible library panel to delete a tag or category globally. Songbook-level taxonomy filtering still needs to be built.
 
 ### Version comparison and recommended versions
 
@@ -259,6 +259,18 @@ This file tracks the current state of work, improvements, and technical debt for
 - **Status**: pending
 - **Priority**: medium
 - **Description**: Allow users to explicitly publish selected songs or songbooks to the wider authenticated community while keeping other items private or selectively shared. This supports the "invite our friends and share songs" model without introducing separate workspaces.
+
+### Validate and clean song input for LaTeX safety
+
+- **Status**: pending
+- **Priority**: medium
+- **Description**: Validate and normalize song text (and related metadata passed into the PDF pipeline) to reduce LaTeX build failures: encoding issues, unescaped special characters, and other inputs that break `pdflatex` or songmaker output. Prefer clear user-facing validation errors where possible, and conservative sanitization where automatic cleanup is acceptable.
+
+### Editor: replayed-chord (`^`) sanity check
+
+- **Status**: pending
+- **Priority**: medium
+- **Description**: In the song editor, warn or validate when the number of ChordPro replay markers (`^`) per line or verse does not match what the previous chord line provides (the LaTeX `songs` package errors with “Replayed chord has no matching chord” when `^` is used for syllable breaks like `be^halt` instead of replay). Help users catch this before PDF export.
 
 ## Decisions
 

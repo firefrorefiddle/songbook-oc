@@ -6,7 +6,9 @@
   import MetadataEditor from '$lib/components/MetadataEditor.svelte';
   import {
     buildSongPreviewPayload,
-    canGenerateSongPreview
+    canGenerateSongPreview,
+    normalizeSongPreviewApiError,
+    songPreviewErrorHeading
   } from '$lib/songEditorPreview';
 
   type EnhanceSubmit = Parameters<typeof enhance>[1];
@@ -71,16 +73,28 @@
     const responseData = await response.json();
 
     if (responseData.error) {
-      previewError = responseData.error;
+      previewError = normalizeSongPreviewApiError(responseData.error);
       previewPng = null;
       return;
     }
 
     previewError = null;
-    previewPng = response.ok && responseData.png ? responseData.png : null;
+    if (!response.ok) {
+      previewError = {
+        stage: 'unknown',
+        message: `Preview request failed (${response.status})`
+      };
+      previewPng = null;
+      return;
+    }
+    previewPng = responseData.png ?? null;
     } catch (error) {
       console.error('Preview error:', error);
       previewPng = null;
+      previewError = {
+        stage: 'unknown',
+        message: error instanceof Error ? error.message : 'Preview failed'
+      };
     } finally {
       isGeneratingPreview = false;
     }
@@ -184,13 +198,13 @@
       {:else if previewError}
         <div class="text-center p-4">
           <div class="text-red-600 font-medium mb-2">
-            {previewError.stage === 'songmaker' ? 'Songmaker Error' : 'LaTeX Error'}
+            {songPreviewErrorHeading(previewError.stage)}
           </div>
-          <div class="text-gray-700 text-sm mb-3 whitespace-pre-wrap">{previewError.message}</div>
+          <div class="text-gray-700 text-sm mb-3 whitespace-pre-wrap font-mono">{previewError.message}</div>
           {#if previewError.logs}
-            <details class="text-left">
-              <summary class="text-sm text-gray-500 cursor-pointer hover:text-gray-700">View logs</summary>
-              <pre class="mt-2 text-xs bg-gray-100 p-2 rounded overflow-auto max-h-40 text-gray-600">{previewError.logs}</pre>
+            <details class="text-left" open={previewError.stage === 'pdflatex'}>
+              <summary class="text-sm text-gray-500 cursor-pointer hover:text-gray-700">Full LaTeX log</summary>
+              <pre class="mt-2 text-xs bg-gray-100 p-2 rounded overflow-auto max-h-64 text-gray-600">{previewError.logs}</pre>
             </details>
           {/if}
         </div>

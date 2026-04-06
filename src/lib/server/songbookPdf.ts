@@ -5,6 +5,10 @@ import { randomUUID } from "crypto";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { prisma } from "$lib/server/prisma";
+import {
+  applyLayoutPlaceholders,
+  type OutputSettings,
+} from "$lib/server/latexLayout";
 
 const execAsync = promisify(exec);
 
@@ -12,6 +16,32 @@ const PROJECT_ROOT = process.cwd();
 const SONGMAKER_CLI = join(PROJECT_ROOT, "bin", "songmaker-cli");
 const LATEX_DIR = join(PROJECT_ROOT, "src/lib/server/latex");
 const PDF_STORAGE_DIR = join(PROJECT_ROOT, "storage", "pdfs");
+
+export type { OutputSettings };
+
+const MODE_TEMPLATE_MAP: Record<OutputSettings["mode"], string> = {
+  chorded: "chorded.tex",
+  "text-only": "text-only.tex",
+  overhead: "overhead.tex",
+};
+
+function parseOutputSettings(json: string): OutputSettings {
+  const defaults: OutputSettings = {
+    mode: "chorded",
+    fontSize: "medium",
+    paperSize: "a4",
+  };
+  try {
+    const parsed = JSON.parse(json || "{}") as Partial<OutputSettings>;
+    return {
+      mode: parsed.mode ?? defaults.mode,
+      fontSize: parsed.fontSize ?? defaults.fontSize,
+      paperSize: parsed.paperSize ?? defaults.paperSize,
+    };
+  } catch {
+    return defaults;
+  }
+}
 
 async function ensurePdfStorageDir(): Promise<string> {
   if (!existsSync(PDF_STORAGE_DIR)) {
@@ -34,11 +64,21 @@ async function ensureOutputDir(): Promise<string> {
   return outputDir;
 }
 
-async function setupLatexFiles(tempDir: string): Promise<void> {
-  const files = ["layout.tex", "font.tex", "songs.sty", "chorded.tex"];
-  for (const file of files) {
+async function setupLatexFiles(
+  tempDir: string,
+  settings: OutputSettings,
+): Promise<void> {
+  const templateFile = MODE_TEMPLATE_MAP[settings.mode];
+  const commonFiles = ["font.tex", "songs.sty"];
+  for (const file of commonFiles) {
     await copyFile(join(LATEX_DIR, file), join(tempDir, file));
   }
+
+  const layoutContent = await readFile(join(LATEX_DIR, "layout.tex"), "utf-8");
+  const updatedLayout = applyLayoutPlaceholders(layoutContent, settings);
+  await writeFile(join(tempDir, "layout.tex"), updatedLayout, "utf-8");
+
+  await copyFile(join(LATEX_DIR, templateFile), join(tempDir, "main.tex"));
 }
 
 async function cleanupTempDir(tempDir: string): Promise<void> {
@@ -120,31 +160,82 @@ async function convertSongToLatex(
   return latex;
 }
 
-interface TocSongEntry {
+export interface SongbookTocSongEntry {
   order: number;
   songVersion: {
     title: string;
   };
 }
 
-function generateTableOfContents(songs: TocSongEntry[]): string {
+/**
+ * Escape text embedded in LaTeX so titles survive in \songtocline arguments.
+ */
+export function escapeLatexForSongbookToc(text: string): string {
+  let result = "";
+  for (const ch of text) {
+    switch (ch) {
+      case "\\":
+        result += "\\textbackslash{}";
+        break;
+      case "&":
+        result += "\\&";
+        break;
+      case "%":
+        result += "\\%";
+        break;
+      case "$":
+        result += "\\$";
+        break;
+      case "#":
+        result += "\\#";
+        break;
+      case "_":
+        result += "\\_";
+        break;
+      case "{":
+        result += "\\{";
+        break;
+      case "}":
+        result += "\\}";
+        break;
+      case "~":
+        result += "\\textasciitilde{}";
+        break;
+      case "^":
+        result += "\\textasciicircum{}";
+        break;
+      default:
+        result += ch;
+    }
+  }
+  return result;
+}
+
+/**
+ * End-of-book TOC matching songs title-index layout (\idxtitlefont, dot leaders,
+ * song number). Anchors are song1-N (see \songtarget in songs.sty); font.tex \songtocline
+ * links to #1.1 because hyperref’s corrected PDF dest for each song is the .1 suffix.
+ */
+export function buildSongbookTocLatex(songs: SongbookTocSongEntry[]): string {
   const tocLines = [
     "\\clearpage",
-    "\\begin{center}",
-    "\\Large\\textbf{Inhaltsverzeichnis}",
-    "\\end{center}",
-    "\\begin{songtoc}",
+    "\\songbooktocheading",
+    "\\vspace{0.5em}",
   ];
 
   for (let i = 0; i < songs.length; i++) {
     const song = songs[i];
     const songNumber = i + 1;
-    tocLines.push(`\\item[${songNumber}] \\textbf{${song.songVersion.title}}`);
+    const anchor = `song1-${songNumber}`;
+    const escapedTitle = escapeLatexForSongbookToc(song.songVersion.title);
+    tocLines.push(`\\songtocline{${anchor}}{${escapedTitle}}{${songNumber}}`);
   }
 
-  tocLines.push("\\end{songtoc}");
-
   return tocLines.join("\n");
+}
+
+function generateTableOfContents(songs: SongbookTocSongEntry[]): string {
+  return buildSongbookTocLatex(songs);
 }
 
 export async function generateSongbookPdf(
@@ -187,8 +278,10 @@ export async function generateSongbookPdf(
   const storageDir = await ensurePdfStorageDir();
   const tempDir = await createTempDir();
 
+  const outputSettings = parseOutputSettings(songbook.outputSettings);
+
   try {
-    await setupLatexFiles(tempDir);
+    await setupLatexFiles(tempDir, outputSettings);
 
     const latexSongs: string[] = [];
     for (const songEntry of version.songs) {
@@ -216,23 +309,23 @@ export async function generateSongbookPdf(
       "utf-8",
     );
 
-    const texPath = join(tempDir, "chorded.tex");
+    const texPath = join(tempDir, "main.tex");
 
     await execAsync(
-      `pdflatex -interaction=batchmode -output-directory=${tempDir} ${texPath}`,
+      `pdflatex -interaction=batchmode -halt-on-error -file-line-error -output-directory=${tempDir} ${texPath}`,
       { cwd: tempDir },
     );
 
     await execAsync(
-      `pdflatex -interaction=batchmode -output-directory=${tempDir} ${texPath}`,
+      `pdflatex -interaction=batchmode -halt-on-error -file-line-error -output-directory=${tempDir} ${texPath}`,
       { cwd: tempDir },
     );
 
     const pdfPath = join(storageDir, `${version.id}.pdf`);
     const logPath = join(storageDir, `${version.id}.log`);
 
-    await copyFile(join(tempDir, "chorded.pdf"), pdfPath);
-    await copyFile(join(tempDir, "chorded.log"), logPath);
+    await copyFile(join(tempDir, "main.pdf"), pdfPath);
+    await copyFile(join(tempDir, "main.log"), logPath);
 
     await prisma.songbookVersion.update({
       where: { id: version.id },
@@ -246,7 +339,7 @@ export async function generateSongbookPdf(
     return { pdfPath, logPath };
   } catch (error) {
     const logPath = join(storageDir, `${version.id}.log`);
-    const tempLogPath = join(tempDir, "chorded.log");
+    const tempLogPath = join(tempDir, "main.log");
     if (existsSync(tempLogPath)) {
       await copyFile(tempLogPath, logPath);
     }

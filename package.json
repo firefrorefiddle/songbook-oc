@@ -23,8 +23,10 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:seed-from-files": "tsx prisma/seed-liedermappe.ts",
     "db:studio": "prisma studio",
+    "db:sync-from-prod": "bash scripts/sync-prod-to-dev-db.sh",
     "user:reset-password": "tsx scripts/user-reset-password.ts",
     "user:create": "tsx scripts/user-create.ts",
+    "run-on-prod": "bash scripts/run-on-prod.sh",
     "postinstall": "prisma generate && rm -f node_modules/@prisma/client && ln -s ../.prisma/client node_modules/@prisma/client"
   },
   "devDependencies": {

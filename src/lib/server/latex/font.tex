@@ -12,6 +12,33 @@
 \songcolumns{1}
 \def\lmnumcols{1}
 
+% After babel; keep hyperref late so PDF links and \hypertarget (from songs) work.
+\usepackage[hidelinks,bookmarksopen]{hyperref}
+
+% Title index typography from songs.sty (\idxtitlefont, \idxrefsfont). Use \SB@ellipspread (same
+% as the songs title index) so the line is \hbox to\hsize{\ldots \leaders fill \ldots refs}; plain
+% \hskip0pt plus 1fil in paragraph mode leaves the right column ragged. \makebox[3em][r] keeps
+% song numbers aligned on the margin.
+% Link to #1.1, not #1: \songtarget's \hypertarget sits inside songs' deferred \vbox; hyperref's
+% primary named dest (#1) is a /Fit on the wrong page, while the corrected /XYZ dest is #1.1.
+\makeatletter
+\newcommand{\songtocline}[3]{%
+	\SB@ellipspread{%
+		\idxtitlefont\relax\hyperlink{#1.1}{#2}%
+	}{%
+		{\idxrefsfont\relax\hyperlink{#1.1}{\makebox[3em][r]{#3}}}%
+	}%
+	\vskip0.3\baselineskip
+}
+\makeatother
+
+% Match \songsection heading in songs.sty; avoid \songsection here — it uses \@startsection and clashes with KOMA.
+\newcommand{\songbooktocheading}{%
+	\begin{center}%
+		{\sffamily\bfseries\LARGE Inhaltsverzeichnis}%
+	\end{center}%
+}
+
 \newenvironment{songtoc}
 {\begin{list}{}{\setlength{\itemindent}{0pt}\setlength{\labelwidth}{2cm}\setlength{\labelsep}{0.5cm}\setlength{\itemsep}{0.3\baselineskip}}}
 		{\end{list}}

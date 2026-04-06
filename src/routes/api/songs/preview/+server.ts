@@ -54,12 +54,23 @@ export const POST: RequestHandler = async ({ request }) => {
   const { content, title, author, metadata, copyright } = body;
 
   if (!content?.trim()) {
-    return json({ error: "Content is required" }, { status: 400 });
+    return json(
+      { error: { stage: "validation", message: "Content is required" } },
+      { status: 400 },
+    );
   }
 
   if (!title?.trim()) {
     if (!content.trim().startsWith("title:")) {
-      return json({ error: "Title is required for preview" }, { status: 400 });
+      return json(
+        {
+          error: {
+            stage: "validation",
+            message: "Title is required for preview",
+          },
+        },
+        { status: 400 },
+      );
     }
   }
 
