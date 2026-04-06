@@ -1,10 +1,14 @@
-import {
-  ActivityAction,
-  ResourceType,
-  type PrismaClient,
-} from "@prisma/client";
+import * as PrismaClientPkg from "@prisma/client";
+import type { PrismaClient } from "@prisma/client";
 
 import { getUserDisplayName } from "./adminUsers";
+
+/** Prisma enums via namespace import so SSR build avoids CJS named-export issues. */
+const ActivityActionEnum = PrismaClientPkg.ActivityAction;
+const ResourceTypeEnum = PrismaClientPkg.ResourceType;
+
+type ActivityAction = PrismaClientPkg.ActivityAction;
+type ResourceType = PrismaClientPkg.ResourceType;
 
 type ActivityLogPrisma = Pick<PrismaClient, "activityLog">;
 
@@ -37,11 +41,11 @@ export function buildAdminActivityWhere(filters: AdminActivityFilters) {
 }
 
 function isActivityAction(value: string): value is ActivityAction {
-  return (Object.values(ActivityAction) as string[]).includes(value);
+  return (Object.values(ActivityActionEnum) as string[]).includes(value);
 }
 
 function isResourceType(value: string): value is ResourceType {
-  return (Object.values(ResourceType) as string[]).includes(value);
+  return (Object.values(ResourceTypeEnum) as string[]).includes(value);
 }
 
 export function normaliseAdminActivityFilters(url: URL): AdminActivityFilters {
@@ -109,7 +113,7 @@ export async function getAdminActivityOverview(
   return {
     filters,
     entries,
-    actionOptions: Object.values(ActivityAction),
-    resourceTypeOptions: Object.values(ResourceType),
+    actionOptions: Object.values(ActivityActionEnum),
+    resourceTypeOptions: Object.values(ResourceTypeEnum),
   };
 }

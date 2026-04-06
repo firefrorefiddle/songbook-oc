@@ -1,6 +1,9 @@
 {
 	"extends": "./.svelte-kit/tsconfig.json",
 	"compilerOptions": {
+		"paths": {
+			"@prisma/client": ["./node_modules/.prisma/client"]
+		},
 		"allowJs": true,
 		"checkJs": true,
 		"esModuleInterop": true,

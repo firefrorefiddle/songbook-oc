@@ -27,7 +27,7 @@
     "user:reset-password": "tsx scripts/user-reset-password.ts",
     "user:create": "tsx scripts/user-create.ts",
     "run-on-prod": "bash scripts/run-on-prod.sh",
-    "postinstall": "prisma generate && rm -f node_modules/@prisma/client && ln -s ../.prisma/client node_modules/@prisma/client"
+    "postinstall": "prisma generate && bash scripts/link-pnpm-prisma-client.sh && rm -f node_modules/@prisma/client && ln -s ../.prisma/client node_modules/@prisma/client"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
