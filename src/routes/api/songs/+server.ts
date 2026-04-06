@@ -2,6 +2,7 @@ import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { prisma } from "$lib/server/prisma";
 import { createSongSchema } from "$lib/schemas";
+import { buildSongListWhere } from "$lib/server/songListQuery";
 
 export const GET: RequestHandler = async ({ url, locals }) => {
   const session = await locals.auth();
@@ -9,25 +10,26 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 
   const search = url.searchParams.get("search") || "";
   const includeArchived = url.searchParams.get("includeArchived") === "true";
+  const tagId = url.searchParams.get("tag")?.trim() || null;
+  const categoryId = url.searchParams.get("category")?.trim() || null;
   const userId = session.user.id;
 
   const songs = await prisma.song.findMany({
-    where: {
-      isArchived: includeArchived ? undefined : false,
-      // Show songs the user owns, collaborates on, or are public
-      OR: [
-        { ownerId: userId },
-        { collaborations: { some: { userId } } },
-        { isPublic: true },
-      ],
-      versions: search ? { some: { title: { contains: search } } } : undefined,
-    },
+    where: buildSongListWhere({
+      userId,
+      includeArchived,
+      search,
+      tagId,
+      categoryId,
+    }),
     include: {
       recommendedVersion: true,
       versions: {
         orderBy: { createdAt: "desc" },
         take: 1,
       },
+      tags: { include: { tag: true } },
+      categories: { include: { category: true } },
     },
     orderBy: { updatedAt: "desc" },
   });
