@@ -3,6 +3,11 @@ import type { RequestHandler } from "./$types";
 import { prisma } from "$lib/server/prisma";
 import { createSongVersionSchema } from "$lib/schemas";
 import { logActivity } from "$lib/server/activityLog";
+import { buildSongCreationWarnings } from "$lib/server/songDuplicateDetection";
+import {
+  enforceSongPdfPipelineOrThrow,
+  normalizedSongVersionWritePayload,
+} from "$lib/server/songPdfPipelineGuard";
 
 export const POST: RequestHandler = async ({ params, request, locals }) => {
   const session = await locals.auth();
@@ -21,14 +26,40 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
   }
 
   const { title, author, content, metadata } = parsed.data;
+  const meta = metadata ?? {};
+
+  enforceSongPdfPipelineOrThrow({
+    title,
+    author: author ?? null,
+    content,
+    metadata: meta,
+  });
+
+  const normalized = normalizedSongVersionWritePayload({
+    title,
+    author: author ?? null,
+    content,
+    metadata: meta,
+  });
+
+  const warnings = await buildSongCreationWarnings(
+    prisma,
+    session.user.id!,
+    {
+      title: normalized.title,
+      author: normalized.author,
+      metadata: JSON.parse(normalized.metadata) as Record<string, string>,
+    },
+    { excludeSongId: params.id },
+  );
 
   const songVersion = await prisma.songVersion.create({
     data: {
       songId: params.id,
-      title,
-      author,
-      content,
-      metadata: JSON.stringify(metadata || {}),
+      title: normalized.title,
+      author: normalized.author,
+      content: normalized.content,
+      metadata: normalized.metadata,
     },
   });
 
@@ -37,8 +68,8 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
     action: "SONG_VERSION_CREATED",
     resourceType: "SONG",
     resourceId: params.id,
-    metadata: { title },
+    metadata: { title: normalized.title },
   });
 
-  return json(songVersion, { status: 201 });
+  return json({ songVersion, warnings }, { status: 201 });
 };

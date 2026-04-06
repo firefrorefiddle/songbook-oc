@@ -206,9 +206,10 @@ This file tracks the current state of work, improvements, and technical debt for
 
 ### Duplicate detection and metadata quality checks
 
-- **Status**: pending
+- **Status**: completed
 - **Priority**: low
 - **Description**: Warn when newly created songs look very similar to existing ones, and surface missing metadata such as author or copyright before export. These checks reduce long-term library mess and prevent quality issues from accumulating silently.
+- **Implementation notes**: Server-side `warnings` on song create (form + `POST /api/songs`), new song version (`POST /api/songs/[id]/versions` and song detail save), and fork (`POST /api/songs/[id]/fork`). Title matching uses normalization (case, diacritics, punctuation) plus Levenshtein similarity against songs visible to the user; new versions exclude the current song id. UI: `SongCreationWarningsBanner` and session flash on `/songs` after create; song detail page already surfaces the same shape from save.
 
 ### Song collection presentation generation (overhead / projection PDF)
 

@@ -6,6 +6,12 @@ import {
   songTagFilterOptionsWhere,
 } from "$lib/server/songListQuery";
 import { fail, redirect } from "@sveltejs/kit";
+import {
+  formatSongPdfPipelineIssues,
+  validateSongPdfPipelineInput,
+} from "$lib/utils/songPdfPipelineSafety";
+import { normalizedSongVersionWritePayload } from "$lib/server/songPdfPipelineGuard";
+import { buildSongCreationWarnings } from "$lib/server/songDuplicateDetection";
 
 export const load: PageServerLoad = async ({ url, locals }) => {
   const session = await locals.auth();
@@ -91,15 +97,41 @@ export const actions: Actions = {
       }
     }
 
+    const pipelineIssues = validateSongPdfPipelineInput({
+      title: title.trim(),
+      author: author?.trim() || null,
+      content,
+      metadata,
+    });
+    if (pipelineIssues.length > 0) {
+      return fail(400, {
+        error: formatSongPdfPipelineIssues(pipelineIssues),
+        fields: { title, author, content },
+      });
+    }
+
+    const normalized = normalizedSongVersionWritePayload({
+      title: title.trim(),
+      author: author?.trim() || null,
+      content,
+      metadata,
+    });
+
+    const warnings = await buildSongCreationWarnings(prisma, session.user.id!, {
+      title: normalized.title,
+      author: normalized.author,
+      metadata: JSON.parse(normalized.metadata) as Record<string, string>,
+    });
+
     const song = await prisma.song.create({
       data: {
         ownerId: session.user.id!,
         versions: {
           create: {
-            title: title.trim(),
-            author: author?.trim() || null,
-            content: content.trim(),
-            metadata: JSON.stringify(metadata),
+            title: normalized.title,
+            author: normalized.author,
+            content: normalized.content,
+            metadata: normalized.metadata,
           },
         },
       },
@@ -118,7 +150,7 @@ export const actions: Actions = {
       });
     }
 
-    return { success: true };
+    return { success: true, warnings };
   },
 
   delete: async ({ request, locals }) => {

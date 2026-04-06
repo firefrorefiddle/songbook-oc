@@ -116,11 +116,11 @@ und alle Schönheit kommt von dir, o Gott!
 ### Songs
 
 - `GET /api/songs` - List songs (search param: `search`, `includeArchived`)
-- `POST /api/songs` - Create song
+- `POST /api/songs` - Create song. Response body: `{ song, warnings }` where `warnings` is a non-blocking list (duplicate title hints, missing author/copyright metadata).
 - `GET /api/songs/[id]` - Get song with versions
 - `PUT /api/songs/[id]` - Update song (creates new version)
 - `DELETE /api/songs/[id]` - Archive song
-- `POST /api/songs/[id]/versions` - Create new version
+- `POST /api/songs/[id]/versions` - Create new version. Response: `{ songVersion, warnings }` (same `warnings` shape as song create; duplicate titles exclude the current song).
 
 ### Songbooks
 

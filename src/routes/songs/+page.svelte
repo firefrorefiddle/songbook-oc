@@ -1,10 +1,16 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
   import { goto } from "$app/navigation";
-  import { getPreferredSongVersion } from "$lib/songVersions";
+  import { onMount } from "svelte";
+  import SongCreationWarningsBanner from "$lib/components/SongCreationWarningsBanner.svelte";
   import Button from "$lib/components/Button.svelte";
   import Modal from "$lib/components/Modal.svelte";
   import SongVersionEditorForm from "$lib/components/SongVersionEditorForm.svelte";
+  import {
+    SONG_CREATE_WARNINGS_SESSION_KEY,
+    type SongCreationWarning,
+  } from "$lib/songCreationWarnings";
+  import { getPreferredSongVersion } from "$lib/songVersions";
 
   let { data, form } = $props();
 
@@ -19,6 +25,19 @@
   let createAuthor = $state("");
   let createContent = $state("");
   let createMetadata = $state<Record<string, string>>({});
+  let flashWarnings = $state<SongCreationWarning[]>([]);
+
+  onMount(() => {
+    try {
+      const raw = sessionStorage.getItem(SONG_CREATE_WARNINGS_SESSION_KEY);
+      if (raw) {
+        sessionStorage.removeItem(SONG_CREATE_WARNINGS_SESSION_KEY);
+        flashWarnings = JSON.parse(raw) as SongCreationWarning[];
+      }
+    } catch {
+      /* ignore corrupt storage */
+    }
+  });
 
   $effect(() => {
     searchInput = data.search;
@@ -64,6 +83,11 @@
   <h1 class="text-2xl font-bold text-gray-900">Songs</h1>
   <Button onclick={() => (showCreateModal = true)}>Create Song</Button>
 </div>
+
+<SongCreationWarningsBanner
+  warnings={flashWarnings}
+  onDismiss={() => (flashWarnings = [])}
+/>
 
 <div class="mb-4 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
   <div class="flex-1 min-w-[12rem]">
@@ -238,7 +262,14 @@
       onCancel={() => (showCreateModal = false)}
       enhanceSubmit={() => {
         return ({ result }) => {
-          if (result.type === "success") {
+          if (result.type === "success" && result.data?.success) {
+            const w = result.data.warnings;
+            if (Array.isArray(w) && w.length > 0) {
+              sessionStorage.setItem(
+                SONG_CREATE_WARNINGS_SESSION_KEY,
+                JSON.stringify(w),
+              );
+            }
             handleCreateSuccess();
           }
         };

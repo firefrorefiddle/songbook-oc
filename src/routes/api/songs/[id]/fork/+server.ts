@@ -2,6 +2,12 @@ import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { prisma } from "$lib/server/prisma";
 import { logActivity } from "$lib/server/activityLog";
+import {
+  enforceSongPdfPipelineOrThrow,
+  normalizedSongVersionWritePayload,
+  parseMetadataRecord,
+} from "$lib/server/songPdfPipelineGuard";
+import { buildSongCreationWarnings } from "$lib/server/songDuplicateDetection";
 
 export const POST: RequestHandler = async ({ params, request, locals }) => {
   const session = await locals.auth();
@@ -20,8 +26,44 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
     throw error(404, "Song not found");
   }
 
+  const baseVersion = originalSong.versions[0];
+  if (!baseVersion) {
+    throw error(400, "Song has no versions to fork");
+  }
+
   const body = await request.json();
   const { title, author, content, metadata } = body;
+  const effectiveTitle = (title ?? baseVersion.title).trim();
+  const effectiveAuthor = author !== undefined ? author : baseVersion.author;
+  const effectiveContent = content ?? baseVersion.content;
+  const effectiveMetadata =
+    metadata !== undefined
+      ? (metadata as Record<string, string>)
+      : parseMetadataRecord(baseVersion.metadata);
+
+  enforceSongPdfPipelineOrThrow({
+    title: effectiveTitle,
+    author: effectiveAuthor,
+    content: effectiveContent,
+    metadata: effectiveMetadata,
+  });
+
+  const normalized = normalizedSongVersionWritePayload({
+    title: effectiveTitle,
+    author: effectiveAuthor,
+    content: effectiveContent,
+    metadata: effectiveMetadata,
+  });
+
+  const warnings = await buildSongCreationWarnings(
+    prisma,
+    session.user.id!,
+    {
+      title: normalized.title,
+      author: normalized.author,
+      metadata: JSON.parse(normalized.metadata) as Record<string, string>,
+    },
+  );
 
   const forkedSong = await prisma.song.create({
     data: {
@@ -29,10 +71,10 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
       forkedFromId: originalSong.id,
       versions: {
         create: {
-          title: title || originalSong.versions[0].title,
-          author: author ?? originalSong.versions[0].author,
-          content: content || originalSong.versions[0].content,
-          metadata: JSON.stringify(metadata || {}),
+          title: normalized.title,
+          author: normalized.author,
+          content: normalized.content,
+          metadata: normalized.metadata,
         },
       },
       tags: {
@@ -68,5 +110,5 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
     metadata: { title: forkedSong.versions[0]?.title },
   });
 
-  return json(forkedSong, { status: 201 });
+  return json({ song: forkedSong, warnings }, { status: 201 });
 };
