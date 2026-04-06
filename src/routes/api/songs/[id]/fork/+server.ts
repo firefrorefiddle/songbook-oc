@@ -1,6 +1,7 @@
 import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { prisma } from "$lib/server/prisma";
+import { logActivity } from "$lib/server/activityLog";
 
 export const POST: RequestHandler = async ({ params, request, locals }) => {
   const session = await locals.auth();
@@ -56,6 +57,16 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
       data: { recommendedVersionId: forkedSong.versions[0].id },
     });
   }
+
+  await logActivity({
+    actorId: session.user.id!,
+    action: "SONG_FORKED",
+    resourceType: "SONG",
+    resourceId: forkedSong.id,
+    sourceResourceId: originalSong.id,
+    sourceResourceType: "SONG",
+    metadata: { title: forkedSong.versions[0]?.title },
+  });
 
   return json(forkedSong, { status: 201 });
 };

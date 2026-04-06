@@ -2,6 +2,7 @@ import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { prisma } from "$lib/server/prisma";
 import { createSongSchema } from "$lib/schemas";
+import { logActivity } from "$lib/server/activityLog";
 import { buildSongListWhere } from "$lib/server/songListQuery";
 
 export const GET: RequestHandler = async ({ url, locals }) => {
@@ -76,6 +77,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       data: { recommendedVersionId: song.versions[0].id },
     });
   }
+
+  await logActivity({
+    actorId: session.user.id!,
+    action: "SONG_CREATED",
+    resourceType: "SONG",
+    resourceId: song.id,
+    metadata: { title: song.versions[0]?.title },
+  });
 
   return json(song, { status: 201 });
 };
