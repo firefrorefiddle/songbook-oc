@@ -1,5 +1,10 @@
 import type { PageServerLoad, Actions } from "./$types";
 import { prisma } from "$lib/server/prisma";
+import {
+  buildSongListWhere,
+  songCategoryFilterOptionsWhere,
+  songTagFilterOptionsWhere,
+} from "$lib/server/songListQuery";
 import { fail, redirect } from "@sveltejs/kit";
 
 export const load: PageServerLoad = async ({ url, locals }) => {
@@ -8,32 +13,48 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 
   const search = url.searchParams.get("search") || "";
   const includeArchived = url.searchParams.get("includeArchived") === "true";
+  const tagId = url.searchParams.get("tag")?.trim() || null;
+  const categoryId = url.searchParams.get("category")?.trim() || null;
   const userId = session.user.id;
 
-  const songs = await prisma.song.findMany({
-    where: {
-      isArchived: includeArchived ? undefined : false,
-      OR: [
-        { ownerId: userId },
-        { collaborations: { some: { userId } } },
-        { isPublic: true },
-      ],
-      versions: search ? { some: { title: { contains: search } } } : undefined,
-    },
-    include: {
-      recommendedVersion: true,
-      versions: {
-        orderBy: { createdAt: "desc" },
-        take: 1,
+  const [songs, tagOptions, categoryOptions] = await Promise.all([
+    prisma.song.findMany({
+      where: buildSongListWhere({
+        userId,
+        includeArchived,
+        search,
+        tagId,
+        categoryId,
+      }),
+      include: {
+        recommendedVersion: true,
+        versions: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
+        tags: { include: { tag: true } },
+        categories: { include: { category: true } },
       },
-    },
-    orderBy: { updatedAt: "desc" },
-  });
+      orderBy: { updatedAt: "desc" },
+    }),
+    prisma.songTag.findMany({
+      where: songTagFilterOptionsWhere(userId, includeArchived),
+      orderBy: { name: "asc" },
+    }),
+    prisma.songCategory.findMany({
+      where: songCategoryFilterOptionsWhere(userId, includeArchived),
+      orderBy: { name: "asc" },
+    }),
+  ]);
 
   return {
     songs,
     search,
     includeArchived,
+    tagId,
+    categoryId,
+    tagOptions,
+    categoryOptions,
   };
 };
 
