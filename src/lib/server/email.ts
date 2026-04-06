@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { prisma } from "./prisma";
 
-type EmailTemplate = "invite" | "password_reset";
+type EmailTemplate = "invite" | "password_reset" | "collaborator_added";
 type EmailTransport = "log" | "mailgun" | "sendmail";
 
 interface EmailMessage {
@@ -30,6 +30,16 @@ interface PasswordResetEmailInput {
   resetUrl: string;
   expiresAt: Date;
   userDisplayName?: string | null;
+}
+
+export interface CollaboratorAddedEmailInput {
+  toEmail: string;
+  collaboratorDisplayName: string;
+  grantedByDisplayName: string;
+  resourceType: "song" | "songbook";
+  resourceTitle: string;
+  resourceUrl: string;
+  role: "EDITOR" | "ADMIN";
 }
 
 interface SendEmailResult {
@@ -286,6 +296,26 @@ export function buildInviteEmail(
   };
 }
 
+export function buildCollaboratorAddedEmail(
+  input: Omit<CollaboratorAddedEmailInput, "toEmail">,
+) {
+  const kind = input.resourceType === "songbook" ? "songbook" : "song";
+  const roleLabel = input.role === "ADMIN" ? "admin collaborator" : "editor";
+
+  return {
+    subject: `You were added as a collaborator on a ${kind}`,
+    text: [
+      `Hello ${input.collaboratorDisplayName},`,
+      "",
+      `${input.grantedByDisplayName} added you as an ${roleLabel} on the ${kind} "${input.resourceTitle}".`,
+      "",
+      `Open it in Songbook: ${input.resourceUrl}`,
+      "",
+      "If you did not expect this message, contact the owner or an administrator.",
+    ].join("\n"),
+  };
+}
+
 export function buildPasswordResetEmail(
   input: Omit<PasswordResetEmailInput, "passwordResetTokenId" | "toEmail">,
 ) {
@@ -410,6 +440,27 @@ export async function sendPasswordResetEmail(
     metadata: JSON.stringify({
       resetUrl: input.resetUrl,
       expiresAt: input.expiresAt.toISOString(),
+    }),
+  });
+}
+
+export async function sendCollaboratorAddedEmail(
+  input: CollaboratorAddedEmailInput,
+): Promise<SendEmailResult> {
+  const rendered = buildCollaboratorAddedEmail(input);
+
+  return sendTrackedEmail({
+    template: "collaborator_added",
+    toEmail: input.toEmail,
+    subject: rendered.subject,
+    text: rendered.text,
+    metadata: JSON.stringify({
+      resourceType: input.resourceType,
+      resourceTitle: input.resourceTitle,
+      resourceUrl: input.resourceUrl,
+      role: input.role,
+      grantedByDisplayName: input.grantedByDisplayName,
+      collaboratorDisplayName: input.collaboratorDisplayName,
     }),
   });
 }

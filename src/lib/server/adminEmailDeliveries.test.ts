@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   getAdminEmailDeliveriesOverview,
@@ -14,12 +14,6 @@ function makePrismaMock() {
 }
 
 describe("adminEmailDeliveries helpers", () => {
-  let prisma: ReturnType<typeof makePrismaMock>;
-
-  beforeEach(() => {
-    prisma = makePrismaMock();
-  });
-
   it("normalises query filters for the admin delivery page", () => {
     const filters = normaliseAdminEmailDeliveryFilters(
       new URL(
@@ -34,7 +28,18 @@ describe("adminEmailDeliveries helpers", () => {
     });
   });
 
+  it("normalises collaborator_added template filter", () => {
+    const filters = normaliseAdminEmailDeliveryFilters(
+      new URL(
+        "https://songbook.example.org/admin/email-deliveries?template=collaborator_added",
+      ),
+    );
+
+    expect(filters.template).toBe("collaborator_added");
+  });
+
   it("builds recent delivery rows with related record summaries", async () => {
+    const prisma = makePrismaMock();
     prisma.emailDelivery.findMany.mockResolvedValue([
       {
         id: "delivery-1",
@@ -91,6 +96,29 @@ describe("adminEmailDeliveries helpers", () => {
           },
         },
       },
+      {
+        id: "delivery-3",
+        template: "collaborator_added",
+        toEmail: "collab@example.com",
+        fromEmail: "no-reply@example.com",
+        subject: "You were added as a collaborator on a song",
+        transport: "log",
+        status: "SENT",
+        metadata: JSON.stringify({
+          resourceType: "song",
+          resourceTitle: "Test Hymn",
+          resourceUrl: "https://songbook.example.org/songs/s1",
+          role: "EDITOR",
+          grantedByDisplayName: "Owner One",
+          collaboratorDisplayName: "New Editor",
+        }),
+        providerMessageId: "/tmp/eml",
+        errorMessage: null,
+        createdAt: new Date("2099-04-01T07:00:00.000Z"),
+        sentAt: new Date("2099-04-01T07:00:01.000Z"),
+        invite: null,
+        passwordResetToken: null,
+      },
     ]);
 
     const result = await getAdminEmailDeliveriesOverview(prisma, {
@@ -100,8 +128,8 @@ describe("adminEmailDeliveries helpers", () => {
     });
 
     expect(result.summary).toEqual({
-      total: 2,
-      sent: 1,
+      total: 3,
+      sent: 2,
       failed: 1,
       pending: 0,
     });
@@ -125,10 +153,19 @@ describe("adminEmailDeliveries helpers", () => {
           expect.objectContaining({ label: "Reset URL" }),
         ]),
       }),
+      expect.objectContaining({
+        id: "delivery-3",
+        relatedEntityLabel: "Song collaboration: Test Hymn",
+        metadataSummary: expect.arrayContaining([
+          expect.objectContaining({ label: "Resource URL" }),
+          expect.objectContaining({ label: "Granted by" }),
+        ]),
+      }),
     ]);
   });
 
   it("filters rows by status, template, and free-text search", async () => {
+    const prisma = makePrismaMock();
     prisma.emailDelivery.findMany.mockResolvedValue([
       {
         id: "delivery-1",

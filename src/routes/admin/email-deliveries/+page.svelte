@@ -127,6 +127,11 @@
             selected={data.filters.template === "password_reset"}
             >Password reset</option
           >
+          <option
+            value="collaborator_added"
+            selected={data.filters.template === "collaborator_added"}
+            >Collaborator added</option
+          >
         </select>
       </label>
 

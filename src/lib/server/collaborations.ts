@@ -1,8 +1,6 @@
-import type {
-  PrismaClient,
-  ActivityAction,
-  ResourceType,
-} from "@prisma/client";
+import type { PrismaClient } from "@prisma/client";
+
+import { sendCollaboratorAddedEmail } from "./email";
 
 type CollabPrisma = Pick<
   PrismaClient,
@@ -27,6 +25,94 @@ function getActorName(user: {
     user.name ||
     user.email
   );
+}
+
+async function notifyCollaboratorAdded(
+  prisma: CollabPrisma,
+  params: {
+    publicBaseUrl: string;
+    resourceType: "song" | "songbook";
+    resourceId: string;
+    actorId: string;
+    targetUserId: string;
+    targetUserDisplayName: string;
+    role: "EDITOR" | "ADMIN";
+  },
+): Promise<void> {
+  const base = params.publicBaseUrl.replace(/\/+$/u, "");
+
+  try {
+    let resourceTitle: string;
+    let resourceUrl: string;
+
+    if (params.resourceType === "song") {
+      const song = await prisma.song.findUnique({
+        where: { id: params.resourceId },
+        select: {
+          recommendedVersion: { select: { title: true } },
+          versions: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: { title: true },
+          },
+        },
+      });
+      resourceTitle =
+        song?.recommendedVersion?.title ??
+        song?.versions[0]?.title ??
+        "Song";
+      resourceUrl = `${base}/songs/${params.resourceId}`;
+    } else {
+      const songbook = await prisma.songbook.findUnique({
+        where: { id: params.resourceId },
+        select: {
+          versions: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: { title: true },
+          },
+        },
+      });
+      resourceTitle = songbook?.versions[0]?.title ?? "Songbook";
+      resourceUrl = `${base}/songbooks/${params.resourceId}`;
+    }
+
+    const [actor, target] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: params.actorId },
+        select: {
+          email: true,
+          firstName: true,
+          lastName: true,
+          username: true,
+          name: true,
+        },
+      }),
+      prisma.user.findUnique({
+        where: { id: params.targetUserId },
+        select: { email: true },
+      }),
+    ]);
+
+    if (!actor || !target?.email) {
+      return;
+    }
+
+    await sendCollaboratorAddedEmail({
+      toEmail: target.email,
+      collaboratorDisplayName: params.targetUserDisplayName,
+      grantedByDisplayName: getActorName(actor),
+      resourceType: params.resourceType,
+      resourceTitle,
+      resourceUrl,
+      role: params.role,
+    });
+  } catch (error) {
+    console.error(
+      "[collaborations] collaborator_added email notification failed:",
+      error,
+    );
+  }
 }
 
 export interface CollaboratorInfo {
@@ -114,6 +200,8 @@ export async function addSongCollaborator(
     targetUserId: string;
     targetUserDisplayName: string;
     role?: "EDITOR" | "ADMIN";
+    /** When set, sends a transactional email after the grant (failures are logged only). */
+    publicBaseUrl?: string;
   },
 ): Promise<void> {
   const existing = await prisma.collaboration.findFirst({
@@ -148,6 +236,18 @@ export async function addSongCollaborator(
       }),
     },
   });
+
+  if (input.publicBaseUrl) {
+    await notifyCollaboratorAdded(prisma, {
+      publicBaseUrl: input.publicBaseUrl,
+      resourceType: "song",
+      resourceId: input.songId,
+      actorId: input.actorId,
+      targetUserId: input.targetUserId,
+      targetUserDisplayName: input.targetUserDisplayName,
+      role: input.role || "EDITOR",
+    });
+  }
 }
 
 export async function removeSongCollaborator(
@@ -252,6 +352,8 @@ export async function addSongbookCollaborator(
     targetUserId: string;
     targetUserDisplayName: string;
     role?: "EDITOR" | "ADMIN";
+    /** When set, sends a transactional email after the grant (failures are logged only). */
+    publicBaseUrl?: string;
   },
 ): Promise<void> {
   const existing = await prisma.collaboration.findFirst({
@@ -286,6 +388,18 @@ export async function addSongbookCollaborator(
       }),
     },
   });
+
+  if (input.publicBaseUrl) {
+    await notifyCollaboratorAdded(prisma, {
+      publicBaseUrl: input.publicBaseUrl,
+      resourceType: "songbook",
+      resourceId: input.songbookId,
+      actorId: input.actorId,
+      targetUserId: input.targetUserId,
+      targetUserDisplayName: input.targetUserDisplayName,
+      role: input.role || "EDITOR",
+    });
+  }
 }
 
 export async function removeSongbookCollaborator(

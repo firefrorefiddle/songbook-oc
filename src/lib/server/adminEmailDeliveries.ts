@@ -7,7 +7,11 @@ type EmailDeliveryPrisma = Pick<PrismaClient, "emailDelivery">;
 export interface AdminEmailDeliveryFilters {
   search: string;
   status: "ALL" | "PENDING" | "SENT" | "FAILED";
-  template: "ALL" | "invite" | "password_reset";
+  template:
+    | "ALL"
+    | "invite"
+    | "password_reset"
+    | "collaborator_added";
 }
 
 export interface AdminEmailDeliveryRow {
@@ -34,6 +38,12 @@ interface ParsedMetadata {
   resetUrl?: unknown;
   expiresAt?: unknown;
   requireEmailVerification?: unknown;
+  resourceType?: unknown;
+  resourceTitle?: unknown;
+  resourceUrl?: unknown;
+  role?: unknown;
+  grantedByDisplayName?: unknown;
+  collaboratorDisplayName?: unknown;
 }
 
 const RECENT_DELIVERY_LIMIT = 200;
@@ -83,36 +93,94 @@ function buildMetadataSummary(metadata: ParsedMetadata) {
     });
   }
 
+  if (typeof metadata.resourceUrl === "string" && metadata.resourceUrl) {
+    summary.push({ label: "Resource URL", value: metadata.resourceUrl });
+  }
+
+  if (metadata.resourceType === "song" || metadata.resourceType === "songbook") {
+    summary.push({
+      label: "Resource type",
+      value: metadata.resourceType,
+    });
+  }
+
+  if (typeof metadata.resourceTitle === "string" && metadata.resourceTitle) {
+    summary.push({ label: "Resource title", value: metadata.resourceTitle });
+  }
+
+  if (metadata.role === "EDITOR" || metadata.role === "ADMIN") {
+    summary.push({ label: "Role", value: metadata.role });
+  }
+
+  if (
+    typeof metadata.grantedByDisplayName === "string" &&
+    metadata.grantedByDisplayName
+  ) {
+    summary.push({
+      label: "Granted by",
+      value: metadata.grantedByDisplayName,
+    });
+  }
+
+  if (
+    typeof metadata.collaboratorDisplayName === "string" &&
+    metadata.collaboratorDisplayName
+  ) {
+    summary.push({
+      label: "Collaborator",
+      value: metadata.collaboratorDisplayName,
+    });
+  }
+
   return summary;
 }
 
-function getRelatedEntityLabel(delivery: {
-  invite: {
-    email: string;
-    sentBy: {
+function getRelatedEntityLabel(
+  delivery: {
+    template: string;
+    invite: {
       email: string;
-      firstName: string | null;
-      lastName: string | null;
-      username: string | null;
-      name: string | null;
-    };
-  } | null;
-  passwordResetToken: {
-    user: {
-      email: string;
-      firstName: string | null;
-      lastName: string | null;
-      username: string | null;
-      name: string | null;
-    };
-  } | null;
-}) {
+      sentBy: {
+        email: string;
+        firstName: string | null;
+        lastName: string | null;
+        username: string | null;
+        name: string | null;
+      };
+    } | null;
+    passwordResetToken: {
+      user: {
+        email: string;
+        firstName: string | null;
+        lastName: string | null;
+        username: string | null;
+        name: string | null;
+      };
+    } | null;
+  },
+  metadata: ParsedMetadata,
+) {
   if (delivery.invite) {
     return `Invite for ${delivery.invite.email} from ${getUserDisplayName(delivery.invite.sentBy)}`;
   }
 
   if (delivery.passwordResetToken) {
     return `Password reset for ${getUserDisplayName(delivery.passwordResetToken.user)}`;
+  }
+
+  if (delivery.template === "collaborator_added") {
+    const title =
+      typeof metadata.resourceTitle === "string" ? metadata.resourceTitle : "";
+    const kind =
+      metadata.resourceType === "songbook"
+        ? "Songbook"
+        : metadata.resourceType === "song"
+          ? "Song"
+          : "Resource";
+    if (title) {
+      return `${kind} collaboration: ${title}`;
+    }
+    return "Collaboration added";
   }
 
   return "No linked record";
@@ -152,7 +220,11 @@ export function normaliseAdminEmailDeliveryFilters(
         ? status
         : "ALL",
     template:
-      template === "invite" || template === "password_reset" ? template : "ALL",
+      template === "invite" ||
+      template === "password_reset" ||
+      template === "collaborator_added"
+        ? template
+        : "ALL",
   };
 }
 
@@ -209,7 +281,7 @@ export async function getAdminEmailDeliveriesOverview(
       sentAt: delivery.sentAt,
       providerMessageId: delivery.providerMessageId,
       errorMessage: delivery.errorMessage,
-      relatedEntityLabel: getRelatedEntityLabel(delivery),
+      relatedEntityLabel: getRelatedEntityLabel(delivery, metadata),
       metadataSummary: buildMetadataSummary(metadata),
     };
   });

@@ -25,11 +25,13 @@ vi.mock("./prisma", () => ({
 }));
 
 import {
+  buildCollaboratorAddedEmail,
   buildInviteEmail,
   buildInviteSignupUrl,
   buildPasswordResetEmail,
   buildPasswordResetUrl,
   resolvePublicBaseUrl,
+  sendCollaboratorAddedEmail,
   sendInviteEmail,
 } from "./email";
 
@@ -105,6 +107,41 @@ describe("email helpers", () => {
     expect(message.text).not.toContain("verify your email address");
   });
 
+  it("renders collaborator-added copy for a song with resource URL", () => {
+    const message = buildCollaboratorAddedEmail({
+      collaboratorDisplayName: "Chris Collaborator",
+      grantedByDisplayName: "Olivia Owner",
+      resourceType: "song",
+      resourceTitle: "Amazing Grace",
+      resourceUrl: "https://songbook.example.org/songs/song-1",
+      role: "EDITOR",
+    });
+
+    expect(message.subject).toBe("You were added as a collaborator on a song");
+    expect(message.text).toContain("Olivia Owner added you as an editor");
+    expect(message.text).toContain('the song "Amazing Grace"');
+    expect(message.text).toContain(
+      "https://songbook.example.org/songs/song-1",
+    );
+  });
+
+  it("renders collaborator-added copy for an admin role on a songbook", () => {
+    const message = buildCollaboratorAddedEmail({
+      collaboratorDisplayName: "Chris Collaborator",
+      grantedByDisplayName: "Olivia Owner",
+      resourceType: "songbook",
+      resourceTitle: "Sunday Set",
+      resourceUrl: "https://songbook.example.org/songbooks/sb-1",
+      role: "ADMIN",
+    });
+
+    expect(message.subject).toBe(
+      "You were added as a collaborator on a songbook",
+    );
+    expect(message.text).toContain("admin collaborator");
+    expect(message.text).toContain('the songbook "Sunday Set"');
+  });
+
   it("renders password reset copy with the reset link", () => {
     const message = buildPasswordResetEmail({
       resetUrl: "https://songbook.example.org/reset-password?token=abc",
@@ -159,5 +196,51 @@ describe("email helpers", () => {
       transport: "mailgun",
       providerMessageId: "<message-id@example.mailgun.org>",
     });
+  });
+
+  it("sends collaborator_added email through Mailgun when configured", async () => {
+    mockEnv.EMAIL_TRANSPORT = "mailgun";
+    mockEnv.MAILGUN_API_KEY = "test-key";
+    mockEnv.MAILGUN_DOMAIN = "sandbox.example.mailgun.org";
+    mockEnv.MAILGUN_BASE_URL = "https://api.mailgun.net";
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      text: vi.fn().mockResolvedValue(
+        JSON.stringify({ id: "<collab-msg@example.mailgun.org>" }),
+      ),
+    });
+    global.fetch = fetchMock as typeof fetch;
+
+    const { prisma } = await import("./prisma");
+    vi.mocked(prisma.emailDelivery.create).mockResolvedValue({
+      id: "delivery-collab-1",
+    } as never);
+    vi.mocked(prisma.emailDelivery.update).mockResolvedValue({} as never);
+
+    const result = await sendCollaboratorAddedEmail({
+      toEmail: "collab@example.org",
+      collaboratorDisplayName: "Chris",
+      grantedByDisplayName: "Olivia",
+      resourceType: "song",
+      resourceTitle: "Test Song",
+      resourceUrl: "https://songbook.example.org/songs/s1",
+      role: "EDITOR",
+    });
+
+    expect(fetchMock).toHaveBeenCalled();
+    expect(result).toEqual({
+      status: "SENT",
+      transport: "mailgun",
+      providerMessageId: "<collab-msg@example.mailgun.org>",
+    });
+    expect(prisma.emailDelivery.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          template: "collaborator_added",
+          toEmail: "collab@example.org",
+        }),
+      }),
+    );
   });
 });

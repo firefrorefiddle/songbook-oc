@@ -18,6 +18,13 @@ import {
   removeSongCollaborator,
   transferSongOwnership,
 } from "$lib/server/collaborations";
+import { resolvePublicBaseUrl } from "$lib/server/email";
+import { buildSongCreationWarnings } from "$lib/server/songDuplicateDetection";
+import {
+  formatSongPdfPipelineIssues,
+  validateSongPdfPipelineInput,
+} from "$lib/utils/songPdfPipelineSafety";
+import { normalizedSongVersionWritePayload } from "$lib/server/songPdfPipelineGuard";
 
 export const load: PageServerLoad = async ({ params, locals }) => {
   const session = await locals.auth();
@@ -118,7 +125,10 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 };
 
 export const actions: Actions = {
-  update: async ({ params, request }) => {
+  update: async ({ params, request, locals }) => {
+    const session = await locals.auth();
+    if (!session?.user) throw redirect(302, "/login");
+
     const formData = await request.formData();
     const title = formData.get("title") as string;
     const author = formData.get("author") as string;
@@ -141,17 +151,45 @@ export const actions: Actions = {
       }
     }
 
+    const pipelineIssues = validateSongPdfPipelineInput({
+      title: title.trim(),
+      author: author?.trim() || null,
+      content,
+      metadata,
+    });
+    if (pipelineIssues.length > 0) {
+      return fail(400, { error: formatSongPdfPipelineIssues(pipelineIssues) });
+    }
+
+    const normalized = normalizedSongVersionWritePayload({
+      title: title.trim(),
+      author: author?.trim() || null,
+      content,
+      metadata,
+    });
+
+    const warnings = await buildSongCreationWarnings(
+      prisma,
+      session.user.id!,
+      {
+        title: normalized.title,
+        author: normalized.author,
+        metadata: JSON.parse(normalized.metadata) as Record<string, string>,
+      },
+      { excludeSongId: params.id },
+    );
+
     await prisma.songVersion.create({
       data: {
         songId: params.id,
-        title: title.trim(),
-        author: author?.trim() || null,
-        content: content.trim(),
-        metadata: JSON.stringify(metadata),
+        title: normalized.title,
+        author: normalized.author,
+        content: normalized.content,
+        metadata: normalized.metadata,
       },
     });
 
-    return { success: true };
+    return { success: true, warnings };
   },
 
   setRecommended: async ({ params, request }) => {
@@ -195,7 +233,10 @@ export const actions: Actions = {
     return { success: true };
   },
 
-  fork: async ({ params, request }) => {
+  fork: async ({ params, request, locals }) => {
+    const session = await locals.auth();
+    if (!session?.user) throw redirect(302, "/login");
+
     const formData = await request.formData();
     const title = formData.get("title") as string;
     const author = formData.get("author") as string;
@@ -218,6 +259,17 @@ export const actions: Actions = {
       }
     }
 
+    const warnings = await buildSongCreationWarnings(
+      prisma,
+      session.user.id!,
+      {
+        title: title.trim(),
+        author: author?.trim() || null,
+        metadata,
+      },
+      { excludeSongId: params.id },
+    );
+
     await prisma.songVersion.create({
       data: {
         songId: params.id,
@@ -228,7 +280,7 @@ export const actions: Actions = {
       },
     });
 
-    return { success: true, forked: true };
+    return { success: true, forked: true, warnings };
   },
 
   deleteVersion: async ({ params, request }) => {
@@ -278,7 +330,7 @@ export const actions: Actions = {
     return { success: true };
   },
 
-  addCollaborator: async ({ params, request, locals }) => {
+  addCollaborator: async ({ params, request, locals, url }) => {
     const session = await locals.auth();
     if (!session?.user) throw redirect(302, "/login");
 
@@ -323,6 +375,7 @@ export const actions: Actions = {
         targetUserId: userId,
         targetUserDisplayName,
         role,
+        publicBaseUrl: resolvePublicBaseUrl(url.origin),
       });
       return { success: true };
     } catch (error) {
