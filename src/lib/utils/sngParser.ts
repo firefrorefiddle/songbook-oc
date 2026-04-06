@@ -161,7 +161,7 @@ function parseSections(lines: string[]): SongSection[] {
   return sections;
 }
 
-function isChordLineType(line: string): boolean {
+export function isChordLineType(line: string): boolean {
   const trimmed = line.trim();
   if (!trimmed) return false;
 
@@ -292,7 +292,7 @@ interface ChordToken {
   chordLinePos: number;
 }
 
-function tokenizeChordLine(line: string): ChordToken[] {
+export function tokenizeChordLine(line: string): ChordToken[] {
   const tokens: ChordToken[] = [];
   const trimmed = line.trim();
   const originalTrimmedStart = line.indexOf(trimmed[0]);
@@ -348,7 +348,7 @@ function updateChordEndChars(line: ChordedLine): void {
   }
 }
 
-function detectSectionLabel(
+export function detectSectionLabel(
   line: string,
 ): { type: SongSection["type"]; label?: string } | null {
   const trimmed = line.trim();

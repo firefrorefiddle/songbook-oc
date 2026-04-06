@@ -10,6 +10,10 @@
     normalizeSongPreviewApiError,
     songPreviewErrorHeading
   } from '$lib/songEditorPreview';
+  import {
+    formatReplayCaretSummary,
+    validateReplayCarets
+  } from '$lib/utils/replayCaretValidation';
 
   type EnhanceSubmit = Parameters<typeof enhance>[1];
 
@@ -42,6 +46,8 @@
   let previewError = $state<{ stage: string; message: string; logs?: string } | null>(null);
   let isGeneratingPreview = $state(false);
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  let replayCaretWarning = $derived(formatReplayCaretSummary(validateReplayCarets(content)));
 
   async function generatePreview(
     currentContent: string,
@@ -153,6 +159,21 @@
       {#if error}
         <div class="mb-4 p-3 bg-red-50 text-red-700 rounded-md text-sm">
           {error}
+        </div>
+      {/if}
+
+      {#if replayCaretWarning}
+        <div
+          class="mb-4 p-3 bg-amber-50 text-amber-950 rounded-md text-sm border border-amber-200"
+          role="status"
+        >
+          <div class="font-medium mb-1">Chord replay markers (^)</div>
+          <p class="text-sm whitespace-pre-wrap">
+            In the LaTeX songs package, each <code class="bg-amber-100 px-1 rounded">^</code> in a lyric line
+            replays a chord from the line above. Too many carets, or carets used for syllable breaks (e.g.
+            <code class="bg-amber-100 px-1 rounded">be^halt</code>), can break PDF preview.
+          </p>
+          <p class="mt-2 text-sm font-mono whitespace-pre-wrap">{replayCaretWarning}</p>
         </div>
       {/if}
 
