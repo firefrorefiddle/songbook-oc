@@ -380,6 +380,7 @@ Every architectural choice, tradeoff, or context that would be lost over time mu
 - Providers: `Credentials` (bcrypt password hash), `Google`
 - Session strategy: JWT (SQLite has no session table overhead)
 - `AUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` must be set in `.env`
+- If `AUTH_SECRET` changes between runs (or you switch databases) while old session cookies remain, Auth.js may log JWT decryption errors until users clear site cookies or sign in again — normal in local dev.
 - Hooks file: `src/hooks.server.ts` exposes `handle` from Auth.js
 - Session available in server load functions via `event.locals.auth()`
 
