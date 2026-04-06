@@ -12,6 +12,7 @@ export interface UserDirectoryRow {
   firstName: string | null;
   lastName: string | null;
   username: string | null;
+  publicBio: string | null;
   createdAt: Date;
   ownedSongsCount: number;
   ownedSongbooksCount: number;
@@ -31,6 +32,7 @@ export async function searchUsers(
           { username: { contains: search } },
           { email: { contains: search } },
           { name: { contains: search } },
+          { publicBio: { contains: search } },
         ],
       }
     : {};
@@ -47,6 +49,7 @@ export async function searchUsers(
       lastName: true,
       username: true,
       name: true,
+      publicBio: true,
       createdAt: true,
       _count: {
         select: {
@@ -74,11 +77,63 @@ export async function searchUsers(
     firstName: user.firstName,
     lastName: user.lastName,
     username: user.username,
+    publicBio: user.publicBio,
     createdAt: user.createdAt,
     ownedSongsCount: user._count.ownedSongs,
     ownedSongbooksCount: user._count.ownedSongbooks,
     sharedWithCurrentUser: user.collaborations.length > 0,
   }));
+}
+
+/** Single active user row for /people/[id]; null if missing or inactive. */
+export async function getUserDirectoryRowById(
+  prisma: UserDirectoryPrisma,
+  currentUserId: string,
+  targetUserId: string,
+): Promise<UserDirectoryRow | null> {
+  const user = await prisma.user.findFirst({
+    where: { id: targetUserId, isActive: true },
+    select: {
+      id: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      username: true,
+      name: true,
+      publicBio: true,
+      createdAt: true,
+      _count: {
+        select: {
+          ownedSongs: true,
+          ownedSongbooks: true,
+        },
+      },
+      collaborations: {
+        where: { userId: currentUserId },
+        select: { id: true },
+      },
+    },
+  });
+
+  if (!user) return null;
+
+  return {
+    id: user.id,
+    displayName:
+      [user.firstName, user.lastName].filter(Boolean).join(" ").trim() ||
+      user.username ||
+      user.name ||
+      user.email,
+    email: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    username: user.username,
+    publicBio: user.publicBio,
+    createdAt: user.createdAt,
+    ownedSongsCount: user._count.ownedSongs,
+    ownedSongbooksCount: user._count.ownedSongbooks,
+    sharedWithCurrentUser: user.collaborations.length > 0,
+  };
 }
 
 export async function getSharedWithMe(

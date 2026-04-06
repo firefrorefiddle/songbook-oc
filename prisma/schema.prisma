@@ -26,6 +26,8 @@ model User {
   isActive      Boolean   @default(true)
   deactivatedAt DateTime?
   createdAt     DateTime  @default(now())
+  // Shown on /people when set; optional community-facing note (not for credentials).
+  publicBio     String?
 
   ownedSongs                Song[]                @relation("SongOwner")
   ownedSongbooks            Songbook[]            @relation("SongbookOwner")

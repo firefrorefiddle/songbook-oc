@@ -1,5 +1,9 @@
 import type { PageServerLoad, Actions } from "./$types";
 import { prisma } from "$lib/server/prisma";
+import {
+  parsePublicBioInput,
+  PUBLIC_BIO_MAX_LENGTH,
+} from "$lib/server/publicProfile";
 import { fail, redirect } from "@sveltejs/kit";
 import bcrypt from "bcryptjs";
 
@@ -17,12 +21,14 @@ export const load: PageServerLoad = async ({ locals }) => {
       firstName: true,
       lastName: true,
       username: true,
+      publicBio: true,
       role: true,
       passwordHash: true,
     },
   });
 
   return {
+    publicBioMaxLength: PUBLIC_BIO_MAX_LENGTH,
     user: user
       ? {
           id: user.id,
@@ -30,6 +36,7 @@ export const load: PageServerLoad = async ({ locals }) => {
           firstName: user.firstName,
           lastName: user.lastName,
           username: user.username,
+          publicBio: user.publicBio,
           role: user.role,
           hasPassword: !!user.passwordHash,
         }
@@ -48,8 +55,14 @@ export const actions: Actions = {
     const firstName = formData.get("firstName") as string;
     const lastName = formData.get("lastName") as string;
     const username = formData.get("username") as string;
+    const publicBioRaw = formData.get("publicBio");
 
-    const fields = { firstName, lastName, username };
+    const fields = { firstName, lastName, username, publicBio: publicBioRaw as string };
+
+    const bioParsed = parsePublicBioInput(publicBioRaw);
+    if (!bioParsed.ok) {
+      return fail(400, { error: bioParsed.error, fields });
+    }
 
     if (!firstName?.trim()) {
       return fail(400, { error: "First name is required", fields });
@@ -77,7 +90,8 @@ export const actions: Actions = {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         username: username.trim(),
-      } as any,
+        publicBio: bioParsed.value,
+      },
     });
 
     return { success: true };

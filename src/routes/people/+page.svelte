@@ -51,22 +51,29 @@
         <ul class="divide-y divide-gray-200">
           {#each data.users as user}
             <li>
-              <div class="px-4 py-4 sm:px-6">
-                <div class="flex items-center justify-between">
-                  <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium text-indigo-600 truncate">
-                      {user.displayName}
-                    </p>
-                    <p class="text-sm text-gray-500">{user.email}</p>
-                    <p class="mt-1 text-xs text-gray-400">
-                      {user.ownedSongsCount} songs, {user.ownedSongbooksCount} songbooks
-                      {#if user.sharedWithCurrentUser}
-                        <span class="ml-2 text-green-600">Shared with you</span>
+              <a href="/people/{user.id}" class="block hover:bg-gray-50">
+                <div class="px-4 py-4 sm:px-6">
+                  <div class="flex items-center justify-between">
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-medium text-indigo-600 truncate">
+                        {user.displayName}
+                      </p>
+                      <p class="text-sm text-gray-500">{user.email}</p>
+                      {#if user.publicBio}
+                        <p class="mt-2 text-sm text-gray-600 line-clamp-2 whitespace-pre-wrap">
+                          {user.publicBio}
+                        </p>
                       {/if}
-                    </p>
+                      <p class="mt-1 text-xs text-gray-400">
+                        {user.ownedSongsCount} songs, {user.ownedSongbooksCount} songbooks
+                        {#if user.sharedWithCurrentUser}
+                          <span class="ml-2 text-green-600">Shared with you</span>
+                        {/if}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </a>
             </li>
           {/each}
         </ul>
