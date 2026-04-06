@@ -11,5 +11,5 @@ export const load: PageServerLoad = async ({ locals }) => {
     throw redirect(302, "/songs");
   }
 
-  throw redirect(302, "/admin/users");
+  return {};
 };

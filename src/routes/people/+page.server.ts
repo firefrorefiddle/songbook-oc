@@ -1,7 +1,7 @@
 import type { PageServerLoad } from "./$types";
 import { prisma } from "$lib/server/prisma";
 import { redirect } from "@sveltejs/kit";
-import { searchUsers, getSharedWithMe } from "$lib/server/userDirectory";
+import { searchUsers } from "$lib/server/userDirectory";
 
 export const load: PageServerLoad = async ({ url, locals }) => {
   const session = await locals.auth();
@@ -10,14 +10,10 @@ export const load: PageServerLoad = async ({ url, locals }) => {
   const currentUserId = session.user.id;
   const search = url.searchParams.get("search") || "";
 
-  const [users, sharedContent] = await Promise.all([
-    searchUsers(prisma, currentUserId, search),
-    getSharedWithMe(prisma, currentUserId),
-  ]);
+  const users = await searchUsers(prisma, currentUserId, search);
 
   return {
     users,
-    sharedContent,
     search,
   };
 };

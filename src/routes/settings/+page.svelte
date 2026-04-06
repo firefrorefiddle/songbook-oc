@@ -1,7 +1,11 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import Button from '$lib/components/Button.svelte';
 
 	let { data, form } = $props();
+
+	const inputFocus =
+		'w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500';
 </script>
 
 <div class="max-w-2xl">
@@ -31,7 +35,7 @@
 					type="text"
 					required
 					value={form?.fields?.firstName ?? data.user?.firstName ?? ''}
-					class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+					class={inputFocus}
 				/>
 			</div>
 
@@ -43,7 +47,7 @@
 					type="text"
 					required
 					value={form?.fields?.lastName ?? data.user?.lastName ?? ''}
-					class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+					class={inputFocus}
 				/>
 			</div>
 
@@ -55,7 +59,7 @@
 					type="text"
 					required
 					value={form?.fields?.username ?? data.user?.username ?? ''}
-					class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+					class={inputFocus}
 				/>
 			</div>
 
@@ -69,7 +73,7 @@
 					rows="3"
 					maxlength={data.publicBioMaxLength}
 					value={form?.fields?.publicBio ?? data.user?.publicBio ?? ''}
-					class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+					class={inputFocus}
 					placeholder="Short note visible to other signed-in users on the People page."
 				></textarea>
 				<p class="mt-1 text-xs text-gray-500">
@@ -101,12 +105,7 @@
 				/>
 			</div>
 
-			<button
-				type="submit"
-				class="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 font-medium"
-			>
-				Save Changes
-			</button>
+			<Button type="submit">Save changes</Button>
 		</form>
 	</div>
 
@@ -134,7 +133,7 @@
 						name="currentPassword"
 						type="password"
 						required
-						class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+						class={inputFocus}
 					/>
 				</div>
 
@@ -146,7 +145,7 @@
 						type="password"
 						required
 						minlength="8"
-						class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+						class={inputFocus}
 					/>
 					<p class="mt-1 text-xs text-gray-500">Minimum 8 characters</p>
 				</div>
@@ -159,16 +158,11 @@
 						type="password"
 						required
 						minlength="8"
-						class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+						class={inputFocus}
 					/>
 				</div>
 
-				<button
-					type="submit"
-					class="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 font-medium"
-				>
-					Change Password
-				</button>
+				<Button type="submit">Change password</Button>
 			</form>
 		</div>
 	{:else}

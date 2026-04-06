@@ -10,10 +10,15 @@
 	let showCreateModal = $state(false);
 	let showDeleteConfirm = $state(false);
 	let songbookToDelete = $state<{ id: string; title: string } | null>(null);
+	let showForkModal = $state(false);
+	let forkTarget = $state<{ id: string; versions: { title: string }[] } | null>(null);
+	let forkTitle = $state('');
+	let isForking = $state(false);
 	let searchInput = $state('');
 	let includeArchived = $state(false);
 	let selectedTagId = $state('');
 	let selectedCategoryId = $state('');
+	let searchDebounce: ReturnType<typeof setTimeout> | null = null;
 
 	$effect(() => {
 		searchInput = data.search;
@@ -31,6 +36,14 @@
 		goto(`/songbooks?${params.toString()}`);
 	}
 
+	function scheduleSearchApply() {
+		if (searchDebounce) clearTimeout(searchDebounce);
+		searchDebounce = setTimeout(() => {
+			searchDebounce = null;
+			applyListParams();
+		}, 400);
+	}
+
 	function handleCreateSuccess() {
 		showCreateModal = false;
 		goto('/songbooks', { invalidateAll: true });
@@ -46,22 +59,37 @@
  		showDeleteConfirm = false;
  	}
 
- 	async function forkSongbook(songbook: { id: string; versions: { title: string }[] }) {
- 		const title = prompt('Enter new songbook title:', songbook.versions[0]?.title);
- 		if (!title) return;
- 		try {
- 			const response = await fetch(`/api/songbooks/${songbook.id}/fork`, {
- 				method: 'POST',
- 				headers: { 'Content-Type': 'application/json' },
- 				body: JSON.stringify({ title }),
- 			});
- 			if (!response.ok) throw new Error('Failed to fork');
- 			const forked = await response.json();
- 			goto(`/songbooks/${forked.id}`);
- 		} catch (_e) {
- 			alert('Failed to fork songbook');
- 		}
- 	}
+	function openForkModal(songbook: { id: string; versions: { title: string }[] }) {
+		forkTarget = songbook;
+		forkTitle = songbook.versions[0]?.title ?? '';
+		showForkModal = true;
+	}
+
+	function closeForkModal() {
+		showForkModal = false;
+		forkTarget = null;
+		forkTitle = '';
+		isForking = false;
+	}
+
+	async function submitFork() {
+		if (!forkTarget?.id || !forkTitle.trim()) return;
+		isForking = true;
+		try {
+			const response = await fetch(`/api/songbooks/${forkTarget.id}/fork`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ title: forkTitle.trim() }),
+			});
+			if (!response.ok) throw new Error('Failed to fork');
+			const forked = await response.json();
+			closeForkModal();
+			goto(`/songbooks/${forked.id}`);
+		} catch (_e) {
+			alert('Failed to fork songbook');
+			isForking = false;
+		}
+	}
 </script>
 
 <svelte:head>
@@ -81,9 +109,12 @@
 			type="text"
 			placeholder="Search by songbook title..."
 			bind:value={searchInput}
+			oninput={scheduleSearchApply}
 			onkeydown={(e) => e.key === 'Enter' && applyListParams()}
 			class="w-full rounded-md border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-indigo-500"
+			aria-describedby="songbook-search-hint"
 		/>
+		<p id="songbook-search-hint" class="sr-only">Results update shortly after you stop typing.</p>
 	</div>
 	<div class="w-full sm:w-auto sm:min-w-[10rem]">
 		<label for="songbook-filter-tag" class="block text-sm font-medium text-gray-700 mb-1">Tag</label>
@@ -172,7 +203,7 @@
 					<div class="mt-4 flex gap-2">
 						<Button variant="secondary" onclick={() => goto(`/songbooks/${songbook.id}`)}>View</Button>
 						{#if !songbook.isArchived}
-							<Button variant="secondary" onclick={() => forkSongbook(songbook)}>Fork</Button>
+							<Button variant="secondary" onclick={() => openForkModal(songbook)}>Fork</Button>
 							<Button variant="danger" onclick={() => confirmDelete({ id: songbook.id, title: songbook.versions[0]?.title || 'Untitled' })}>
 								Archive
 							</Button>
@@ -211,6 +242,33 @@
 				<Button type="submit">Create</Button>
 			</div>
 		</form>
+	{/snippet}
+</Modal>
+
+<Modal bind:open={showForkModal} title="Fork Songbook" onclose={closeForkModal}>
+	{#snippet children()}
+		<div class="space-y-4">
+			<p class="text-sm text-gray-600">
+				Create a copy of this songbook that you can edit independently.
+			</p>
+			<div>
+				<label for="list-fork-title" class="block text-sm font-medium text-gray-700">
+					New songbook title
+				</label>
+				<input
+					id="list-fork-title"
+					type="text"
+					bind:value={forkTitle}
+					class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+				/>
+			</div>
+			<div class="flex justify-end gap-2">
+				<Button variant="secondary" onclick={closeForkModal}>Cancel</Button>
+				<Button onclick={submitFork} disabled={isForking || !forkTitle.trim()}>
+					{isForking ? 'Forking…' : 'Fork songbook'}
+				</Button>
+			</div>
+		</div>
 	{/snippet}
 </Modal>
 

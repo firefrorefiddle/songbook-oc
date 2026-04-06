@@ -364,38 +364,75 @@
         {/if}
       </div>
     </div>
-    <div class="flex gap-2">
+    <div class="flex flex-wrap gap-2 justify-end items-center">
       {#if getCurrentVersion()?.songs.length}
         <Button variant="secondary" onclick={() => goto(`/songbooks/${data.songbook.id}/present`)}
           >Present</Button
         >
       {/if}
-      <Button
-        onclick={() => generatePdf()}
-        disabled={isGeneratingPdf || !getCurrentVersion()?.songs.length}
-      >
-        {isGeneratingPdf ? "Generating..." : "Generate PDF"}
-      </Button>
-      {#if getCurrentVersion()?.pdfPath}
-        <Button
-          onclick={() => downloadPdf()}
-          disabled={isDownloadingPdf || !getCurrentVersion()?.songs.length}
+      <details class="relative group">
+        <summary
+          class="list-none cursor-pointer rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 [&::-webkit-details-marker]:hidden"
         >
-          {isDownloadingPdf ? "Downloading..." : "Download PDF"}
-          {#if getCurrentVersion()?.pdfGeneratedAt}
-            ({new Date(getCurrentVersion()!.pdfGeneratedAt!).toLocaleString(undefined, {
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })})
+          <span class="inline-flex items-center gap-1">
+            PDF
+            <svg class="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </span>
+        </summary>
+        <div
+          class="absolute right-0 z-30 mt-1 w-60 rounded-md border border-gray-200 bg-white py-1 shadow-lg"
+          role="menu"
+        >
+          <button
+            type="button"
+            class="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={isGeneratingPdf || !getCurrentVersion()?.songs.length}
+            onclick={() => generatePdf()}
+          >
+            {isGeneratingPdf ? "Generating…" : "Generate PDF"}
+          </button>
+          {#if getCurrentVersion()?.pdfPath}
+            <button
+              type="button"
+              class="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={isDownloadingPdf || !getCurrentVersion()?.songs.length}
+              onclick={() => downloadPdf()}
+            >
+              {isDownloadingPdf ? "Downloading…" : "Download PDF"}
+              {#if getCurrentVersion()?.pdfGeneratedAt}
+                <span class="mt-0.5 block text-xs text-gray-500">
+                  Built {new Date(getCurrentVersion()!.pdfGeneratedAt!).toLocaleString(undefined, {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              {/if}
+            </button>
           {/if}
-        </Button>
-      {/if}
-      {#if getCurrentVersion()?.pdfLogPath}
-        <Button variant="secondary" onclick={() => viewLog()}>View Log</Button>
-      {/if}
+          {#if getCurrentVersion()?.pdfLogPath}
+            <button
+              type="button"
+              class="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+              onclick={() => viewLog()}
+            >
+              View build log
+            </button>
+          {/if}
+          {#if !getCurrentVersion()?.songs.length}
+            <p class="px-4 py-2 text-xs text-gray-500">Add songs to generate a PDF.</p>
+          {/if}
+        </div>
+      </details>
       <Button onclick={() => (showAddSongModal = true)}>Add Song</Button>
       <Button variant="secondary" onclick={() => (showNewVersionModal = true)}
         >New Version</Button

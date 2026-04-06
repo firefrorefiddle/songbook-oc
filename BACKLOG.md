@@ -93,7 +93,7 @@ This file tracks the current state of work, improvements, and technical debt for
 - **Status**: completed
 - **Priority**: high
 - **Description**: Add a "People" page where users can search for others by name or email and quickly understand who is part of the community. This should become the main entry point for sharing and collaboration without requiring users to remember exact email addresses.
-- **Implementation notes**: Added `/people` page with user search and a "Shared with me" section showing songs and songbooks shared with the current user. Navigation link added for all authenticated users.
+- **Implementation notes**: Added `/people` page with user search. Shared content was initially duplicated on this page; as of 2026-04-06 the canonical list is `/shared` (Community → Shared with me), and People links there instead of embedding the list.
 
 ### Shared with me dashboard
 
@@ -102,11 +102,44 @@ This file tracks the current state of work, improvements, and technical debt for
 - **Description**: Created a dedicated view at `/shared` listing all songs and songbooks others have shared with the current user, with filters for songs/songbooks and showing owner and role.
 - **Implementation notes**: Added `/shared` page with collaboration filter, owner info display, and role badges. Navigation link added in header.
 
-### Grouped navigation submenus
+### Grouped navigation and UI simplification (2026-04-06)
 
-- **Status**: pending
+- **Status**: completed
 - **Priority**: medium
-- **Description**: Group main menu items using submenus (or equivalent nested navigation) with these sections: **Songs**, **Songbooks**, **Community**, **Admin**, and **Impressum**, so the header stays scannable as more links accumulate.
+- **Description**: Reduce header clutter and duplicate surfaces while keeping power-user paths discoverable.
+
+**Subagent debate (summary)**  
+Three perspectives were run in parallel before implementation:
+
+- **Minimalist UX**: Favors grouped nav, deduping “Shared”, debounced search, and clustered PDF actions; would defer polish (e.g. fork modal) if rare—countered by low cost of consistency.
+- **Power-user / ops**: Pushes back on hiding admin and export paths; concedes grouping if labels stay explicit (“Download PDF”, stable Admin entry) and accountability (owner/collaborators on detail) stays on-item, not only in settings.
+- **Engineering**: Flags `+layout.svelte` as merge bottleneck; recommends one coordinated shell change, leaf pages first if splitting work—here shell and leaf changes shipped in one branch to avoid rebase pain.
+
+**Agreed plan**
+
+| # | Change | Rationale |
+|---|--------|-----------|
+| 1 | **`/admin` hub** with cards to Users, Invites, Mail, Activity; single **Admin** nav link | Keeps four tools one click away via hub; fewer top-level links. |
+| 2 | **Community** dropdown: People + Shared with me | Two related destinations, one scan line. |
+| 3 | **Impressum** moved to **footer** | Frees primary nav for tasks; still one click on every page. |
+| 4 | **People** page: remove duplicate “Shared with me” list; copy points to `/shared`; loader no longer calls `getSharedWithMe` | One canonical list for shared content. |
+| 5 | **Songbooks list**: fork via **Modal** (replaces `prompt`) | Matches songbook detail and song fork patterns. |
+| 6 | **Settings**: shared **Button** + indigo focus rings | Visual consistency with rest of app. |
+| 7 | **Songbook detail**: **PDF** `<details>` menu—Generate, Download, View build log | Clusters export/debug actions without hiding labels. |
+| 8 | **Songs / Songbooks lists**: **400ms debounced** search `oninput` (tags/categories/archive unchanged); Enter still applies immediately | Fewer surprise navigations; same query params. |
+
+**Deferred (not in this slice)**  
+Song detail tabs/anchors, home dashboard, further role simplification—see `docs/ui-simplification-audit.md`.
+
+**Implementation notes**
+
+- `src/routes/admin/+page.svelte` + `admin/+page.server.ts` (load returns `{}` for admins instead of redirecting to `/admin/users`).
+- `src/routes/+layout.svelte`: Community dropdown, Admin → `/admin`, footer Impressum, flex column layout.
+- `src/routes/people/+page.svelte` and `+page.server.ts`: removed shared-content section and query.
+- `src/routes/songbooks/+page.svelte`: fork modal + debounced search.
+- `src/routes/songs/+page.svelte`: debounced search.
+- `src/routes/settings/+page.svelte`: `Button` + `inputFocus` indigo.
+- `src/routes/songbooks/[id]/+page.svelte`: PDF menu.
 
 ### Sharing management UI with clear roles
 

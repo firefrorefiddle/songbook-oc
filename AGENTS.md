@@ -267,6 +267,22 @@ Every architectural choice, tradeoff, or context that would be lost over time mu
 ---
 
 **Date**: 2026-04-06
+**Context**: Primary navigation had grown to many peer links (Songs, Songbooks, People, Shared, four admin destinations, Impressum); People duplicated the `/shared` list; songbook list fork used `prompt`; export actions on songbook detail filled the header.
+**Decision**:
+
+- Add `/admin` as a hub with cards to Users, Invites, Mail, and Activity; expose a single **Admin** nav item for admins.
+- Group **People** and **Shared with me** under a **Community** dropdown; move **Impressum** to the footer.
+- Remove the embedded “Shared with me” list from `/people`; link to `/shared` instead and drop the extra loader query.
+- Cluster PDF actions on songbook detail in a `<details>` menu with explicit labels; debounce list search (`oninput`, 400ms); replace songbook list fork `prompt` with a modal; align Settings primary actions with shared `Button` and indigo focus styles.
+
+**Alternatives considered**:
+
+- Nested submenus for every section: heavier JS and testing; dropdown + hub matched the backlog with less chrome.
+- Tabs on song detail in the same change: deferred to keep the shell merge reviewable.
+
+---
+
+**Date**: 2026-04-06
 **Context**: Song PDF generation uses songmaker to emit LaTeX `\\beginsong{...}` from `.sng` headers. Characters such as `&`, `$`, and `%` broke pdflatex when copied verbatim; `%` also truncates songmaker header lines. CRLF and NUL bytes caused fragile tooling behavior.
 **Decision**:
 

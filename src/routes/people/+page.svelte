@@ -18,7 +18,13 @@
 
 <div class="space-y-8">
   <div>
-    <h1 class="text-2xl font-bold text-gray-900 mb-6">People</h1>
+    <h1 class="text-2xl font-bold text-gray-900 mb-2">People</h1>
+    <p class="text-sm text-gray-600 mb-6">
+      Find collaborators by name or email. For everything others have shared with you, use
+      <a href="/shared" class="text-indigo-600 hover:text-indigo-800 font-medium"
+        >Shared with me</a
+      >.
+    </p>
 
     <div class="mb-6 flex gap-4">
       <div class="flex-1">
@@ -77,50 +83,6 @@
             </li>
           {/each}
         </ul>
-      </div>
-    {/if}
-  </div>
-
-  <div>
-    <h2 class="text-xl font-bold text-gray-900 mb-4">Shared with me</h2>
-    {#if data.sharedContent.songs.length === 0 && data.sharedContent.songbooks.length === 0}
-      <p class="text-gray-500">Nothing has been shared with you yet.</p>
-    {:else}
-      <div class="grid gap-4 md:grid-cols-2">
-        {#if data.sharedContent.songs.length > 0}
-          <div>
-            <h3 class="text-sm font-medium text-gray-700 mb-2">Songs</h3>
-            <ul class="bg-white shadow rounded-md divide-y divide-gray-200">
-              {#each data.sharedContent.songs as song}
-                <li>
-                  <a
-                    href="/songs/{song.id}"
-                    class="block px-4 py-2 hover:bg-gray-50"
-                  >
-                    <span class="text-sm text-indigo-600">{song.title}</span>
-                  </a>
-                </li>
-              {/each}
-            </ul>
-          </div>
-        {/if}
-        {#if data.sharedContent.songbooks.length > 0}
-          <div>
-            <h3 class="text-sm font-medium text-gray-700 mb-2">Songbooks</h3>
-            <ul class="bg-white shadow rounded-md divide-y divide-gray-200">
-              {#each data.sharedContent.songbooks as songbook}
-                <li>
-                  <a
-                    href="/songbooks/{songbook.id}"
-                    class="block px-4 py-2 hover:bg-gray-50"
-                  >
-                    <span class="text-sm text-indigo-600">{songbook.title}</span>
-                  </a>
-                </li>
-              {/each}
-            </ul>
-          </div>
-        {/if}
       </div>
     {/if}
   </div>

@@ -18,80 +18,88 @@
   let isAdmin = $derived(user?.role === "ADMIN");
   let isMenuOpen = $state(false);
   let menuRef = $state<HTMLDivElement | null>(null);
+  let communityMenuOpen = $state(false);
+  let communityRef = $state<HTMLDivElement | null>(null);
 
   function handleClickOutside(event: MouseEvent) {
-    if (menuRef && !menuRef.contains(event.target as Node)) {
+    const target = event.target as Node;
+    if (menuRef && !menuRef.contains(target)) {
       isMenuOpen = false;
+    }
+    if (communityRef && !communityRef.contains(target)) {
+      communityMenuOpen = false;
     }
   }
 </script>
 
 <svelte:window onclick={handleClickOutside} />
 
-<div class="min-h-screen bg-gray-50">
+<div class="min-h-screen bg-gray-50 flex flex-col">
   <nav class="bg-white shadow-sm border-b border-gray-200">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between h-16">
-        <div class="flex space-x-8">
+        <div class="flex items-center gap-1 sm:gap-6 flex-wrap">
           <a
             href="/songs"
             class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900"
           >
             Songs
           </a>
-<a
-  href="/songbooks"
-  class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900"
->
-  Songbooks
-</a>
-<a
-      href="/people"
-      class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900"
-    >
-      People
-    </a>
-    <a
-      href="/shared"
-      class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900"
-    >
-      Shared
-    </a>
-          {#if isAdmin}
-            <a
-              href="/admin/users"
-              class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900"
-            >
-              Users
-            </a>
-            <a
-              href="/admin/invites"
-              class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900"
-            >
-              Invites
-            </a>
-            <a
-              href="/admin/email-deliveries"
-              class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900"
-            >
-              Mail
-            </a>
-            <a
-              href="/admin/activity"
-              class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900"
-            >
-              Activity
-            </a>
-          {/if}
           <a
-            href="/impressum"
+            href="/songbooks"
             class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900"
           >
-            Impressum
+            Songbooks
           </a>
+          <div class="relative" bind:this={communityRef}>
+            <button
+              type="button"
+              onclick={() => (communityMenuOpen = !communityMenuOpen)}
+              class="inline-flex items-center gap-1 px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900"
+              aria-expanded={communityMenuOpen}
+              aria-haspopup="true"
+            >
+              Community
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+            {#if communityMenuOpen}
+              <div
+                class="absolute left-0 mt-2 w-52 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50"
+                role="menu"
+              >
+                <a
+                  href="/people"
+                  class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  role="menuitem"
+                  onclick={() => (communityMenuOpen = false)}>People</a
+                >
+                <a
+                  href="/shared"
+                  class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  role="menuitem"
+                  onclick={() => (communityMenuOpen = false)}>Shared with me</a
+                >
+              </div>
+            {/if}
+          </div>
+          {#if isAdmin}
+            <a
+              href="/admin"
+              class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900"
+            >
+              Admin
+            </a>
+          {/if}
         </div>
         {#if user}
-          <div class="relative" bind:this={menuRef}>
+          <div class="relative shrink-0" bind:this={menuRef}>
             <button
               onclick={() => (isMenuOpen = !isMenuOpen)}
               class="flex items-center space-x-2 text-sm text-gray-500 hover:text-gray-900"
@@ -138,7 +146,12 @@
       </div>
     </div>
   </nav>
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
     {@render children()}
   </main>
+  <footer class="border-t border-gray-200 bg-white py-4 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-500">
+      <a href="/impressum" class="hover:text-gray-900">Impressum</a>
+    </div>
+  </footer>
 </div>

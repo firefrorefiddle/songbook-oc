@@ -21,6 +21,7 @@
   let includeArchived = $state(false);
   let selectedTagId = $state("");
   let selectedCategoryId = $state("");
+  let searchDebounce: ReturnType<typeof setTimeout> | null = null;
   let createTitle = $state("");
   let createAuthor = $state("");
   let createContent = $state("");
@@ -53,6 +54,14 @@
     if (selectedTagId) params.set("tag", selectedTagId);
     if (selectedCategoryId) params.set("category", selectedCategoryId);
     goto(`/songs?${params.toString()}`);
+  }
+
+  function scheduleSearchApply() {
+    if (searchDebounce) clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(() => {
+      searchDebounce = null;
+      applyListParams();
+    }, 400);
   }
 
   function handleCreateSuccess() {
@@ -99,9 +108,14 @@
       type="text"
       placeholder="Search title, lyrics, author, or metadata…"
       bind:value={searchInput}
+      oninput={scheduleSearchApply}
       onkeydown={(e) => e.key === "Enter" && applyListParams()}
       class="w-full rounded-md border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-indigo-500"
+      aria-describedby="song-search-hint"
     />
+    <p id="song-search-hint" class="sr-only">
+      Results update shortly after you stop typing.
+    </p>
   </div>
   <div class="w-full sm:w-auto sm:min-w-[10rem]">
     <label for="song-filter-tag" class="block text-sm font-medium text-gray-700 mb-1"
