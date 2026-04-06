@@ -85,6 +85,37 @@ describe("validateReplayCarets", () => {
     ].join("\n");
     expect(validateReplayCarets(content)).toEqual([]);
   });
+
+  it("flags a lyric line with five ^ when the prior chord row has four slots (chorus replay limit)", () => {
+    const content = [
+      "title: T",
+      "reference:",
+      "***",
+      "D          e A       D",
+      "Jesus, wir sehen auf dich.",
+      "",
+      "Und wir ^haben er^kannt, du bist ^Chr^is^tus.",
+    ].join("\n");
+    const issues = validateReplayCarets(content);
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.kind).toBe("too_many_replay_carets");
+    expect(issues[0]?.caretCount).toBe(5);
+    expect(issues[0]?.memorizedChordSlots).toBe(4);
+    expect(issues[0]?.lineNumber).toBe(7);
+  });
+
+  it("accepts that line after removing one syllable ^ (erkannt vs er^kannt)", () => {
+    const content = [
+      "title: T",
+      "reference:",
+      "***",
+      "D          e A       D",
+      "Jesus, wir sehen auf dich.",
+      "",
+      "Und wir ^haben erkannt, du bist ^Chr^is^tus.",
+    ].join("\n");
+    expect(validateReplayCarets(content)).toEqual([]);
+  });
 });
 
 describe("formatReplayCaretSummary", () => {

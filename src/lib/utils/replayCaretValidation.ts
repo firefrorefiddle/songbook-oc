@@ -132,15 +132,23 @@ export function validateReplayCarets(content: string): ReplayCaretIssue[] {
   return issues;
 }
 
+/**
+ * User-facing text for one replay-caret issue (PDF guard and editor notice).
+ */
+export function formatReplayCaretIssue(issue: ReplayCaretIssue): string {
+  if (issue.kind === "replay_no_chords") {
+    return `Line ${issue.lineNumber}: ${issue.caretCount} replay marker(s) (^) but no chord line memorizes chords yet.`;
+  }
+  return (
+    `Line ${issue.lineNumber}: ${issue.caretCount} replay marker(s) (^), but only ${issue.memorizedChordSlots} chord slot(s) are memorized (from the last chord line). ` +
+    `The last chord-only line above sets how many ^ you can use on this lyric line. Every ^ counts, including syllable splits (e.g. er^kannt, hö^ren). ` +
+    `Remove one ^, join a word (e.g. erkannt instead of er^kannt), or add another chord to that chord row if the music needs it.`
+  );
+}
+
 export function formatReplayCaretSummary(issues: ReplayCaretIssue[]): string {
   if (issues.length === 0) {
     return "";
   }
-  const parts = issues.map((issue) => {
-    if (issue.kind === "replay_no_chords") {
-      return `Line ${issue.lineNumber}: ${issue.caretCount} replay marker(s) (^) but no chord line memorizes chords yet.`;
-    }
-    return `Line ${issue.lineNumber}: ${issue.caretCount} replay marker(s) (^), but only ${issue.memorizedChordSlots} chord slot(s) are memorized (from the last chord line).`;
-  });
-  return parts.join("\n");
+  return issues.map((issue) => formatReplayCaretIssue(issue)).join("\n");
 }

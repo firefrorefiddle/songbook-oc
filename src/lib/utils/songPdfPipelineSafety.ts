@@ -1,4 +1,5 @@
 import {
+  formatReplayCaretIssue,
   validateReplayCarets,
   type ReplayCaretIssue,
 } from "$lib/utils/replayCaretValidation";
@@ -142,10 +143,7 @@ function replayIssues(contentForReplay: string): PdfPipelineIssue[] {
     out.push({
       code: r.kind,
       lineNumber: r.lineNumber,
-      message:
-        r.kind === "replay_no_chords"
-          ? `Line ${r.lineNumber}: ${r.caretCount} replay marker(s) (^) but no chord line memorizes chords yet.`
-          : `Line ${r.lineNumber}: ${r.caretCount} replay marker(s) (^), but only ${r.memorizedChordSlots} chord slot(s) are memorized (from the last chord line).`,
+      message: formatReplayCaretIssue(r),
     });
   }
   return out;

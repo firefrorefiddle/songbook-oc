@@ -180,8 +180,9 @@
           <p class="text-sm whitespace-pre-wrap">
             Some inputs break the PDF pipeline (songmaker / LaTeX): line breaks or control characters in
             titles or metadata, missing <code class="bg-amber-100 px-1 rounded">***</code> in raw song files, or
-            ChordPro replay markers (<code class="bg-amber-100 px-1 rounded">^</code>) that do not match the chord
-            line above (e.g. syllable breaks like <code class="bg-amber-100 px-1 rounded">be^halt</code>).
+            ChordPro replay markers (<code class="bg-amber-100 px-1 rounded">^</code>) that do not match the last chord-only line above that lyric.
+            Each <code class="bg-amber-100 px-1 rounded">^</code> replays one chord from that row, including syllable splits such as
+            <code class="bg-amber-100 px-1 rounded">be^halt</code> or <code class="bg-amber-100 px-1 rounded">er^kannt</code>.
           </p>
           <p class="mt-2 text-sm font-mono whitespace-pre-wrap">{pdfPipelineNotice}</p>
         </div>
