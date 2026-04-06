@@ -171,6 +171,12 @@ Use seed_data as reference for:
 
 ## Database Workflow (CRITICAL)
 
+### SQLite paths
+
+Prisma resolves relative SQLite `DATABASE_URL` values (for example `file:./dev.db` in `.env`) against the **schema directory** (`prisma/`), so the dev database file is usually **`prisma/dev.db`**, not a `dev.db` at the repository root unless you configure otherwise.
+
+The QA script **`scripts/qa-browser-setup.ts`** targets **`prisma/dev.db`** when that file exists; keep scripts and preview pointed at the same file the app uses.
+
 ### ALWAYS use migrations, NEVER use db push
 
 **Never run `pnpm db:push`** - it will wipe your database and lose all data!
