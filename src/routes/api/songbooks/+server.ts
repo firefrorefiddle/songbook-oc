@@ -3,6 +3,10 @@ import type { RequestHandler } from "./$types";
 import { prisma } from "$lib/server/prisma";
 import { createSongbookSchema } from "$lib/schemas";
 import { logActivity } from "$lib/server/activityLog";
+import {
+  buildSongbookListWhere,
+  findSongbookIdsMatchingLatestVersionTaxonomy,
+} from "$lib/server/songbookListQuery";
 
 export const GET: RequestHandler = async ({ url, locals }) => {
   const session = await locals.auth();
@@ -10,19 +14,25 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 
   const search = url.searchParams.get("search") || "";
   const includeArchived = url.searchParams.get("includeArchived") === "true";
+  const tagId = url.searchParams.get("tag")?.trim() || null;
+  const categoryId = url.searchParams.get("category")?.trim() || null;
   const userId = session.user.id;
 
+  const taxonomySongbookIds =
+    tagId || categoryId
+      ? await findSongbookIdsMatchingLatestVersionTaxonomy(prisma, {
+          tagId,
+          categoryId,
+        })
+      : null;
+
   const songbooks = await prisma.songbook.findMany({
-    where: {
-      isArchived: includeArchived ? undefined : false,
-      // Show songbooks the user owns, collaborates on, or are public
-      OR: [
-        { ownerId: userId },
-        { collaborations: { some: { userId } } },
-        { isPublic: true },
-      ],
-      versions: search ? { some: { title: { contains: search } } } : undefined,
-    },
+    where: buildSongbookListWhere({
+      userId,
+      includeArchived,
+      search,
+      taxonomySongbookIds,
+    }),
     include: {
       versions: {
         orderBy: { createdAt: "desc" },

@@ -12,16 +12,22 @@
 	let songbookToDelete = $state<{ id: string; title: string } | null>(null);
 	let searchInput = $state('');
 	let includeArchived = $state(false);
+	let selectedTagId = $state('');
+	let selectedCategoryId = $state('');
 
 	$effect(() => {
 		searchInput = data.search;
 		includeArchived = data.includeArchived;
+		selectedTagId = data.tagId ?? '';
+		selectedCategoryId = data.categoryId ?? '';
 	});
 
-	function handleSearch() {
+	function applyListParams() {
 		const params = new URLSearchParams();
 		if (searchInput) params.set('search', searchInput);
 		if (includeArchived) params.set('includeArchived', 'true');
+		if (selectedTagId) params.set('tag', selectedTagId);
+		if (selectedCategoryId) params.set('category', selectedCategoryId);
 		goto(`/songbooks?${params.toString()}`);
 	}
 
@@ -67,32 +73,77 @@
 	<Button onclick={() => showCreateModal = true}>Create Songbook</Button>
 </div>
 
-<div class="mb-6 flex gap-4">
-	<div class="flex-1">
+<div class="mb-4 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
+	<div class="flex-1 min-w-[12rem]">
+		<label for="songbook-search" class="block text-sm font-medium text-gray-700 mb-1">Search</label>
 		<input
+			id="songbook-search"
 			type="text"
-			placeholder="Search songbooks..."
+			placeholder="Search by songbook title..."
 			bind:value={searchInput}
-			onkeydown={(e) => e.key === 'Enter' && handleSearch()}
+			onkeydown={(e) => e.key === 'Enter' && applyListParams()}
 			class="w-full rounded-md border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-indigo-500"
 		/>
 	</div>
-	<Button variant="secondary" onclick={handleSearch}>Search</Button>
-	<label class="flex items-center gap-2">
-		<input
-			type="checkbox"
-			bind:checked={includeArchived}
-			onchange={handleSearch}
-			class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-		/>
-		<span class="text-sm text-gray-700">Show archived</span>
-	</label>
+	<div class="w-full sm:w-auto sm:min-w-[10rem]">
+		<label for="songbook-filter-tag" class="block text-sm font-medium text-gray-700 mb-1">Tag</label>
+		<select
+			id="songbook-filter-tag"
+			bind:value={selectedTagId}
+			onchange={applyListParams}
+			class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500 bg-white"
+		>
+			<option value="">All tags</option>
+			{#each data.tagOptions as opt (opt.id)}
+				<option value={opt.id}>{opt.name}</option>
+			{/each}
+		</select>
+	</div>
+	<div class="w-full sm:w-auto sm:min-w-[10rem]">
+		<label for="songbook-filter-category" class="block text-sm font-medium text-gray-700 mb-1"
+			>Category</label
+		>
+		<select
+			id="songbook-filter-category"
+			bind:value={selectedCategoryId}
+			onchange={applyListParams}
+			class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500 bg-white"
+		>
+			<option value="">All categories</option>
+			{#each data.categoryOptions as opt (opt.id)}
+				<option value={opt.id}>{opt.name}</option>
+			{/each}
+		</select>
+	</div>
+	<div class="flex gap-3 items-center">
+		<Button variant="secondary" onclick={applyListParams}>Apply</Button>
+		<label class="flex items-center gap-2">
+			<input
+				type="checkbox"
+				bind:checked={includeArchived}
+				onchange={applyListParams}
+				class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+			/>
+			<span class="text-sm text-gray-700">Show archived</span>
+		</label>
+	</div>
 </div>
 
 {#if data.songbooks.length === 0}
 	<div class="text-center py-12 text-gray-500">
-		{#if data.search}
-			<p>No songbooks found matching "{data.search}"</p>
+		{#if data.search || data.tagId || data.categoryId}
+			<p>
+				No songbooks match your filters{#if data.search} for "{data.search}"{/if}.
+			</p>
+			<p class="mt-2 text-sm">
+				<button
+					type="button"
+					class="text-indigo-600 hover:text-indigo-800 underline"
+					onclick={() => goto('/songbooks')}
+				>
+					Clear filters
+				</button>
+			</p>
 		{:else}
 			<p>No songbooks yet. Create your first songbook!</p>
 		{/if}

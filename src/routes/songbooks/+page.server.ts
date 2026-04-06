@@ -1,5 +1,13 @@
 import type { PageServerLoad, Actions } from "./$types";
 import { prisma } from "$lib/server/prisma";
+import {
+  buildSongbookListWhere,
+  findSongbookIdsMatchingLatestVersionTaxonomy,
+} from "$lib/server/songbookListQuery";
+import {
+  songCategoryFilterOptionsWhere,
+  songTagFilterOptionsWhere,
+} from "$lib/server/songListQuery";
 import { fail, redirect } from "@sveltejs/kit";
 
 export const load: PageServerLoad = async ({ url, locals }) => {
@@ -8,38 +16,59 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 
   const search = url.searchParams.get("search") || "";
   const includeArchived = url.searchParams.get("includeArchived") === "true";
+  const tagId = url.searchParams.get("tag")?.trim() || null;
+  const categoryId = url.searchParams.get("category")?.trim() || null;
   const userId = session.user.id;
 
-  const songbooks = await prisma.songbook.findMany({
-    where: {
-      isArchived: includeArchived ? undefined : false,
-      OR: [
-        { ownerId: userId },
-        { collaborations: { some: { userId } } },
-        { isPublic: true },
-      ],
-      versions: search ? { some: { title: { contains: search } } } : undefined,
-    },
-    include: {
-      versions: {
-        orderBy: { createdAt: "desc" },
-        take: 1,
-        include: {
-          songs: {
-            include: {
-              songVersion: true,
+  const taxonomySongbookIds =
+    tagId || categoryId
+      ? await findSongbookIdsMatchingLatestVersionTaxonomy(prisma, {
+          tagId,
+          categoryId,
+        })
+      : null;
+
+  const [songbooks, tagOptions, categoryOptions] = await Promise.all([
+    prisma.songbook.findMany({
+      where: buildSongbookListWhere({
+        userId,
+        includeArchived,
+        search,
+        taxonomySongbookIds,
+      }),
+      include: {
+        versions: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          include: {
+            songs: {
+              include: {
+                songVersion: true,
+              },
             },
           },
         },
       },
-    },
-    orderBy: { updatedAt: "desc" },
-  });
+      orderBy: { updatedAt: "desc" },
+    }),
+    prisma.songTag.findMany({
+      where: songTagFilterOptionsWhere(userId, includeArchived),
+      orderBy: { name: "asc" },
+    }),
+    prisma.songCategory.findMany({
+      where: songCategoryFilterOptionsWhere(userId, includeArchived),
+      orderBy: { name: "asc" },
+    }),
+  ]);
 
   return {
     songbooks,
     search,
     includeArchived,
+    tagId,
+    categoryId,
+    tagOptions,
+    categoryOptions,
   };
 };
 
