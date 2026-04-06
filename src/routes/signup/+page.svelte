@@ -127,16 +127,22 @@
         </div>
 
         <div>
-          <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Name</label
+          <label for="full-name" class="block text-sm font-medium text-gray-700 mb-1"
+            >Full name</label
           >
           <input
-            id="name"
+            id="full-name"
             type="text"
+            autocomplete="name"
             bind:value={name}
             required
             placeholder="First Last"
+            aria-describedby="signup-full-name-hint"
             class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
+          <p id="signup-full-name-hint" class="mt-1 text-xs text-gray-500">
+            Your display name as others see it. Use Username below to sign in.
+          </p>
         </div>
 
         <div>
@@ -146,6 +152,7 @@
           <input
             id="username"
             type="text"
+            autocomplete="username"
             bind:value={username}
             required
             class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -159,6 +166,7 @@
           <input
             id="password"
             type="password"
+            autocomplete="new-password"
             bind:value={password}
             required
             minlength="8"
