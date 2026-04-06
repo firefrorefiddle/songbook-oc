@@ -6,7 +6,11 @@ vi.mock("./email", () => ({
   sendCollaboratorAddedEmail,
 }));
 
-import { addSongCollaborator, addSongbookCollaborator } from "./collaborations";
+import {
+  addSongCollaborator,
+  addSongbookCollaborator,
+  removeSongbookCollaborator,
+} from "./collaborations";
 
 describe("addSongCollaborator", () => {
   beforeEach(() => {
@@ -176,5 +180,39 @@ describe("addSongCollaborator", () => {
         toEmail: "buddy@example.org",
       }),
     );
+  });
+});
+
+describe("removeSongbookCollaborator", () => {
+  it("removes collaboration row and writes activity log", async () => {
+    const deleteMany = vi.fn().mockResolvedValue({ count: 1 });
+    const create = vi.fn().mockResolvedValue({});
+    const prisma = {
+      collaboration: { deleteMany },
+      activityLog: { create },
+    } as any;
+
+    await removeSongbookCollaborator(prisma, {
+      actorId: "owner-1",
+      songbookId: "sb-1",
+      targetUserId: "user-2",
+      targetUserDisplayName: "Pat",
+    });
+
+    expect(deleteMany).toHaveBeenCalledWith({
+      where: { userId: "user-2", songbookId: "sb-1" },
+    });
+    expect(create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        actorId: "owner-1",
+        action: "COLLABORATOR_REMOVED",
+        resourceType: "SONGBOOK",
+        resourceId: "sb-1",
+        metadata: JSON.stringify({
+          collaboratorId: "user-2",
+          collaboratorDisplayName: "Pat",
+        }),
+      }),
+    });
   });
 });

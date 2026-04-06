@@ -6,9 +6,14 @@ import {
   songTagFilterOptionsWhere,
 } from "$lib/server/songListQuery";
 import {
+  addSongbookCollaborator,
+  getActiveUsers,
   getOwnerInfo,
   getSongbookCollaborators,
+  removeSongbookCollaborator,
+  transferSongbookOwnership,
 } from "$lib/server/collaborations";
+import { resolvePublicBaseUrl } from "$lib/server/email";
 import { error, fail, redirect } from "@sveltejs/kit";
 
 export const load: PageServerLoad = async ({ params, url, locals }) => {
@@ -265,5 +270,185 @@ export const actions: Actions = {
     });
 
     return { success: true };
+  },
+
+  addCollaborator: async ({ params, request, locals, url }) => {
+    const session = await locals.auth();
+    if (!session?.user) throw redirect(302, "/login");
+
+    const songbook = await prisma.songbook.findUnique({
+      where: { id: params.id },
+      select: { ownerId: true },
+    });
+
+    if (!songbook) {
+      return fail(404, { error: "Songbook not found" });
+    }
+
+    if (songbook.ownerId !== session.user.id) {
+      return fail(403, { error: "Only the owner can add collaborators" });
+    }
+
+    const formData = await request.formData();
+    const userId = formData.get("userId") as string;
+    const roleRaw = formData.get("role");
+    const role: "EDITOR" | "ADMIN" =
+      roleRaw === "ADMIN" || roleRaw === "EDITOR" ? roleRaw : "EDITOR";
+
+    if (!userId) {
+      return fail(400, { error: "User is required" });
+    }
+
+    try {
+      const targetUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { firstName: true, lastName: true, email: true },
+      });
+      if (!targetUser) {
+        return fail(400, { error: "User not found" });
+      }
+      const targetUserDisplayName =
+        [targetUser.firstName, targetUser.lastName]
+          .filter(Boolean)
+          .join(" ")
+          .trim() || targetUser.email;
+
+      await addSongbookCollaborator(prisma, {
+        actorId: session.user.id,
+        songbookId: params.id,
+        targetUserId: userId,
+        targetUserDisplayName,
+        role,
+        publicBaseUrl: resolvePublicBaseUrl(url.origin),
+      });
+      return { success: true };
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Could not add collaborator";
+      return fail(400, { error: message });
+    }
+  },
+
+  removeCollaborator: async ({ params, request, locals }) => {
+    const session = await locals.auth();
+    if (!session?.user) throw redirect(302, "/login");
+
+    const songbook = await prisma.songbook.findUnique({
+      where: { id: params.id },
+      select: { ownerId: true },
+    });
+
+    if (!songbook) {
+      return fail(404, { error: "Songbook not found" });
+    }
+
+    if (songbook.ownerId !== session.user.id) {
+      return fail(403, { error: "Only the owner can remove collaborators" });
+    }
+
+    const formData = await request.formData();
+    const userId = formData.get("userId") as string;
+
+    if (!userId) {
+      return fail(400, { error: "User is required" });
+    }
+
+    try {
+      const targetUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { firstName: true, lastName: true, email: true },
+      });
+      if (!targetUser) {
+        return fail(400, { error: "User not found" });
+      }
+      const targetUserDisplayName =
+        [targetUser.firstName, targetUser.lastName]
+          .filter(Boolean)
+          .join(" ")
+          .trim() || targetUser.email;
+
+      await removeSongbookCollaborator(prisma, {
+        actorId: session.user.id,
+        songbookId: params.id,
+        targetUserId: userId,
+        targetUserDisplayName,
+      });
+      return { success: true };
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Could not remove collaborator";
+      return fail(400, { error: message });
+    }
+  },
+
+  transferOwnership: async ({ params, request, locals }) => {
+    const session = await locals.auth();
+    if (!session?.user) throw redirect(302, "/login");
+
+    const songbook = await prisma.songbook.findUnique({
+      where: { id: params.id },
+      select: { ownerId: true },
+    });
+
+    if (!songbook) {
+      return fail(404, { error: "Songbook not found" });
+    }
+
+    if (songbook.ownerId !== session.user.id) {
+      return fail(403, { error: "Only the owner can transfer ownership" });
+    }
+
+    const formData = await request.formData();
+    const newOwnerId = formData.get("newOwnerId") as string;
+
+    if (!newOwnerId) {
+      return fail(400, { error: "New owner is required" });
+    }
+
+    try {
+      const currentOwner = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { firstName: true, lastName: true, email: true },
+      });
+      const newOwner = await prisma.user.findUnique({
+        where: { id: newOwnerId },
+        select: { firstName: true, lastName: true, email: true },
+      });
+      if (!currentOwner || !newOwner) {
+        return fail(400, { error: "User not found" });
+      }
+      const currentOwnerDisplayName =
+        [currentOwner.firstName, currentOwner.lastName]
+          .filter(Boolean)
+          .join(" ")
+          .trim() || currentOwner.email;
+      const newOwnerDisplayName =
+        [newOwner.firstName, newOwner.lastName]
+          .filter(Boolean)
+          .join(" ")
+          .trim() || newOwner.email;
+
+      await transferSongbookOwnership(prisma, {
+        actorId: session.user.id,
+        songbookId: params.id,
+        currentOwnerId: session.user.id,
+        currentOwnerDisplayName,
+        newOwnerId,
+        newOwnerDisplayName,
+      });
+      return { success: true };
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Could not transfer ownership";
+      return fail(400, { error: message });
+    }
+  },
+
+  loadUsers: async ({ locals }) => {
+    const session = await locals.auth();
+    if (!session?.user) throw redirect(302, "/login");
+
+    const users = await getActiveUsers(prisma);
+    return { users };
   },
 };

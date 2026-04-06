@@ -1,7 +1,11 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
   import { goto, invalidateAll } from "$app/navigation";
-  import { collaborationUiCopy, collaboratorRoleLabel } from "$lib/collaborationUiCopy";
+  import type { ActionResult } from "@sveltejs/kit";
+  import {
+    collaborationUiCopy,
+    collaboratorRoleLabel,
+  } from "$lib/collaborationUiCopy";
   import { getPreferredSongVersion } from "$lib/songVersions";
   import Button from "$lib/components/Button.svelte";
   import Input from "$lib/components/Input.svelte";
@@ -173,6 +177,12 @@
   let forkTitle = $state("");
   let isForking = $state(false);
   let showSettingsModal = $state(false);
+  let showCollabModal = $state(false);
+  let selectedUserId = $state("");
+  let selectedRole = $state<"EDITOR" | "ADMIN">("EDITOR");
+  let availableUsers = $state<
+    { id: string; displayName: string; email: string }[]
+  >([]);
 
   let outputMode = $state("chorded");
   let outputFontSize = $state("medium");
@@ -246,6 +256,30 @@
   function openFork() {
     forkTitle = getCurrentVersion()?.title || "";
     showForkModal = true;
+  }
+
+  async function openCollabModal() {
+    const response = await fetch("?/loadUsers", { method: "POST" });
+    const result = await response.json();
+    if (result.type === "success") {
+      availableUsers = result.data.users.filter(
+        (u: { id: string }) =>
+          u.id !== data.owner.id &&
+          !data.collaborators.some((c: { id: string }) => c.id === u.id),
+      );
+    }
+    showCollabModal = true;
+  }
+
+  function refreshSharing(closeModal = false) {
+    return async ({ result }: { result: ActionResult }) => {
+      if (result.type === "success") {
+        if (closeModal) {
+          showCollabModal = false;
+        }
+        await invalidateAll();
+      }
+    };
   }
 
   async function submitFork() {
@@ -367,6 +401,9 @@
         >New Version</Button
       >
       <Button variant="secondary" onclick={openFork}>Fork</Button>
+      {#if data.isOwner}
+        <Button variant="secondary" onclick={openCollabModal}>Sharing</Button>
+      {/if}
       <Button variant="secondary" onclick={openSettings}>Settings</Button>
     </div>
   </div>
@@ -751,6 +788,159 @@
           {isForking ? "Forking..." : "Fork Songbook"}
         </Button>
       </div>
+    </div>
+  {/snippet}
+</Modal>
+
+<Modal
+  bind:open={showCollabModal}
+  title="Sharing"
+  onclose={() => (showCollabModal = false)}
+>
+  {#snippet children()}
+    <div class="space-y-6">
+      <p class="text-sm text-gray-600">
+        {collaborationUiCopy.songbookSharingModalIntro}
+      </p>
+      <p class="text-xs text-gray-500">
+        <a
+          href="/people"
+          class="text-indigo-600 hover:text-indigo-800 underline"
+          >{collaborationUiCopy.findPeopleLinkText}</a
+        >
+      </p>
+
+      <div>
+        <h4 class="text-sm font-medium text-gray-700 mb-2">Owner</h4>
+        <p class="text-sm text-gray-900">
+          {data.owner.displayName} ({data.owner.email})
+        </p>
+        <p class="mt-1 text-xs text-gray-500">{collaborationUiCopy.ownerBlurb}</p>
+      </div>
+
+      <div>
+        <h4 class="text-sm font-medium text-gray-700 mb-2">Collaborators</h4>
+        <p class="text-xs text-gray-500 mb-2">
+          {collaborationUiCopy.editorSongbookBlurb}
+          {collaborationUiCopy.adminCollabBlurb}
+        </p>
+        {#if data.collaborators.length === 0}
+          <p class="text-sm text-gray-500">No collaborators yet</p>
+        {:else}
+          <ul class="divide-y divide-gray-200 border rounded-md">
+            {#each data.collaborators as collab}
+              <li class="px-3 py-2 flex justify-between items-center gap-2">
+                <span class="text-sm"
+                  >{collab.displayName} ({collab.email})</span
+                >
+                <span class="text-xs text-gray-600 shrink-0"
+                  >{collaboratorRoleLabel(collab.role)}</span
+                >
+                {#if data.isOwner}
+                  <form
+                    method="POST"
+                    action="?/removeCollaborator"
+                    use:enhance={() => refreshSharing()}
+                  >
+                    <input type="hidden" name="userId" value={collab.id} />
+                    <Button
+                      variant="danger"
+                      type="submit"
+                      onclick={() => (showCollabModal = false)}>Remove</Button
+                    >
+                  </form>
+                {/if}
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      </div>
+
+      {#if data.isOwner}
+        <div>
+          <h4 class="text-sm font-medium text-gray-700 mb-2">Add collaborator</h4>
+          <form
+            method="POST"
+            action="?/addCollaborator"
+            use:enhance={() => refreshSharing(true)}
+          >
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-start mb-2">
+              <select
+                name="userId"
+                bind:value={selectedUserId}
+                class="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
+                aria-label="User to add as collaborator"
+              >
+                <option value="">Select a user...</option>
+                {#each availableUsers as user}
+                  <option value={user.id}
+                    >{user.displayName} ({user.email})</option
+                  >
+                {/each}
+              </select>
+              <div class="flex flex-col gap-1 sm:w-48">
+                <label
+                  for="songbook-new-collab-role"
+                  class="text-xs font-medium text-gray-600">Role</label
+                >
+                <select
+                  id="songbook-new-collab-role"
+                  name="role"
+                  bind:value={selectedRole}
+                  class="rounded-md border border-gray-300 px-3 py-2 text-sm"
+                  aria-describedby="songbook-collab-role-help"
+                >
+                  <option value="EDITOR">Editor</option>
+                  <option value="ADMIN">Admin</option>
+                </select>
+              </div>
+            </div>
+            <p id="songbook-collab-role-help" class="text-xs text-gray-500 mb-2">
+              {#if selectedRole === "EDITOR"}
+                {collaborationUiCopy.editorSongbookBlurb}
+              {:else}
+                {collaborationUiCopy.adminCollabBlurb}
+              {/if}
+            </p>
+            <Button type="submit" disabled={!selectedUserId}>Add</Button>
+          </form>
+        </div>
+
+        <div class="border-t pt-4">
+          <h4 class="text-sm font-medium text-gray-700 mb-2">
+            Transfer ownership
+          </h4>
+          <p class="text-xs text-gray-500 mb-2">
+            The previous owner becomes a collaborator with Editor access.
+          </p>
+          <form
+            method="POST"
+            action="?/transferOwnership"
+            use:enhance={() => refreshSharing(true)}
+          >
+            <div class="flex gap-2">
+              <select
+                name="newOwnerId"
+                bind:value={selectedUserId}
+                class="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
+                aria-label="New owner"
+              >
+                <option value="">Select new owner...</option>
+                {#each data.collaborators as collab}
+                  <option value={collab.id}
+                    >{collab.displayName} ({collab.email})</option
+                  >
+                {/each}
+              </select>
+              <Button
+                type="submit"
+                variant="danger"
+                disabled={!selectedUserId}>Transfer</Button
+              >
+            </div>
+          </form>
+        </div>
+      {/if}
     </div>
   {/snippet}
 </Modal>
