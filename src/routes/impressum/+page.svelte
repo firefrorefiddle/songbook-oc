@@ -20,7 +20,7 @@
 
 	<div class="bg-white shadow-sm rounded-lg border border-gray-200 p-6 space-y-6">
 		<section>
-			<h2 class="text-lg font-medium text-gray-900 mb-2">Angaben gemäß § 5 ECG</h2>
+			<h2 class="text-lg font-medium text-gray-900 mb-2">Angaben gemäß Abschnitt 5 ECG</h2>
 			<p class="text-gray-700">
 				{data.companyName || 'Songbook-OC'}<br />
 				{data.street || 'Straße example'}<br />
@@ -51,8 +51,8 @@
 			<p class="text-gray-700 text-sm">
 				Die Inhalte unserer Seite wurden mit größter Sorgfalt erstellt. Für die Richtigkeit,
 				Vollständigkeit und Aktualität der Inhalte können wir jedoch keine Gewähr übernehmen.
-				Als Diensteanbieter sind wir gemäß § 7 Abs.1 TMG für eigene Inhalte auf diesen Seiten
-				nach den allgemeinen Gesetzen verantwortlich. Nach §§ 8 bis 10 TMG sind wir als
+				Als Diensteanbieter sind wir gemäß Paragraf 7 Absatz 1 TMG für eigene Inhalte auf diesen Seiten
+				nach den allgemeinen Gesetzen verantwortlich. Nach den Paragraphen 8 bis 10 TMG sind wir als
 				Diensteanbieter jedoch nicht verpflichtet, übermittelte oder gespeicherte fremde
 				Informationen zu überwachen oder nach Umständen zu forschen, die auf eine rechtswidrige
 				Tätigkeit hinweisen. Verpflichtungen zur Entfernung oder Sperrung der Nutzung von
