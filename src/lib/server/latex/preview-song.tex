@@ -1,0 +1,13 @@
+% Preview-only driver: minimal extarticle layout so the first PDF page shows song content.
+% Songbook PDFs use scrbook via layout.tex; do not reuse that stack here (avoids blank leading pages).
+\documentclass[@@FONTSIZE@@pt,@@PAPERSIZE@@]{extarticle}
+\usepackage[utf8]{inputenc}
+\usepackage[chorded]{songs}
+\input{font}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\begin{document}
+\begin{songs}{}
+\input{generated-song}
+\end{songs}
+\end{document}

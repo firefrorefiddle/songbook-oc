@@ -16,6 +16,9 @@ const PROJECT_ROOT = process.cwd();
 const SONGMAKER_CLI = join(PROJECT_ROOT, "bin", "songmaker-cli");
 const LATEX_DIR = join(PROJECT_ROOT, "src/lib/server/latex");
 
+/** PNG preview uses `preview-song.tex` (extarticle); songbooks use `layout.tex` + scrbook separately. */
+const PREVIEW_TEX_BASENAME = "preview-song";
+
 async function createTempDir(): Promise<string> {
   const tmpDir = join(PROJECT_ROOT, "tmp", randomUUID());
   await mkdir(tmpDir, { recursive: true });
@@ -31,13 +34,20 @@ async function ensureOutputDir(): Promise<string> {
 }
 
 async function setupLatexFiles(tempDir: string): Promise<void> {
-  const layoutContent = await readFile(join(LATEX_DIR, "layout.tex"), "utf-8");
-  const layoutWritten = applyLayoutPlaceholders(
-    layoutContent,
+  const previewContent = await readFile(
+    join(LATEX_DIR, `${PREVIEW_TEX_BASENAME}.tex`),
+    "utf-8",
+  );
+  const previewWritten = applyLayoutPlaceholders(
+    previewContent,
     PREVIEW_OUTPUT_SETTINGS,
   );
-  await writeFile(join(tempDir, "layout.tex"), layoutWritten, "utf-8");
-  for (const file of ["font.tex", "songs.sty", "single-song.tex"]) {
+  await writeFile(
+    join(tempDir, `${PREVIEW_TEX_BASENAME}.tex`),
+    previewWritten,
+    "utf-8",
+  );
+  for (const file of ["font.tex", "songs.sty"]) {
     await copyFile(join(LATEX_DIR, file), join(tempDir, file));
   }
 }
@@ -103,7 +113,7 @@ export async function renderPdf(
   await setupLatexFiles(tempDir);
 
   const generatedPath = join(tempDir, "generated-song.tex");
-  const texPath = join(tempDir, "single-song.tex");
+  const texPath = join(tempDir, `${PREVIEW_TEX_BASENAME}.tex`);
 
   await writeFile(generatedPath, latexContent, "utf-8");
 
@@ -115,20 +125,20 @@ export async function renderPdf(
       },
     );
 
-    const logPath = join(tempDir, "single-song.log");
+    const logPath = join(tempDir, `${PREVIEW_TEX_BASENAME}.log`);
     let logs: string | undefined;
     if (existsSync(logPath)) {
       logs = await readFile(logPath, "utf-8");
     }
 
-    const builtPdf = join(tempDir, "single-song.pdf");
+    const builtPdf = join(tempDir, `${PREVIEW_TEX_BASENAME}.pdf`);
     if (!existsSync(builtPdf)) {
       return {
         stage: "pdflatex",
         message:
           logs && logs.trim().length > 0
             ? extractPdflatexUserMessage(logs)
-            : "pdflatex finished without producing single-song.pdf",
+            : `pdflatex finished without producing ${PREVIEW_TEX_BASENAME}.pdf`,
         logs,
       };
     }
@@ -138,7 +148,7 @@ export async function renderPdf(
     await copyFile(builtPdf, outputPdfPath);
     return outputPdfPath;
   } catch (error) {
-    const logPath = join(tempDir, "single-song.log");
+    const logPath = join(tempDir, `${PREVIEW_TEX_BASENAME}.log`);
     let logs: string | undefined;
     if (existsSync(logPath)) {
       logs = await readFile(logPath, "utf-8");
@@ -162,7 +172,7 @@ export async function renderPng(pdfPath: string): Promise<string> {
   const pngPath = pdfPath.replace(".pdf", ".png");
 
   await execAsync(
-    `pdftocairo -png -singlefile -f 0 -r 150 ${pdfPath} ${pngPath.replace(".png", "")}`,
+    `pdftocairo -png -singlefile -f 1 -r 150 ${pdfPath} ${pngPath.replace(".png", "")}`,
   );
 
   try {

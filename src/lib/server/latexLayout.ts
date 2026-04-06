@@ -1,6 +1,6 @@
 /**
- * Shared KOMA/layout.tex placeholder substitution used by songbook PDFs and single-song preview.
- * `layout.tex` ships with @@PAPERSIZE@@ and @@FONTSIZE@@ tokens; copying it verbatim breaks scrbook.
+ * Placeholder substitution for `layout.tex` (songbook PDFs, scrbook) and `preview-song.tex`
+ * (PNG preview, extarticle). Both ship @@PAPERSIZE@@ and @@FONTSIZE@@ tokens.
  */
 
 export interface OutputSettings {
@@ -33,7 +33,7 @@ export function applyLayoutPlaceholders(
     .replace(/@@PAPERSIZE@@/g, paperSize);
 }
 
-/** Defaults for server-side single-song PNG preview (must match a valid layout). */
+/** Defaults for server-side PNG preview (`preview-song.tex` + extarticle). */
 export const PREVIEW_OUTPUT_SETTINGS: Pick<OutputSettings, "fontSize" | "paperSize"> = {
   fontSize: "medium",
   paperSize: "a4",

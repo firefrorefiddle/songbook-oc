@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, it, expect } from "vitest";
 import {
   convertToLatex,
@@ -69,6 +71,20 @@ describe("songPreview", () => {
       if (result.png) {
         expect(result.png).toMatch(/^data:image\/png;base64,/);
         expect(result.png.length).toBeGreaterThan(10000);
+      }
+    });
+
+    it("includes visible content on the first preview page for a long seed song", async () => {
+      const sng = readFileSync(
+        join(process.cwd(), "seed_data/lieder/anker_in_der_zeit.sng"),
+        "utf8",
+      );
+      const result = await generatePreview(sng);
+      expect(result.error).toBeUndefined();
+      expect(result.png).toBeDefined();
+      if (result.png) {
+        // All-white first-page PNGs from the old scrbook path were ~12k chars of base64; real ink raises entropy/size.
+        expect(result.png.length).toBeGreaterThan(20_000);
       }
     });
   });

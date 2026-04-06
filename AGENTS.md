@@ -111,7 +111,7 @@ Located in `src/lib/server/latex/`:
 - `font.tex` - Font configuration and song formatting
 - `songs.sty` - Song package (from seed_data)
 - `chorded.tex` - Main template for songbook PDFs
-- `single-song.tex` - Template for single song previews
+- `preview-song.tex` - Minimal extarticle driver for PNG preview (not scrbook)
 
 ### PDF Generation Process
 
