@@ -102,6 +102,12 @@ This file tracks the current state of work, improvements, and technical debt for
 - **Description**: Created a dedicated view at `/shared` listing all songs and songbooks others have shared with the current user, with filters for songs/songbooks and showing owner and role.
 - **Implementation notes**: Added `/shared` page with collaboration filter, owner info display, and role badges. Navigation link added in header.
 
+### Grouped navigation submenus
+
+- **Status**: pending
+- **Priority**: medium
+- **Description**: Group main menu items using submenus (or equivalent nested navigation) with these sections: **Songs**, **Songbooks**, **Community**, **Admin**, and **Impressum**, so the header stays scannable as more links accumulate.
+
 ### Sharing management UI with clear roles
 
 - **Status**: pending
@@ -180,9 +186,10 @@ This file tracks the current state of work, improvements, and technical debt for
 
 ### Better search and filtering
 
-- **Status**: pending
+- **Status**: completed
 - **Priority**: medium
 - **Description**: Improve search across titles, lyrics, authors, metadata, and ownership or sharing scope. As the library grows, search quality becomes one of the highest-leverage productivity features for building songbooks quickly.
+- **Progress**: `buildSongListWhere` / songs list API `?search=` now match any song version whose title, author, content (lyrics), or metadata JSON string contains the trimmed query (same visibility scope as before). Placeholder on `/songs` updated to reflect the broader fields.
 
 ### Tags and categories
 

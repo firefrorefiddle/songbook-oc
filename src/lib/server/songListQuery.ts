@@ -1,5 +1,24 @@
 import type { Prisma } from "@prisma/client";
 
+/** Trims search input; empty after trim means no search filter (consistent for API and pages). */
+export function normalizeSongListSearch(search: string): string {
+  return search.trim();
+}
+
+/** Match when any version field relevant to discovery contains the term (substring, case-sensitive per SQLite). */
+export function songVersionTextSearchWhere(
+  term: string,
+): Prisma.SongVersionWhereInput {
+  return {
+    OR: [
+      { title: { contains: term } },
+      { author: { contains: term } },
+      { content: { contains: term } },
+      { metadata: { contains: term } },
+    ],
+  };
+}
+
 /**
  * Visibility scope for the songs list: owned, collaborated, or public.
  * Used for listing songs and for discovering which tags/categories appear in that scope.
@@ -27,9 +46,12 @@ export function buildSongListWhere(args: {
 }): Prisma.SongWhereInput {
   const { userId, includeArchived, search, tagId, categoryId } = args;
   const base = visibleSongScopeWhere(userId, includeArchived);
+  const trimmedSearch = normalizeSongListSearch(search);
   return {
     ...base,
-    ...(search ? { versions: { some: { title: { contains: search } } } } : {}),
+    ...(trimmedSearch
+      ? { versions: { some: songVersionTextSearchWhere(trimmedSearch) } }
+      : {}),
     ...(tagId ? { tags: { some: { tagId } } } : {}),
     ...(categoryId ? { categories: { some: { categoryId } } } : {}),
   };

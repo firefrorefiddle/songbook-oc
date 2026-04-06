@@ -73,7 +73,7 @@
     <input
       id="song-search"
       type="text"
-      placeholder="Search by title..."
+      placeholder="Search title, lyrics, author, or metadata…"
       bind:value={searchInput}
       onkeydown={(e) => e.key === "Enter" && applyListParams()}
       class="w-full rounded-md border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-indigo-500"

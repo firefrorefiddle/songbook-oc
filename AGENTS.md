@@ -260,6 +260,20 @@ Every architectural choice, tradeoff, or context that would be lost over time mu
 
 ---
 
+**Date**: 2026-04-06
+**Context**: Song list search only matched version titles; users expect to find songs by lyric fragments, author lines, or stored metadata (e.g. copyright) without a separate query shape.
+**Decision**:
+
+- Extend `buildSongListWhere` so a non-empty trimmed `search` matches if **any** `SongVersion` for that song has a substring hit on `title`, `author`, `content`, or `metadata` (stored JSON string), reusing one `OR` predicate for SQLite `LIKE`-style `contains` filters.
+- Trim the search string inside the query builder so API and pages behave consistently and whitespace-only input does not over-filter.
+
+**Alternatives considered**:
+
+- Case-insensitive search: deferred because SQLite provider support and index story are unclear in this stack; current behavior matches prior title-only search.
+- Full-text search (FTS5) or dedicated search service: rejected for this slice as unnecessary complexity relative to library size and existing `contains` pattern elsewhere.
+
+---
+
 **Date**: 2026-04-02
 **Context**: The production deployment needed a repeatable backup flow for the SQLite database that matches the documented home-directory deployment layout and avoids storing duplicate snapshots when the database rarely changes.
 **Decision**:
