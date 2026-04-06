@@ -1,16 +1,9 @@
+import { CHORD_WORD_RE } from "./chordWord";
 import {
   detectSectionLabel,
   isChordLineType,
   tokenizeChordLine,
 } from "./sngParser";
-
-/**
- * Must match `isChordLineType` in sngParser (single-token chord words). We use a
- * strict "every whitespace-separated token matches" rule here so lyric lines
- * with many `^` replay markers are not mistaken for chord lines.
- */
-const CHORD_WORD_RE =
-  /^(\^|[\dA-G][#b]?(|m|maj|min|dim|aug|sus[24]?|add[0-9]+|[0-9]+)?(\/[A-G][#b]?)?|\([^)]+\)|\[[^\]]+\]|\|[|:])$/;
 
 function isStrictChordLine(line: string): boolean {
   const trimmed = line.trim();

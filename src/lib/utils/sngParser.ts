@@ -1,3 +1,5 @@
+import { CHORD_WORD_RE } from "./chordWord";
+
 export interface SngMetadata {
   title: string;
   copyright?: string;
@@ -168,11 +170,9 @@ export function isChordLineType(line: string): boolean {
   const words = trimmed.split(/\s+/).filter((w) => w.length > 0);
   if (words.length === 0) return false;
 
-  const chordPattern =
-    /^(\^|[\dA-G][#b]?(|m|maj|min|dim|aug|sus[24]?|add[0-9]+|[0-9]+)?(\/[A-G][#b]?)?|\([^)]+\)|\[[^\]]+\]|\|[|:])$/;
   const chordLikeCount = words.filter(
     (w) =>
-      chordPattern.test(w) ||
+      CHORD_WORD_RE.test(w) ||
       w === "^" ||
       (w.match(/[\[\(]/) && w.match(/[\]\)]/)),
   );

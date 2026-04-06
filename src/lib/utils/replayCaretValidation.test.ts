@@ -48,7 +48,13 @@ describe("validateReplayCarets", () => {
   });
 
   it("flags too many replay markers vs memorized slots", () => {
-    const content = ["title: T", "reference:", "***", "C", "a ^ b ^ c ^"].join("\n");
+    const content = [
+      "title: T",
+      "reference:",
+      "***",
+      "C",
+      "one two three four ^ five six seven eight ^ nine ten eleven twelve ^",
+    ].join("\n");
     const issues = validateReplayCarets(content);
     expect(issues).toHaveLength(1);
     expect(issues[0]?.kind).toBe("too_many_replay_carets");
@@ -64,6 +70,18 @@ describe("validateReplayCarets", () => {
       "",
       "^ ^",
       "second line",
+    ].join("\n");
+    expect(validateReplayCarets(content)).toEqual([]);
+  });
+
+  it("treats German chord symbols (H, fis, cis, …) as a chord line for memorized slots", () => {
+    const content = [
+      "title: T",
+      "reference:",
+      "***",
+      "     fis           H           E H cis",
+      "Alle Menschen, sie werden dich s-e-hen.",
+      "^ ^ ^ ^ ^",
     ].join("\n");
     expect(validateReplayCarets(content)).toEqual([]);
   });
