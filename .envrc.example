@@ -1,0 +1,3 @@
+# Copy to `.envrc` (ignored by git) and set your values. Used by `deploy.sh`.
+export SERVER="your.server.host.or.ip"
+export DOMAIN="your.domain.example.com"
