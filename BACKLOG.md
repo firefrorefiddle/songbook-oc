@@ -80,7 +80,7 @@ This file tracks the current state of work, improvements, and technical debt for
 - **Priority**: high
 - **Description**: Added a central transactional mail service with `sendmail`, `mailgun`, and local `log` transports, plus persisted `EmailDelivery` records for delivery tracking. Invite creation now uses this service and records whether the email was sent, logged locally, or failed.
 - **Related**: This commit
-- **Follow-up**: Extend the same service to password reset, notifications, and ownership transfer emails.
+- **Follow-up**: Extend the same service to notifications and ownership transfer emails. Password reset and **collaborator-added** (`collaborator_added` template) are implemented.
 
 ### Password reset by email
 
@@ -110,9 +110,10 @@ This file tracks the current state of work, improvements, and technical debt for
 
 ### Sharing management UI with clear roles
 
-- **Status**: pending
+- **Status**: completed
 - **Priority**: high
 - **Description**: Add UI on songs and songbooks to show owner, collaborators, and permission levels in one place. Users should be able to add or remove collaborators, adjust roles, and understand what each role allows without admin help.
+- **Implementation notes**: Song and songbook detail pages show owner and collaborators with shared copy (`collaborationUiCopy.ts`) explaining what Editor means, role labels, and links to `/people`. Songbook page loads collaborators in `+page.server.ts` for a visible Sharing section when applicable.
 
 ### Fine-grained sharing for specific songs and songbooks
 
@@ -152,16 +153,17 @@ This file tracks the current state of work, improvements, and technical debt for
 
 ### Community profile visibility
 
-- **Status**: pending
+- **Status**: in_progress
 - **Priority**: low
 - **Description**: Show light profile information such as display name, optional team or church note, recent activity presence, and what the user has shared with you. The goal is not social networking, but enough context to make collaboration understandable and human.
+- **Progress**: Optional `User.publicBio` (settings + `/people` list/detail, search matches bio). Further items (activity presence, “what they shared with you”) remain open.
 
 ### Activity log
 
 - **Status**: completed
 - **Priority**: high
 - **Description**: Add an activity feed for important events such as create, edit, fork, share, archive, ownership change, and invite acceptance. Shared systems work better when users and admins can answer "what happened?" without guessing.
-- **Implementation notes**: Added `ActivityLog` model with `actorId`, `action`, `resourceType`, `resourceId`, `sourceResourceId`, and `sourceResourceType` for tracking forks. Actions include SONG_CREATED, SONG_VERSION_CREATED, SONG_ARCHIVED, SONG_FORKED, SONG_MADE_PUBLIC/PRIVATE, COLLABORATOR_ADDED/REMOVED, OWNERSHIP_TRANSFERRED, INVITE_SENT, INVITE_ACCEPTED. Added activity log server module with `logActivity`, `getActivityLogs`, and `getRecentActivity` functions. Integrated logging into song/songbook creation, versioning, forking, archiving, collaboration changes, invites, and signup.
+- **Implementation notes**: Added `ActivityLog` model with `actorId`, `action`, `resourceType`, `resourceId`, `sourceResourceId`, and `sourceResourceType` for tracking forks. Actions include SONG_CREATED, SONG_VERSION_CREATED, SONG_ARCHIVED, SONG_FORKED, SONG_MADE_PUBLIC/PRIVATE, COLLABORATOR_ADDED/REMOVED, OWNERSHIP_TRANSFERRED, INVITE_SENT, INVITE_ACCEPTED. Added activity log server module with `logActivity`, `getActivityLogs`, and `getRecentActivity` functions. Integrated logging into song/songbook creation, versioning, forking, archiving, collaboration changes, invites, and signup. Admins can browse and filter recent rows at `/admin/activity`.
 
 ### Notifications
 
@@ -196,7 +198,7 @@ This file tracks the current state of work, improvements, and technical debt for
 - **Status**: in progress
 - **Priority**: medium
 - **Description**: Support tags like `Christmas`, `Easter`, `Youth`, `Opening`, `Communion`, `German`, or `English`, with filters in song and songbook flows. This matches how churches think about songs and will make collection building much faster.
-- **Progress**: Liedermappe import now persists first-class song tags and categories, inferred from source collections plus conservative language/keyword rules. The songs list (`/songs`) supports URL-driven tag and category filters (`?tag=…`, `?category=…`), shows tags/categories on each row, and the songs API accepts the same query params. On the song detail page, owners and collaborators can add or remove tags and categories (creating new labels by name via upsert), and admins get a collapsible library panel to delete a tag or category globally. On a songbook detail page, the **Add Song** modal uses the same tag/category filters (URL `?tag=` / `?category=` on the songbook route), shows label chips on each pickable row, and loads **only songs visible to the current user** (same scope as `/songs`), not every non-archived song in the database.
+- **Progress**: Liedermappe import now persists first-class song tags and categories, inferred from source collections plus conservative language/keyword rules. The songs list (`/songs`) supports URL-driven tag and category filters (`?tag=…`, `?category=…`), shows tags/categories on each row, and the songs API accepts the same query params. On the song detail page, owners and collaborators can add or remove tags and categories (creating new labels by name via upsert), and admins get a collapsible library panel to delete a tag or category globally. On a songbook detail page, the **Add Song** modal uses the same tag/category filters (URL `?tag=` / `?category=` on the songbook route), shows label chips on each pickable row, and loads **only songs visible to the current user** (same scope as `/songs`), not every non-archived song in the database. The **songbooks list** (`/songbooks`) and `GET /api/songbooks` support `?tag=` / `?category=` filtered by songs on the **latest** songbook version (`songbookListQuery.ts`).
 
 ### Version comparison and recommended versions
 
@@ -240,9 +242,10 @@ This file tracks the current state of work, improvements, and technical debt for
 
 ### Presentation mode in the app
 
-- **Status**: pending
+- **Status**: in_progress
 - **Priority**: high
 - **Description**: Create a browser-based presentation mode that can open a collection and step through songs cleanly (keyboard navigation, quick jumps via TOC). **Complements** the projection PDF work above: in-browser mode for rehearsals/services without leaving the app; projection PDF remains for venues that prefer a static file or PDF reader.
+- **Progress**: `/songbooks/[id]/present` steps through a songbook version’s ordered songs with keyboard navigation and version selection; TOC-style jump list still open.
 
 ### Reusable song collections and setlists
 
