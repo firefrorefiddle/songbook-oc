@@ -76,6 +76,12 @@
             >
               Mail
             </a>
+            <a
+              href="/admin/activity"
+              class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900"
+            >
+              Activity
+            </a>
           {/if}
           <a
             href="/impressum"
