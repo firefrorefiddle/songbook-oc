@@ -203,38 +203,38 @@ This file tracks the current state of work, improvements, and technical debt for
 - **Priority**: low
 - **Description**: Warn when newly created songs look very similar to existing ones, and surface missing metadata such as author or copyright before export. These checks reduce long-term library mess and prevent quality issues from accumulating silently.
 
-### Song collection presentation generation
+### Song collection presentation generation (overhead / projection PDF)
 
-- **Status**: completed
+- **Status**: pending
 - **Priority**: high
-- **Description**: Add a new output mode for song collections intended for on-screen presentation using the overhead LaTeX layout and a clickable table of contents at the beginning. This should be optimized for projection use and navigation rather than simply reusing the print flow.
-- **Note**: Implemented as part of "Configurable songbook output modes" - users can now select "overhead/projection" mode in songbook settings.
+- **Description**: Deliver a **projection-quality** PDF that is **not** the same procedure as normal songbook generation. Today, "overhead" reuses the same `generated-songs` pipeline as chorded/text-only (`overhead.tex` only switches the `songs` package to `[slides]`), with the same end-of-book clickable TOC as print songbooks. That is **not** adequate for on-screen use.
+- **Target behavior** (separate generation path from print songbooks):
+  - **One verse or chorus per page** (or slide), tuned for legibility at a distance.
+  - **Repeat the chorus** on each appearance even when the printed songbook would not repeat it (projection workflow).
+  - **Table of contents on page 1** in a **multi-column** layout (not the same end-of-book TOC block as chorded PDFs).
+  - **Navigation**: e.g. a control to jump **back to the start** (PDF link/button or equivalent).
+- **Note**: Normal songbooks keep a **single** end-of-book title index with clickable entries (`buildSongbookTocLatex`); presentation output should be explicitly designed, not a thin variant of that flow.
 
-### Configurable songbook output modes
+### Configurable songbook output modes (print pipeline)
 
-- **Status**: completed
+- **Status**: in_progress
 - **Priority**: medium
-- **Description**: Allow users to configure songbooks for different output modes: chorded (with chords), text-only (lyrics without chords), and overhead/projection. Each mode maps to different LaTeX configurations that control how content is rendered.
-- **Details**:
-  - Output modes: chorded (default), text-only, overhead/projection
-  - Font size options: small, medium, large, extra-large
-  - Paper sizes: A4, A5, letter
-  - Mode-specific LaTeX templates that toggle chord visibility, font scaling, and page layout
-  - Store output settings as JSON on Songbook so they persist with the collection
-  - Generate the correct LaTeX template based on stored settings at PDF generation time
-- **Follow-up**: Add presentation mode in app (item above) after output modes are configurable.
+- **Description**: Baseline exists: `Songbook.outputSettings` JSON drives mode (`chorded` | `text-only` | `overhead`), font size, and paper size; `songbookPdf.ts` picks a template and applies `layout.tex` placeholders. **Gaps vs desired behavior**:
+  - **One stored PDF per version today** (`SongbookVersion.pdfPath` → `${version.id}.pdf`): regenerating **overwrites** the file. Chorded and text-only (and any other variant) **cannot coexist** as separate downloads without schema/UI changes.
+  - **No live preview** of the chosen configuration before generating.
+  - **Limited** font list, paper sizes, and font sizes compared to what we want long term.
+
+### Named export configurations and retained PDF artifacts
+
+- **Status**: pending
+- **Priority**: high
+- **Description**: Let users **save layout presets independently of a songbook** (named configurations: mode, fonts, paper, sizes, and related options). When generating, pick **a songbook version + a named configuration**, produce the PDF, and **keep it** as a downloadable artifact (so multiple modes or presets for the same songbook can coexist). Include **preview** of the selected configuration (at least before full generation). This replaces the idea of a single implicit `outputSettings` blob on the songbook as the only way to capture "how to print."
 
 ### Presentation mode in the app
 
 - **Status**: pending
 - **Priority**: high
-- **Description**: Create a browser-based presentation mode that can open a generated collection and step through songs cleanly, ideally with keyboard navigation and quick jumps via the table of contents. This makes the app usable during rehearsals, meetings, and services without leaving the system.
-
-### Presentation-friendly songbook options
-
-- **Status**: pending
-- **Priority**: medium
-- **Description**: Allow users to choose between print layout and presentation layout when generating a songbook, with settings for chord visibility, font size, and section display. Projection and paper serve different needs, so output should be intentional rather than one-size-fits-all.
+- **Description**: Create a browser-based presentation mode that can open a collection and step through songs cleanly (keyboard navigation, quick jumps via TOC). **Complements** the projection PDF work above: in-browser mode for rehearsals/services without leaving the app; projection PDF remains for venues that prefer a static file or PDF reader.
 
 ### Reusable song collections and setlists
 
@@ -268,9 +268,10 @@ This file tracks the current state of work, improvements, and technical debt for
 
 ### Editor: replayed-chord (`^`) sanity check
 
-- **Status**: pending
+- **Status**: completed
 - **Priority**: medium
 - **Description**: In the song editor, warn or validate when the number of ChordPro replay markers (`^`) per line or verse does not match what the previous chord line provides (the LaTeX `songs` package errors with “Replayed chord has no matching chord” when `^` is used for syllable breaks like `be^halt` instead of replay). Help users catch this before PDF export.
+- **Implementation notes**: Added `validateReplayCarets` in `src/lib/utils/replayCaretValidation.ts` (body lines after `***`, chord-line detection aligned with `sngParser`, strict handling when lines contain `^`). Song create/edit modal (`SongVersionEditorForm`) shows an amber `role="status"` notice with per-line messages. Unit tests cover happy path, `be^halt`, and too-many-carets cases.
 
 ## Decisions
 
