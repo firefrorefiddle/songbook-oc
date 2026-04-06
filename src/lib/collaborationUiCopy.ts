@@ -9,11 +9,13 @@ export const collaborationUiCopy = {
   editorSongbookBlurb:
     "Editor: can change this songbook's songs, order, versions, and output settings. Cannot add or remove people or transfer ownership.",
   adminCollabBlurb:
-    'Admin (collaborator): same editing access as Editor in the app today.',
+    'Admin matches Editor for now; we keep both roles so finer-grained permissions can land later without reassigning people.',
   songSharingModalIntro:
     'Collaborators can edit this song. To pick someone to add, open People and search by name or email.',
+  songbookSharingModalIntro:
+    'Collaborators can edit this songbook. To pick someone to add, open People and search by name or email.',
   songbookSharingBlurb:
-    'Sharing works like songs: editors can work on the songbook; only the owner controls access.',
+    'Editors can edit; only the owner manages access. Owners use Sharing; anyone can open People to find users.',
   findPeopleLinkText: 'Open People directory',
 } as const;
 
