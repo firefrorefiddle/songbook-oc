@@ -5,6 +5,10 @@ import {
   songCategoryFilterOptionsWhere,
   songTagFilterOptionsWhere,
 } from "$lib/server/songListQuery";
+import {
+  getOwnerInfo,
+  getSongbookCollaborators,
+} from "$lib/server/collaborations";
 import { error, fail, redirect } from "@sveltejs/kit";
 
 export const load: PageServerLoad = async ({ params, url, locals }) => {
@@ -57,6 +61,14 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
     throw error(403, "You do not have access to this songbook");
   }
 
+  const [owner, collaborators] = await Promise.all([
+    getOwnerInfo(prisma, songbook.ownerId),
+    getSongbookCollaborators(prisma, params.id),
+  ]);
+
+  const isOwner = songbook.ownerId === userId;
+  const yourCollabRole = songbook.collaborations[0]?.role ?? null;
+
   const [availableSongs, tagOptions, categoryOptions] = await Promise.all([
     prisma.song.findMany({
       where: buildSongListWhere({
@@ -89,6 +101,10 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 
   return {
     songbook,
+    owner,
+    collaborators,
+    isOwner,
+    yourCollabRole,
     availableSongs,
     tagId,
     categoryId,

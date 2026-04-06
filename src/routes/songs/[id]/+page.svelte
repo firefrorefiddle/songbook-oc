@@ -1,14 +1,25 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
   import { invalidateAll } from "$app/navigation";
+  import type { ActionResult } from "@sveltejs/kit";
+  import { onMount } from "svelte";
+  import {
+    collaborationUiCopy,
+    collaboratorRoleLabel,
+  } from "$lib/collaborationUiCopy";
+  import SongCreationWarningsBanner from "$lib/components/SongCreationWarningsBanner.svelte";
+  import Button from "$lib/components/Button.svelte";
+  import Modal from "$lib/components/Modal.svelte";
+  import SongVersionEditorForm from "$lib/components/SongVersionEditorForm.svelte";
+  import {
+    SONG_CREATE_WARNINGS_SESSION_KEY,
+    type SongCreationWarning,
+  } from "$lib/songCreationWarnings";
   import {
     compareSongVersions,
     getPreferredSongVersion,
     parseSongMetadata,
   } from "$lib/songVersions";
-  import Button from "$lib/components/Button.svelte";
-  import Modal from "$lib/components/Modal.svelte";
-  import SongVersionEditorForm from "$lib/components/SongVersionEditorForm.svelte";
 
   let { data, form } = $props();
 
@@ -33,6 +44,19 @@
   let selectedUserId = $state("");
   let selectedRole = $state<"EDITOR" | "ADMIN">("EDITOR");
   let availableUsers = $state<{ id: string; displayName: string; email: string }[]>([]);
+  let pageWarnings = $state<SongCreationWarning[]>([]);
+
+  onMount(() => {
+    try {
+      const raw = sessionStorage.getItem(SONG_CREATE_WARNINGS_SESSION_KEY);
+      if (raw) {
+        sessionStorage.removeItem(SONG_CREATE_WARNINGS_SESSION_KEY);
+        pageWarnings = JSON.parse(raw) as SongCreationWarning[];
+      }
+    } catch {
+      /* ignore corrupt storage */
+    }
+  });
 
   async function openCollabModal() {
     const response = await fetch("?/loadUsers", { method: "POST" });
@@ -40,7 +64,8 @@
     if (result.type === "success") {
       availableUsers = result.data.users.filter(
         (u: { id: string }) =>
-          u.id !== (data as any).owner?.id && !(data as any).collaborators?.some((c: { id: string }) => c.id === u.id),
+          u.id !== data.owner.id &&
+          !data.collaborators.some((c: { id: string }) => c.id === u.id),
       );
     }
     showCollabModal = true;
@@ -87,7 +112,18 @@
   }
 
   function refreshOnSuccess(closeModal = false) {
-    return async ({ result }: { result: { type: string } }) => {
+    return async ({ result }: { result: ActionResult }) => {
+      if (
+        result.type === "success" &&
+        result.data &&
+        typeof result.data === "object" &&
+        "warnings" in result.data
+      ) {
+        const w = (result.data as { warnings?: unknown }).warnings;
+        if (Array.isArray(w)) {
+          pageWarnings = w as SongCreationWarning[];
+        }
+      }
       if (result.type === "success") {
         if (closeModal) {
           showEditModal = false;
@@ -123,7 +159,18 @@
       if (!response.ok) {
         throw new Error("Failed to fork song");
       }
-      const forkedSong = await response.json();
+      const payload = (await response.json()) as {
+        song?: { id: string };
+        id?: string;
+        warnings?: SongCreationWarning[];
+      };
+      const forkedSong = payload.song ?? (payload as { id: string });
+      if (Array.isArray(payload.warnings) && payload.warnings.length > 0) {
+        sessionStorage.setItem(
+          SONG_CREATE_WARNINGS_SESSION_KEY,
+          JSON.stringify(payload.warnings),
+        );
+      }
       window.location.href = `/songs/${forkedSong.id}`;
     } catch (e) {
       console.error("Fork error:", e);
@@ -141,6 +188,11 @@
     >&larr; Back to Songs</a
   >
 </div>
+
+<SongCreationWarningsBanner
+  warnings={pageWarnings}
+  onDismiss={() => (pageWarnings = [])}
+/>
 
 {#if data.song.isArchived}
   <div class="mb-4 rounded-md bg-gray-100 p-3 text-gray-700">
@@ -165,11 +217,28 @@ Forked from <a href="/songs/{forked!.id}" class="text-indigo-600 hover:text-indi
 </p>
 {/if}
 <p class="mt-1 text-sm text-gray-500">
-Owner: <span class="font-medium text-gray-700">{data.owner.displayName}</span>
+<span class="font-medium text-gray-700">Owner:</span>
+<span class="ml-1">{data.owner.displayName}</span>
+<span class="text-gray-500"> ({data.owner.email})</span>
 </p>
+<p class="mt-0.5 text-xs text-gray-500">{collaborationUiCopy.ownerBlurb}</p>
 {#if data.collaborators.length > 0}
 <p class="mt-1 text-sm text-gray-500">
-Collaborators: {data.collaborators.map((c) => c.displayName).join(", ")}
+<span class="font-medium text-gray-700">Collaborators</span>
+<span class="sr-only">shared access</span>:
+{data.collaborators.map((c) => `${c.displayName} (${collaboratorRoleLabel(c.role)})`).join(", ")}
+</p>
+<p class="mt-0.5 text-xs text-gray-500">{collaborationUiCopy.editorSongBlurb}</p>
+{/if}
+{#if data.canEditSong && !data.isOwner}
+<p class="mt-2 rounded-md bg-indigo-50 px-3 py-2 text-sm text-indigo-900" role="status">
+You are a collaborator on this song with editing access. Only the owner can change who else can access it.
+<a href="/people" class="ml-1 text-indigo-700 underline">{collaborationUiCopy.findPeopleLinkText}</a>
+</p>
+{/if}
+{#if data.isOwner || !data.canEditSong}
+<p class="mt-1 text-xs text-gray-500">
+<a href="/people" class="text-indigo-600 hover:text-indigo-800 underline">{collaborationUiCopy.findPeopleLinkText}</a>
 </p>
 {/if}
       {#if getRecommendedVersion()}
@@ -197,7 +266,7 @@ Collaborators: {data.collaborators.map((c) => c.displayName).join(", ")}
 <Button onclick={() => openEdit(0)}>Edit Current Version</Button>
   <Button variant="secondary" onclick={openFork}>Fork</Button>
   {#if data.isOwner}
-    <Button variant="secondary" onclick={openCollabModal}>Manage</Button>
+    <Button variant="secondary" onclick={openCollabModal}>Sharing</Button>
   {/if}
     </div>
   </div>
@@ -676,24 +745,30 @@ class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm foc
 {/snippet}
 </Modal>
 
-<Modal bind:open={showCollabModal} title="Manage Collaborators" onclose={() => (showCollabModal = false)}>
+<Modal bind:open={showCollabModal} title="Sharing" onclose={() => (showCollabModal = false)}>
 {#snippet children()}
 <div class="space-y-6">
+<p class="text-sm text-gray-600">{collaborationUiCopy.songSharingModalIntro}</p>
+<p class="text-xs text-gray-500">
+<a href="/people" class="text-indigo-600 hover:text-indigo-800 underline">{collaborationUiCopy.findPeopleLinkText}</a>
+</p>
 <div>
 <h4 class="text-sm font-medium text-gray-700 mb-2">Owner</h4>
-<p class="text-sm text-gray-900">{(data as any).owner?.displayName || "Unknown"} ({(data as any).owner?.email})</p>
+<p class="text-sm text-gray-900">{data.owner.displayName} ({data.owner.email})</p>
+<p class="mt-1 text-xs text-gray-500">{collaborationUiCopy.ownerBlurb}</p>
 </div>
 
 <div>
 <h4 class="text-sm font-medium text-gray-700 mb-2">Collaborators</h4>
-{#if (data as any).collaborators?.length === 0}
+<p class="text-xs text-gray-500 mb-2">{collaborationUiCopy.editorSongBlurb} {collaborationUiCopy.adminCollabBlurb}</p>
+{#if data.collaborators.length === 0}
 <p class="text-sm text-gray-500">No collaborators yet</p>
 {:else}
 <ul class="divide-y divide-gray-200 border rounded-md">
-{#each (data as any).collaborators || [] as collab}
+{#each data.collaborators as collab}
 <li class="px-3 py-2 flex justify-between items-center">
 <span class="text-sm">{collab.displayName} ({collab.email})</span>
-<span class="text-xs text-gray-500 mr-2">{collab.role}</span>
+<span class="text-xs text-gray-600 mr-2">{collaboratorRoleLabel(collab.role)}</span>
 {#if data.isOwner}
 <form method="POST" action="?/removeCollaborator" use:enhance={() => refreshOnSuccess()}>
 <input type="hidden" name="userId" value={collab.id} />
@@ -708,34 +783,48 @@ class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm foc
 
 {#if data.isOwner}
 <div>
-<h4 class="text-sm font-medium text-gray-700 mb-2">Add Collaborator</h4>
+<h4 class="text-sm font-medium text-gray-700 mb-2">Add collaborator</h4>
 <form method="POST" action="?/addCollaborator" use:enhance={() => refreshOnSuccess(true)}>
-<div class="flex gap-2 mb-2">
+<div class="flex flex-col gap-2 sm:flex-row sm:items-start mb-2">
 <select
 name="userId"
 bind:value={selectedUserId}
 class="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
+aria-label="User to add as collaborator"
 >
 <option value="">Select a user...</option>
 {#each availableUsers as user}
 <option value={user.id}>{user.displayName} ({user.email})</option>
 {/each}
 </select>
+<div class="flex flex-col gap-1 sm:w-48">
+<label for="new-collab-role" class="text-xs font-medium text-gray-600">Role</label>
 <select
+id="new-collab-role"
 name="role"
 bind:value={selectedRole}
 class="rounded-md border border-gray-300 px-3 py-2 text-sm"
+aria-describedby="collab-role-help"
 >
 <option value="EDITOR">Editor</option>
 <option value="ADMIN">Admin</option>
 </select>
 </div>
+</div>
+<p id="collab-role-help" class="text-xs text-gray-500 mb-2">
+{#if selectedRole === "EDITOR"}
+{collaborationUiCopy.editorSongBlurb}
+{:else}
+{collaborationUiCopy.adminCollabBlurb}
+{/if}
+</p>
 <Button type="submit" disabled={!selectedUserId}>Add</Button>
 </form>
 </div>
 
 <div class="border-t pt-4">
-<h4 class="text-sm font-medium text-gray-700 mb-2">Transfer Ownership</h4>
+<h4 class="text-sm font-medium text-gray-700 mb-2">Transfer ownership</h4>
+<p class="text-xs text-gray-500 mb-2">The previous owner becomes a collaborator with Editor access.</p>
 <form method="POST" action="?/transferOwnership" use:enhance={() => refreshOnSuccess(true)}>
 <div class="flex gap-2">
 <select
@@ -744,7 +833,7 @@ bind:value={selectedUserId}
 class="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
 >
 <option value="">Select new owner...</option>
-{#each (data as any).collaborators || [] as collab}
+{#each data.collaborators as collab}
 <option value={collab.id}>{collab.displayName} ({collab.email})</option>
 {/each}
 </select>

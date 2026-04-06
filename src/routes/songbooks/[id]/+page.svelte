@@ -1,6 +1,7 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
   import { goto, invalidateAll } from "$app/navigation";
+  import { collaborationUiCopy, collaboratorRoleLabel } from "$lib/collaborationUiCopy";
   import { getPreferredSongVersion } from "$lib/songVersions";
   import Button from "$lib/components/Button.svelte";
   import Input from "$lib/components/Input.svelte";
@@ -299,8 +300,42 @@
           >
         </p>
       {/if}
+      <div class="mt-3 space-y-1 text-sm text-gray-600" aria-label="Sharing">
+        <p>
+          <span class="font-medium text-gray-700">Owner:</span>
+          {data.owner.displayName}
+          <span class="text-gray-500">({data.owner.email})</span>
+        </p>
+        <p class="text-xs text-gray-500">{collaborationUiCopy.ownerBlurb}</p>
+        {#if data.collaborators.length > 0}
+          <p>
+            <span class="font-medium text-gray-700">Collaborators:</span>
+            {data.collaborators.map((c) => `${c.displayName} (${collaboratorRoleLabel(c.role)})`).join(", ")}
+          </p>
+          <p class="text-xs text-gray-500">{collaborationUiCopy.editorSongbookBlurb}</p>
+        {:else}
+          <p class="text-xs text-gray-500">No collaborators yet.</p>
+        {/if}
+        <p class="text-xs">
+          <a href="/people" class="text-indigo-600 hover:text-indigo-800 underline"
+            >{collaborationUiCopy.findPeopleLinkText}</a
+          >
+          <span class="text-gray-500"> — {collaborationUiCopy.songbookSharingBlurb}</span>
+        </p>
+        {#if !data.isOwner && data.yourCollabRole}
+          <p class="mt-2 rounded-md bg-indigo-50 px-3 py-2 text-sm text-indigo-900" role="status">
+            You are a collaborator with the {collaboratorRoleLabel(data.yourCollabRole)} role on this songbook.
+            Only the owner can add or remove access.
+          </p>
+        {/if}
+      </div>
     </div>
     <div class="flex gap-2">
+      {#if getCurrentVersion()?.songs.length}
+        <Button variant="secondary" onclick={() => goto(`/songbooks/${data.songbook.id}/present`)}
+          >Present</Button
+        >
+      {/if}
       <Button
         onclick={() => generatePdf()}
         disabled={isGeneratingPdf || !getCurrentVersion()?.songs.length}
