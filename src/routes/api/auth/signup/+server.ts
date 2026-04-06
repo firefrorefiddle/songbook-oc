@@ -2,6 +2,7 @@ import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { prisma } from "$lib/server/prisma";
 import { materialiseInviteCollaborations } from "$lib/server/inviteCollaborations";
+import { logActivity } from "$lib/server/activityLog";
 import bcrypt from "bcryptjs";
 import { EMAIL_VERIFICATION } from "$env/static/private";
 
@@ -85,6 +86,16 @@ export const POST: RequestHandler = async ({ request }) => {
     user.id,
     invite.inviteCollaborations,
   );
+
+  await logActivity({
+    actorId: user.id,
+    action: "INVITE_ACCEPTED",
+    resourceType: "USER",
+    resourceId: user.id,
+    sourceResourceId: invite.id,
+    sourceResourceType: "INVITE",
+    metadata: { email: user.email },
+  });
 
   return json(
     {

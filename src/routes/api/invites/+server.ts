@@ -6,6 +6,7 @@ import {
   resolvePublicBaseUrl,
   sendInviteEmail,
 } from "$lib/server/email";
+import { logActivity } from "$lib/server/activityLog";
 import { randomBytes } from "crypto";
 import { EMAIL_VERIFICATION } from "$env/static/private";
 
@@ -115,6 +116,14 @@ export const POST: RequestHandler = async ({ request, locals, url }) => {
     expiresAt: invite.expiresAt,
     invitedByName: null,
     requireEmailVerification: EMAIL_VERIFICATION === "true",
+  });
+
+  await logActivity({
+    actorId: session.user.id!,
+    action: "INVITE_SENT",
+    resourceType: "INVITE",
+    resourceId: invite.id,
+    metadata: { email: invite.email },
   });
 
   return json({ invite, signupUrl, emailDelivery }, { status: 201 });
