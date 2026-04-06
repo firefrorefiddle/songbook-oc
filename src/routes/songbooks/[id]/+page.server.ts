@@ -1,11 +1,27 @@
 import type { PageServerLoad, Actions } from "./$types";
 import { prisma } from "$lib/server/prisma";
-import { fail } from "@sveltejs/kit";
+import {
+  buildSongListWhere,
+  songCategoryFilterOptionsWhere,
+  songTagFilterOptionsWhere,
+} from "$lib/server/songListQuery";
+import { error, fail, redirect } from "@sveltejs/kit";
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async ({ params, url, locals }) => {
+  const session = await locals.auth();
+  if (!session?.user) throw redirect(302, "/login");
+
+  const userId = session.user.id;
+  const tagId = url.searchParams.get("tag")?.trim() || null;
+  const categoryId = url.searchParams.get("category")?.trim() || null;
+
   const songbook = await prisma.songbook.findUnique({
     where: { id: params.id },
     include: {
+      collaborations: {
+        where: { userId },
+        take: 1,
+      },
       forkedFrom: {
         include: {
           versions: { orderBy: { createdAt: "desc" }, take: 1 },
@@ -30,22 +46,55 @@ export const load: PageServerLoad = async ({ params }) => {
   });
 
   if (!songbook) {
-    throw new Error("Songbook not found");
+    throw error(404, "Songbook not found");
   }
 
-  const availableSongs = await prisma.song.findMany({
-    where: { isArchived: false },
-    include: {
-      recommendedVersion: true,
-      versions: {
-        orderBy: { createdAt: "desc" },
-        take: 1,
-      },
-    },
-    orderBy: { updatedAt: "desc" },
-  });
+  const canView =
+    songbook.ownerId === userId ||
+    songbook.isPublic ||
+    songbook.collaborations.length > 0;
+  if (!canView) {
+    throw error(403, "You do not have access to this songbook");
+  }
 
-  return { songbook, availableSongs };
+  const [availableSongs, tagOptions, categoryOptions] = await Promise.all([
+    prisma.song.findMany({
+      where: buildSongListWhere({
+        userId,
+        includeArchived: false,
+        search: "",
+        tagId,
+        categoryId,
+      }),
+      include: {
+        recommendedVersion: true,
+        versions: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
+        tags: { include: { tag: true } },
+        categories: { include: { category: true } },
+      },
+      orderBy: { updatedAt: "desc" },
+    }),
+    prisma.songTag.findMany({
+      where: songTagFilterOptionsWhere(userId, false),
+      orderBy: { name: "asc" },
+    }),
+    prisma.songCategory.findMany({
+      where: songCategoryFilterOptionsWhere(userId, false),
+      orderBy: { name: "asc" },
+    }),
+  ]);
+
+  return {
+    songbook,
+    availableSongs,
+    tagId,
+    categoryId,
+    tagOptions,
+    categoryOptions,
+  };
 };
 
 export const actions: Actions = {

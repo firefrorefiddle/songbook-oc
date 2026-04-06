@@ -12,10 +12,28 @@
   let showNewVersionModal = $state(false);
   let selectedSongVersionIds = $state<string[]>([]);
   let songSearchQuery = $state("");
+  let selectedTagId = $state("");
+  let selectedCategoryId = $state("");
   let versionTitle = $state("");
   let versionDescription = $state("");
   let draggedIndex = $state<number | null>(null);
   let dragOverIndex = $state<number | null>(null);
+
+  $effect(() => {
+    selectedTagId = data.tagId ?? "";
+    selectedCategoryId = data.categoryId ?? "";
+  });
+
+  function applySongPickerFilters() {
+    const params = new URLSearchParams();
+    if (selectedTagId) params.set("tag", selectedTagId);
+    if (selectedCategoryId) params.set("category", selectedCategoryId);
+    const q = params.toString();
+    goto(`/songbooks/${data.songbook.id}${q ? `?${q}` : ""}`, {
+      keepFocus: true,
+      noScroll: true,
+    });
+  }
 
   function getCurrentVersion() {
     return data.songbook.versions[0];
@@ -439,6 +457,7 @@
 <Modal
   bind:open={showAddSongModal}
   title="Add Song to Songbook"
+  class="max-w-3xl"
   onclose={() => {
     showAddSongModal = false;
     songSearchQuery = "";
@@ -485,6 +504,43 @@
           />
         </div>
 
+        <div class="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label
+              for="songbook-picker-tag"
+              class="block text-sm font-medium text-gray-700 mb-1">Tag</label
+            >
+            <select
+              id="songbook-picker-tag"
+              bind:value={selectedTagId}
+              onchange={applySongPickerFilters}
+              class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500 bg-white"
+            >
+              <option value="">All tags</option>
+              {#each data.tagOptions as opt (opt.id)}
+                <option value={opt.id}>{opt.name}</option>
+              {/each}
+            </select>
+          </div>
+          <div>
+            <label
+              for="songbook-picker-category"
+              class="block text-sm font-medium text-gray-700 mb-1">Category</label
+            >
+            <select
+              id="songbook-picker-category"
+              bind:value={selectedCategoryId}
+              onchange={applySongPickerFilters}
+              class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500 bg-white"
+            >
+              <option value="">All categories</option>
+              {#each data.categoryOptions as opt (opt.id)}
+                <option value={opt.id}>{opt.name}</option>
+              {/each}
+            </select>
+          </div>
+        </div>
+
         <div class="mb-4 max-h-64 overflow-y-auto border rounded-md">
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50 sticky top-0">
@@ -525,13 +581,34 @@
                       />
                     </td>
                     <td class="px-3 py-2 text-sm text-gray-900">
-                      {displayedVersion.title}
-                      {#if song.recommendedVersionId === displayedVersion.id}
-                        <span
-                          class="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800"
+                      <div>
+                        {displayedVersion.title}
+                        {#if song.recommendedVersionId === displayedVersion.id}
+                          <span
+                            class="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800"
+                          >
+                            Recommended
+                          </span>
+                        {/if}
+                      </div>
+                      {#if song.tags?.length || song.categories?.length}
+                        <div
+                          class="mt-1 flex flex-wrap gap-1"
+                          aria-label="Tags and categories"
                         >
-                          Recommended
-                        </span>
+                          {#each song.tags as t (t.tag.id)}
+                            <span
+                              class="inline-block rounded bg-indigo-50 px-1.5 py-0.5 text-xs text-indigo-800"
+                              >{t.tag.name}</span
+                            >
+                          {/each}
+                          {#each song.categories as c (c.category.id)}
+                            <span
+                              class="inline-block rounded bg-emerald-50 px-1.5 py-0.5 text-xs text-emerald-800"
+                              >{c.category.name}</span
+                            >
+                          {/each}
+                        </div>
                       {/if}
                     </td>
                     <td class="px-3 py-2 text-sm text-gray-500"
