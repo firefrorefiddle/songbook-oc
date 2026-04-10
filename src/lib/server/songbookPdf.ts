@@ -1,7 +1,7 @@
-import { writeFile, copyFile, rm, mkdir, readFile } from "fs/promises";
+import { writeFile, copyFile, rm, mkdir, readFile, appendFile } from "fs/promises";
 import { existsSync } from "fs";
 import { join } from "path";
-import { randomUUID } from "crypto";
+import { createHash, randomUUID } from "crypto";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { prisma } from "$lib/server/prisma";
@@ -20,6 +20,61 @@ const PROJECT_ROOT = process.cwd();
 const SONGMAKER_CLI = join(PROJECT_ROOT, "bin", "songmaker-cli");
 const LATEX_DIR = join(PROJECT_ROOT, "src/lib/server/latex");
 const PDF_STORAGE_DIR = join(PROJECT_ROOT, "storage", "pdfs");
+
+/** Debug session NDJSON (local `.cursor/…` + optional ingest); also `storage/pdfs` copy for remote scp. */
+const DEBUG_SESSION = "9e9858";
+const DEBUG_LOG_REL = join(".cursor", `debug-${DEBUG_SESSION}.log`);
+const DEBUG_STORAGE_REL = join("storage", "pdfs", `latex-debug-${DEBUG_SESSION}.ndjson`);
+
+function sha256String(s: string): string {
+  return createHash("sha256").update(s, "utf8").digest("hex");
+}
+
+async function sha256File(path: string): Promise<string | null> {
+  try {
+    const buf = await readFile(path);
+    return createHash("sha256").update(buf).digest("hex");
+  } catch {
+    return null;
+  }
+}
+
+async function agentDebugLog(payload: {
+  hypothesisId: string;
+  location: string;
+  message: string;
+  data: Record<string, unknown>;
+  runId?: string;
+}): Promise<void> {
+  const body = {
+    sessionId: DEBUG_SESSION,
+    timestamp: Date.now(),
+    ...payload,
+  };
+  const line = `${JSON.stringify(body)}\n`;
+  // #region agent log
+  try {
+    await mkdir(join(PROJECT_ROOT, ".cursor"), { recursive: true });
+    await appendFile(join(PROJECT_ROOT, DEBUG_LOG_REL), line, "utf-8");
+  } catch {
+    /* ignore local log failures */
+  }
+  try {
+    await mkdir(join(PROJECT_ROOT, "storage", "pdfs"), { recursive: true });
+    await appendFile(join(PROJECT_ROOT, DEBUG_STORAGE_REL), line, "utf-8");
+  } catch {
+    /* ignore */
+  }
+  fetch("http://127.0.0.1:7324/ingest/8a12abdf-b0bd-4ef7-8a8e-38d4063a75ce", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Debug-Session-Id": DEBUG_SESSION,
+    },
+    body: JSON.stringify(body),
+  }).catch(() => {});
+  // #endregion
+}
 
 export type { OutputSettings };
 
@@ -238,11 +293,81 @@ export async function generateSongbookPdf(
 
   const outputSettings = parseOutputSettings(songbook.outputSettings);
 
+  // #region agent log
+  await agentDebugLog({
+    hypothesisId: "H-env",
+    location: "songbookPdf.ts:generateSongbookPdf:entry",
+    message: "PDF build environment",
+    data: {
+      nodeEnv: process.env.NODE_ENV ?? null,
+      cwd: process.cwd(),
+      songbookId,
+      versionId: versionId ?? null,
+      songmakerPath: SONGMAKER_CLI,
+      songmakerExists: existsSync(SONGMAKER_CLI),
+      latexDir: LATEX_DIR,
+    },
+  });
+  await agentDebugLog({
+    hypothesisId: "H4-settings",
+    location: "songbookPdf.ts:generateSongbookPdf:outputSettings",
+    message: "Songbook output settings",
+    data: {
+      outputSettings,
+      rawOutputSettingsHead: (songbook.outputSettings ?? "").slice(0, 400),
+    },
+  });
+  const songmakerSha256 = await sha256File(SONGMAKER_CLI);
+  const templateNames =
+    outputSettings.mode === "overhead"
+      ? (["overhead.tex", "songs.sty"] as const)
+      : ([
+          MODE_TEMPLATE_MAP[outputSettings.mode],
+          "layout.tex",
+          "font-body.tex",
+          "songbook-hyper-toc.tex",
+          "songs.sty",
+        ] as const);
+  const templateSha256: Record<string, string | null> = {};
+  for (const name of templateNames) {
+    templateSha256[name] = await sha256File(join(LATEX_DIR, name));
+  }
+  let pdflatexVersionLine = "unknown";
+  try {
+    const { stdout } = await execAsync("pdflatex --version", { maxBuffer: 64 * 1024 });
+    pdflatexVersionLine = stdout.split("\n")[0]?.trim() ?? stdout.slice(0, 200);
+  } catch (e) {
+    pdflatexVersionLine = `error:${e instanceof Error ? e.message : String(e)}`;
+  }
+  await agentDebugLog({
+    hypothesisId: "H2-songmaker",
+    location: "songbookPdf.ts:generateSongbookPdf:toolchain",
+    message: "songmaker binary + template shas",
+    data: { songmakerSha256, templateSha256, pdflatexVersionLine },
+  });
+  // #endregion
+
   try {
     await setupLatexFiles(tempDir, outputSettings);
 
     const latexSongs: string[] = [];
+    const perSongDebug: {
+      order: number;
+      title: string;
+      sngBodySha256: string;
+      latexSha256: string;
+      latexLen: number;
+      head800: string;
+    }[] = [];
+
     for (const songEntry of version.songs) {
+      const parsedMeta = JSON.parse(songEntry.songVersion.metadata || "{}") as SongPdfPipelineMetadata;
+      const sngForPdf = buildSongContentForPdf(
+        songEntry.songVersion.title,
+        songEntry.songVersion.content,
+        songEntry.songVersion.author,
+        parsedMeta,
+      );
       const latex = await convertSongToLatex(
         songEntry.songVersion.title,
         songEntry.songVersion.content,
@@ -251,7 +376,27 @@ export async function generateSongbookPdf(
         tempDir,
       );
       latexSongs.push(latex);
+      const bodyAfterSep = sngForPdf.includes("***\n")
+        ? sngForPdf.split("***\n").slice(1).join("***\n")
+        : sngForPdf;
+      perSongDebug.push({
+        order: songEntry.order,
+        title: songEntry.songVersion.title,
+        sngBodySha256: sha256String(bodyAfterSep),
+        latexSha256: sha256String(latex),
+        latexLen: latex.length,
+        head800: latex.slice(0, 800),
+      });
     }
+
+    // #region agent log
+    await agentDebugLog({
+      hypothesisId: "H1-content-latex",
+      location: "songbookPdf.ts:generateSongbookPdf:perSong",
+      message: "Per-song sng body + songmaker latex digest",
+      data: { perSongDebug },
+    });
+    // #endregion
 
     const combinedLatex = latexSongs.join("\n\n");
     await writeFile(
@@ -266,6 +411,28 @@ export async function generateSongbookPdf(
       tocContent,
       "utf-8",
     );
+
+    const mainTexWritten = await readFile(join(tempDir, "main.tex"), "utf-8");
+    const layoutWritten =
+      outputSettings.mode === "chorded" || outputSettings.mode === "text-only"
+        ? await readFile(join(tempDir, "layout.tex"), "utf-8")
+        : "";
+
+    // #region agent log
+    await agentDebugLog({
+      hypothesisId: "H3-effective-tex",
+      location: "songbookPdf.ts:generateSongbookPdf:assembledSources",
+      message: "Effective main.tex + layout + combined songs head",
+      data: {
+        mainTexSha256: sha256String(mainTexWritten),
+        layoutTexSha256: layoutWritten ? sha256String(layoutWritten) : null,
+        combinedSongsSha256: sha256String(combinedLatex),
+        mainTexHead: mainTexWritten.slice(0, 600),
+        layoutTexHead: layoutWritten.slice(0, 400),
+        combinedSongsHead2000: combinedLatex.slice(0, 2000),
+      },
+    });
+    // #endregion
 
     const texPath = join(tempDir, "main.tex");
 
@@ -285,6 +452,22 @@ export async function generateSongbookPdf(
     await copyFile(join(tempDir, "main.pdf"), pdfPath);
     await copyFile(join(tempDir, "main.log"), logPath);
 
+    // #region agent log
+    let mainLogTail = "";
+    try {
+      const logFull = await readFile(join(tempDir, "main.log"), "utf-8");
+      mainLogTail = logFull.slice(-2500);
+    } catch {
+      mainLogTail = "(unreadable)";
+    }
+    await agentDebugLog({
+      hypothesisId: "H5-pdflatex-log",
+      location: "songbookPdf.ts:generateSongbookPdf:success",
+      message: "pdflatex main.log tail",
+      data: { mainLogTail },
+    });
+    // #endregion
+
     await prisma.songbookVersion.update({
       where: { id: version.id },
       data: {
@@ -296,6 +479,16 @@ export async function generateSongbookPdf(
 
     return { pdfPath, logPath };
   } catch (error) {
+    // #region agent log
+    await agentDebugLog({
+      hypothesisId: "H-err",
+      location: "songbookPdf.ts:generateSongbookPdf:catch",
+      message: "PDF build failed",
+      data: {
+        err: error instanceof Error ? error.message : String(error),
+      },
+    });
+    // #endregion
     const logPath = join(storageDir, `${version.id}.log`);
     const tempLogPath = join(tempDir, "main.log");
     if (existsSync(tempLogPath)) {
