@@ -2,7 +2,7 @@ import {
   formatReplayCaretIssue,
   validateReplayCarets,
   type ReplayCaretIssue,
-} from "$lib/utils/replayCaretValidation";
+} from "./replayCaretValidation";
 
 export type SongPdfPipelineMetadata = Partial<{
   copyright: string;

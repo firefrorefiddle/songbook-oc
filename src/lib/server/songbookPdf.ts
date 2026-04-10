@@ -4,15 +4,12 @@ import { join } from "path";
 import { createHash, randomUUID } from "crypto";
 import { exec } from "child_process";
 import { promisify } from "util";
-import { prisma } from "$lib/server/prisma";
-import {
-  applyLayoutPlaceholders,
-  type OutputSettings,
-} from "$lib/server/latexLayout";
+import { prisma } from "./prisma";
+import { applyLayoutPlaceholders, type OutputSettings } from "./latexLayout";
 import {
   buildSongContentForPdf,
   type SongPdfPipelineMetadata,
-} from "$lib/utils/songPdfPipelineSafety";
+} from "../utils/songPdfPipelineSafety";
 
 const execAsync = promisify(exec);
 
@@ -251,6 +248,104 @@ function generateTableOfContents(songs: SongbookTocSongEntry[]): string {
   return buildSongbookTocLatex(songs);
 }
 
+const SONGBOOK_PDF_VERSION_INCLUDE = {
+  orderBy: { order: "asc" as const },
+  include: {
+    songVersion: {
+      include: {
+        song: true,
+      },
+    },
+  },
+};
+
+/**
+ * Writes the exact LaTeX tree used for PDF generation (main.tex, layout, fragments,
+ * generated-songs.tex, table-of-contents.tex, songs.sty) into `outDir` without running pdflatex.
+ * Use for cross-host pdflatex comparison: same bytes → any PDF difference is TeX engine/fonts only.
+ */
+export async function exportSongbookLatexWorkspace(
+  songbookId: string,
+  outDir: string,
+  versionId?: string,
+): Promise<{
+  songbookId: string;
+  versionId: string;
+  songCount: number;
+  mode: OutputSettings["mode"];
+}> {
+  await rm(outDir, { recursive: true, force: true });
+  await mkdir(outDir, { recursive: true });
+
+  const songbook = await prisma.songbook.findUnique({
+    where: { id: songbookId },
+    include: {
+      versions: {
+        where: versionId ? { id: versionId } : {},
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        include: {
+          songs: SONGBOOK_PDF_VERSION_INCLUDE,
+        },
+      },
+    },
+  });
+
+  if (!songbook || songbook.versions.length === 0) {
+    throw new Error("Songbook or version not found");
+  }
+
+  const version = songbook.versions[0];
+
+  if (version.songs.length === 0) {
+    throw new Error("Songbook has no songs");
+  }
+
+  const outputSettings = parseOutputSettings(songbook.outputSettings);
+  await setupLatexFiles(outDir, outputSettings);
+
+  const latexSongs: string[] = [];
+  for (const songEntry of version.songs) {
+    const latex = await convertSongToLatex(
+      songEntry.songVersion.title,
+      songEntry.songVersion.content,
+      songEntry.songVersion.author,
+      songEntry.songVersion.metadata,
+      outDir,
+    );
+    latexSongs.push(latex);
+  }
+
+  await writeFile(
+    join(outDir, "generated-songs.tex"),
+    latexSongs.join("\n\n"),
+    "utf-8",
+  );
+
+  await writeFile(
+    join(outDir, "table-of-contents.tex"),
+    generateTableOfContents(version.songs),
+    "utf-8",
+  );
+
+  const manifest = [
+    `songbookId=${songbookId}`,
+    `versionId=${version.id}`,
+    `songCount=${version.songs.length}`,
+    `mode=${outputSettings.mode}`,
+    `exportedAt=${new Date().toISOString()}`,
+    `combinedSongsSha256=${sha256String(latexSongs.join("\n\n"))}`,
+  ].join("\n");
+  await writeFile(join(outDir, "EXPORT_MANIFEST.txt"), manifest, "utf-8");
+
+  return {
+    songbookId,
+    versionId: version.id,
+    songCount: version.songs.length,
+    mode: outputSettings.mode,
+  };
+}
+
 export async function generateSongbookPdf(
   songbookId: string,
   versionId?: string,
@@ -263,16 +358,7 @@ export async function generateSongbookPdf(
         orderBy: { createdAt: "desc" },
         take: 1,
         include: {
-          songs: {
-            orderBy: { order: "asc" },
-            include: {
-              songVersion: {
-                include: {
-                  song: true,
-                },
-              },
-            },
-          },
+          songs: SONGBOOK_PDF_VERSION_INCLUDE,
         },
       },
     },
