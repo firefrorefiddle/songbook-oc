@@ -1,10 +1,23 @@
-\input{layout}
-
+% Slide / overhead layout — legacy Liedermappe `seed_data/tex/overhead.tex` (no scrbook, no TOC).
+\documentclass{article}
+\usepackage[%
+	papersize={12.8cm,9.6cm},
+	hmargin=1cm,%
+	vmargin=1cm,%
+	head=1cm,%
+	headsep=0pt,%
+	foot=1cm%
+]{geometry}
 \usepackage[slides]{songs}
 \usepackage[utf8]{inputenc}
 \usepackage[ngerman]{babel}
+\usepackage{DejaVuSans}
+\renewcommand*\familydefault{\sfdefault}
 
-\input{font}
+\pagestyle{empty}
+
+\songcolumns{1}
+\def\lmnumcols{1}
 
 \begin{document}
 
@@ -13,7 +26,5 @@
 	\input{generated-songs}
 
 \end{songs}
-
-\input{table-of-contents}
 
 \end{document}

@@ -73,14 +73,19 @@ async function setupLatexFiles(
   settings: OutputSettings,
 ): Promise<void> {
   const templateFile = MODE_TEMPLATE_MAP[settings.mode];
-  const commonFiles = ["font.tex", "songs.sty"];
-  for (const file of commonFiles) {
-    await copyFile(join(LATEX_DIR, file), join(tempDir, file));
+  await copyFile(join(LATEX_DIR, "songs.sty"), join(tempDir, "songs.sty"));
+
+  // Chorded / text-only: scrbook `layout.tex` + shared song body + hyperref/TOC fragment.
+  if (settings.mode === "chorded" || settings.mode === "text-only") {
+    for (const file of ["font-body.tex", "songbook-hyper-toc.tex"] as const) {
+      await copyFile(join(LATEX_DIR, file), join(tempDir, file));
+    }
+    const layoutContent = await readFile(join(LATEX_DIR, "layout.tex"), "utf-8");
+    const updatedLayout = applyLayoutPlaceholders(layoutContent, settings);
+    await writeFile(join(tempDir, "layout.tex"), updatedLayout, "utf-8");
   }
 
-  const layoutContent = await readFile(join(LATEX_DIR, "layout.tex"), "utf-8");
-  const updatedLayout = applyLayoutPlaceholders(layoutContent, settings);
-  await writeFile(join(tempDir, "layout.tex"), updatedLayout, "utf-8");
+  // Overhead: self-contained article + geometry (legacy Liedermappe); only `songs.sty` beside main.tex.
 
   await copyFile(join(LATEX_DIR, templateFile), join(tempDir, "main.tex"));
 }
@@ -166,7 +171,7 @@ export function escapeLatexForSongbookToc(text: string): string {
 
 /**
  * End-of-book TOC matching songs title-index layout (\idxtitlefont, dot leaders,
- * song number). Anchors are song1-N (see \songtarget in songs.sty); font.tex \songtocline
+ * song number). Anchors are song1-N (see \songtarget in songs.sty); songbook-hyper-toc.tex \songtocline
  * links to #1.1 because hyperref’s corrected PDF dest for each song is the .1 suffix.
  */
 export function buildSongbookTocLatex(songs: SongbookTocSongEntry[]): string {

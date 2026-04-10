@@ -1,9 +1,9 @@
-% Preview-only driver: minimal extarticle layout so the first PDF page shows song content.
-% Songbook PDFs use scrbook via layout.tex; do not reuse that stack here (avoids blank leading pages).
+% Preview-only: tight margins; not the scrbook songbook stack (`layout.tex`).
 \documentclass[@@FONTSIZE@@pt,@@PAPERSIZE@@]{extarticle}
+\usepackage[margin=2mm]{geometry}
 \usepackage[utf8]{inputenc}
 \usepackage[chorded]{songs}
-\input{font}
+\input{preview-font}
 \pagestyle{empty}
 \setlength{\parindent}{0pt}
 \begin{document}

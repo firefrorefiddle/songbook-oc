@@ -47,7 +47,7 @@ async function setupLatexFiles(tempDir: string): Promise<void> {
     previewWritten,
     "utf-8",
   );
-  for (const file of ["font.tex", "songs.sty"]) {
+  for (const file of ["font-body.tex", "preview-font.tex", "songs.sty"]) {
     await copyFile(join(LATEX_DIR, file), join(tempDir, file));
   }
 }

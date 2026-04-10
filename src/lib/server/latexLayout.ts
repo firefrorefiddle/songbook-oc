@@ -1,6 +1,6 @@
 /**
  * Placeholder substitution for `layout.tex` (songbook PDFs, scrbook) and `preview-song.tex`
- * (PNG preview, extarticle). Both ship @@PAPERSIZE@@ and @@FONTSIZE@@ tokens.
+ * (PNG preview, extarticle + geometry). Both ship @@PAPERSIZE@@ and @@FONTSIZE@@ tokens.
  */
 
 export interface OutputSettings {

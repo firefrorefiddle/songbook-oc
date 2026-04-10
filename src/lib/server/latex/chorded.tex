@@ -1,10 +1,19 @@
+% Preamble matches legacy Liedermappe `seed_data/tex/chorded.tex` (paths flattened for temp dir).
 \input{layout}
 
 \usepackage[chorded]{songs}
 \usepackage[utf8]{inputenc}
 \usepackage[ngerman]{babel}
 
-\input{font}
+\input{font-body}
+
+\usepackage{pdfpages}
+
+\setlength{\songnumwidth}{4em}
+\songcolumns{1}
+\def\lmnumcols{1}
+
+\input{songbook-hyper-toc}
 
 \begin{document}
 
