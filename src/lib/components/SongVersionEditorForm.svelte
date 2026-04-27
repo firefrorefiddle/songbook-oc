@@ -1,5 +1,6 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
+  import { onMount } from 'svelte';
   import AdvancedSongEditor from '$lib/components/AdvancedSongEditor.svelte';
   import Button from '$lib/components/Button.svelte';
   import Input from '$lib/components/Input.svelte';
@@ -14,6 +15,9 @@
     formatSongPdfPipelineIssues,
     validateSongPdfPipelineInput
   } from '$lib/utils/songPdfPipelineSafety';
+  import { DEFAULT_SONG_LATEX_STYLE, type SongLatexStyle } from '$lib/songLatexStyle';
+
+  const PREVIEW_LATEX_STYLE_KEY = 'songbook-oc-preview-latex-style';
 
   type EnhanceSubmit = Parameters<typeof enhance>[1];
 
@@ -42,10 +46,30 @@
   }: Props = $props();
 
   let useAdvancedEditor = $state(false);
+  let previewLatexStyle = $state<SongLatexStyle>(DEFAULT_SONG_LATEX_STYLE);
   let previewPng = $state<string | null>(null);
   let previewError = $state<{ stage: string; message: string; logs?: string } | null>(null);
   let isGeneratingPreview = $state(false);
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  onMount(() => {
+    try {
+      const stored = localStorage.getItem(PREVIEW_LATEX_STYLE_KEY);
+      previewLatexStyle = stored === 'songbook_tex' ? 'songbook_tex' : 'songs_sty';
+    } catch {
+      /* private mode */
+    }
+  });
+
+  $effect(() => {
+    const style = previewLatexStyle;
+    if (typeof localStorage === 'undefined') return;
+    try {
+      localStorage.setItem(PREVIEW_LATEX_STYLE_KEY, style);
+    } catch {
+      /* ignore */
+    }
+  });
 
   let pdfPipelineNotice = $derived(
     formatSongPdfPipelineIssues(
@@ -62,13 +86,14 @@
     currentContent: string,
     currentTitle: string,
     currentAuthor: string,
-    currentMetadata: Record<string, string>
+    currentMetadata: Record<string, string>,
+    currentLatexStyle: SongLatexStyle
   ) {
     const previewInput = {
       content: currentContent,
       title: currentTitle,
       author: currentAuthor,
-      metadata: currentMetadata
+      metadata: currentMetadata,
     };
 
     if (!canGenerateSongPreview(previewInput)) {
@@ -83,7 +108,9 @@
       const response = await fetch('/api/songs/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildSongPreviewPayload(previewInput))
+        body: JSON.stringify(
+          buildSongPreviewPayload({ ...previewInput, latexStyle: currentLatexStyle })
+        )
       });
     const responseData = await response.json();
 
@@ -120,13 +147,20 @@
     const currentTitle = title;
     const currentAuthor = author;
     const currentMetadata = metadata;
+    const currentLatexStyle = previewLatexStyle;
 
     if (debounceTimer) {
       clearTimeout(debounceTimer);
     }
 
     debounceTimer = setTimeout(() => {
-      void generatePreview(currentContent, currentTitle, currentAuthor, currentMetadata);
+      void generatePreview(
+        currentContent,
+        currentTitle,
+        currentAuthor,
+        currentMetadata,
+        currentLatexStyle,
+      );
     }, 300);
 
     return () => {
@@ -223,7 +257,21 @@
   </div>
 
   <div class="w-3/5 bg-gray-50 p-6 flex flex-col">
-    <h3 class="text-sm font-medium text-gray-700 mb-3">Preview</h3>
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-2 mb-3">
+      <h3 class="text-sm font-medium text-gray-700">Preview</h3>
+      <fieldset class="flex flex-wrap items-center gap-3 text-xs text-gray-600 border-0 p-0 m-0">
+        <legend class="sr-only">LaTeX style for preview</legend>
+        <span class="font-medium text-gray-700 not-sr-only">Style</span>
+        <label class="inline-flex items-center gap-1.5 cursor-pointer">
+          <input type="radio" name="preview-latex-style" value="songs_sty" bind:group={previewLatexStyle} />
+          <span>Legacy (songs.sty)</span>
+        </label>
+        <label class="inline-flex items-center gap-1.5 cursor-pointer">
+          <input type="radio" name="preview-latex-style" value="songbook_tex" bind:group={previewLatexStyle} />
+          <span>Songbook layout</span>
+        </label>
+      </fieldset>
+    </div>
     <div class="flex-1 flex items-center justify-center overflow-auto">
       {#if isGeneratingPreview}
         <div class="text-gray-400">Generating preview...</div>

@@ -1,8 +1,11 @@
+import { DEFAULT_SONG_LATEX_STYLE, type SongLatexStyle } from "$lib/songLatexStyle";
+
 export interface SongPreviewInput {
   title: string;
   author: string;
   content: string;
   metadata: Record<string, string>;
+  latexStyle?: SongLatexStyle;
 }
 
 /** Normalized preview failure for the editor (API may return a string on older clients). */
@@ -56,6 +59,7 @@ export function buildSongPreviewPayload(input: SongPreviewInput): SongPreviewInp
     title: input.title.trim(),
     author: input.author,
     content: input.content,
-    metadata: input.metadata
+    metadata: input.metadata,
+    latexStyle: input.latexStyle ?? DEFAULT_SONG_LATEX_STYLE,
   };
 }

@@ -7,7 +7,9 @@ Type=exec
 WorkingDirectory=%h/songbook-oc
 Environment=NODE_ENV=production
 Environment=PORT=3000
-Environment=PATH=%h/songbook-oc/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PATH=%h/songbook-oc/bin:/usr/local/texlive/2022/bin/x86_64-linux:/usr/local/bin:/usr/bin:/bin
+Environment=MANPATH=/usr/local/texlive/2022/texmf-dist/doc/man
+Environment=INFOPATH=/usr/local/texlive/2022/texmf-dist/doc/info
 EnvironmentFile=%h/songbook-oc/.env.production
 ExecStart=/usr/bin/node build/index.js
 Restart=always

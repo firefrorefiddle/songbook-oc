@@ -54,6 +54,23 @@ echo "=== Building app locally ==="
 pnpm install
 pnpm build
 
+echo "=== Verifying PDF toolchain (songmaker + LaTeX templates) ==="
+REQUIRED_PDF_FILES=(
+  bin/songmaker-cli
+  bin/songbook-backup
+  src/lib/server/latex/songs.sty
+  src/lib/server/latex/songbook-layout.sty
+  src/lib/server/latex/layout.tex
+  src/lib/server/latex/chorded.tex
+  src/lib/server/latex/songbook-hyper-toc.tex
+)
+for f in "${REQUIRED_PDF_FILES[@]}"; do
+  if [ ! -f "$f" ]; then
+    echo "Error: required PDF toolchain file missing: $f" >&2
+    exit 1
+  fi
+done
+
 echo "=== Syncing to server ==="
 rsync -avz --delete -e "$RSYNC_SSH" \
   --exclude='node_modules' \
@@ -77,6 +94,16 @@ fi
 
 echo "=== Syncing build folder ==="
 rsync -avz -e "$RSYNC_SSH" build/ "$USER@$SERVER:$APP_DIR/build/"
+
+# Always ship these explicitly so a future broad rsync --exclude cannot omit them.
+echo "=== Syncing PDF toolchain (songmaker binary + server LaTeX tree) ==="
+rsync -avz -e "$RSYNC_SSH" \
+  bin/songmaker-cli \
+  bin/songbook-backup \
+  "$USER@$SERVER:$APP_DIR/bin/"
+rsync -avz --delete -e "$RSYNC_SSH" \
+  src/lib/server/latex/ \
+  "$USER@$SERVER:$APP_DIR/src/lib/server/latex/"
 
 echo "=== Syncing Prisma postinstall helper (postinstall runs scripts/link-pnpm-prisma-client.sh) ==="
 ssh $SSH_OPTS "$USER@$SERVER" "mkdir -p $APP_DIR/scripts"

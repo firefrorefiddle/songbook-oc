@@ -1,6 +1,7 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { generatePreview } from "$lib/server/songPreview";
+import { parseSongLatexStyle } from "$lib/songLatexStyle";
 import {
   buildSongContentForPdf,
   formatSongPdfPipelineIssues,
@@ -10,7 +11,8 @@ import {
 
 export const POST: RequestHandler = async ({ request }) => {
   const body = await request.json();
-  const { content, title, author, metadata, copyright } = body;
+  const { content, title, author, metadata, copyright, latexStyle: latexStyleRaw } = body;
+  const latexStyle = parseSongLatexStyle(latexStyleRaw);
 
   if (!content?.trim()) {
     return json(
@@ -62,7 +64,7 @@ export const POST: RequestHandler = async ({ request }) => {
       author,
       finalMetadataTyped,
     );
-    const result = await generatePreview(sngContent);
+    const result = await generatePreview(sngContent, latexStyle);
     if (result.error) {
       return json({ error: result.error }, { status: 500 });
     }

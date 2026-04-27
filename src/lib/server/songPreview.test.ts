@@ -29,6 +29,18 @@ describe("songPreview", () => {
         expect(result).toContain("Großer Gott");
       }
     });
+
+    it("uses native songbook macros when latex style is songbook_tex", async () => {
+      const result = await convertToLatex(
+        `title: Native\n***\n^C word\n`,
+        "songbook_tex",
+      );
+      expect(isPreviewError(result)).toBe(false);
+      if (!isPreviewError(result)) {
+        expect(result).toContain("\\BeginSong");
+        expect(result).toContain("\\SongLine");
+      }
+    });
   });
 
   describe("renderPdf", () => {

@@ -4,8 +4,9 @@ import {
   buildSongPreviewPayload,
   canGenerateSongPreview,
   normalizeSongPreviewApiError,
-  songPreviewErrorHeading
-} from '$lib/songEditorPreview';
+  songPreviewErrorHeading,
+} from "$lib/songEditorPreview";
+import { DEFAULT_SONG_LATEX_STYLE } from "$lib/songLatexStyle";
 
 describe('songEditorPreview', () => {
   it('requires both title and content before generating a preview', () => {
@@ -68,7 +69,8 @@ describe('songEditorPreview', () => {
       title: 'Title',
       author: 'Author',
       content: 'C G\nLyrics',
-      metadata: { copyright: '2026' }
+      metadata: { copyright: '2026' },
+      latexStyle: DEFAULT_SONG_LATEX_STYLE,
     });
   });
 });

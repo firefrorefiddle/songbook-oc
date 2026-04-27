@@ -5,7 +5,13 @@ import { createHash, randomUUID } from "crypto";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { prisma } from "./prisma";
-import { applyLayoutPlaceholders, type OutputSettings } from "./latexLayout";
+import {
+  applyLayoutPlaceholders,
+  effectiveLatexStyle,
+  parseOutputSettings,
+  type OutputSettings,
+} from "./latexLayout";
+import { songmakerUsesSongsStyFlag, type SongLatexStyle } from "$lib/songLatexStyle";
 import {
   buildSongContentForPdf,
   type SongPdfPipelineMetadata,
@@ -81,24 +87,6 @@ const MODE_TEMPLATE_MAP: Record<OutputSettings["mode"], string> = {
   overhead: "overhead.tex",
 };
 
-function parseOutputSettings(json: string): OutputSettings {
-  const defaults: OutputSettings = {
-    mode: "chorded",
-    fontSize: "medium",
-    paperSize: "a4",
-  };
-  try {
-    const parsed = JSON.parse(json || "{}") as Partial<OutputSettings>;
-    return {
-      mode: parsed.mode ?? defaults.mode,
-      fontSize: parsed.fontSize ?? defaults.fontSize,
-      paperSize: parsed.paperSize ?? defaults.paperSize,
-    };
-  } catch {
-    return defaults;
-  }
-}
-
 async function ensurePdfStorageDir(): Promise<string> {
   if (!existsSync(PDF_STORAGE_DIR)) {
     await mkdir(PDF_STORAGE_DIR, { recursive: true });
@@ -124,22 +112,52 @@ async function setupLatexFiles(
   tempDir: string,
   settings: OutputSettings,
 ): Promise<void> {
-  const templateFile = MODE_TEMPLATE_MAP[settings.mode];
-  await copyFile(join(LATEX_DIR, "songs.sty"), join(tempDir, "songs.sty"));
+  const style = effectiveLatexStyle(settings);
 
-  // Chorded / text-only: scrbook `layout.tex` + shared song body + hyperref/TOC fragment.
   if (settings.mode === "chorded" || settings.mode === "text-only") {
-    for (const file of ["font-body.tex", "songbook-hyper-toc.tex"] as const) {
-      await copyFile(join(LATEX_DIR, file), join(tempDir, file));
-    }
     const layoutContent = await readFile(join(LATEX_DIR, "layout.tex"), "utf-8");
-    const updatedLayout = applyLayoutPlaceholders(layoutContent, settings);
-    await writeFile(join(tempDir, "layout.tex"), updatedLayout, "utf-8");
+    await writeFile(
+      join(tempDir, "layout.tex"),
+      applyLayoutPlaceholders(layoutContent, settings),
+      "utf-8",
+    );
+
+    if (style === "songs_sty") {
+      await copyFile(join(LATEX_DIR, "songs.sty"), join(tempDir, "songs.sty"));
+      await copyFile(join(LATEX_DIR, "font-body.tex"), join(tempDir, "font-body.tex"));
+      await copyFile(
+        join(LATEX_DIR, "songbook-hyper-toc.tex"),
+        join(tempDir, "songbook-hyper-toc.tex"),
+      );
+      await copyFile(
+        join(LATEX_DIR, MODE_TEMPLATE_MAP[settings.mode]),
+        join(tempDir, "main.tex"),
+      );
+    } else {
+      await copyFile(
+        join(LATEX_DIR, "songbook-layout.sty"),
+        join(tempDir, "songbook-layout.sty"),
+      );
+      await copyFile(
+        join(LATEX_DIR, "songbook-style.tex"),
+        join(tempDir, "songbook-style.tex"),
+      );
+      await copyFile(
+        join(LATEX_DIR, "font-body-songbook.tex"),
+        join(tempDir, "font-body-songbook.tex"),
+      );
+      await copyFile(
+        join(LATEX_DIR, "songbook-toc-native.tex"),
+        join(tempDir, "songbook-toc-native.tex"),
+      );
+      const nativeMain =
+        settings.mode === "chorded" ? "chorded-songbook.tex" : "text-only-songbook.tex";
+      await copyFile(join(LATEX_DIR, nativeMain), join(tempDir, "main.tex"));
+    }
+  } else {
+    await copyFile(join(LATEX_DIR, "songs.sty"), join(tempDir, "songs.sty"));
+    await copyFile(join(LATEX_DIR, "overhead.tex"), join(tempDir, "main.tex"));
   }
-
-  // Overhead: self-contained article + geometry (legacy Liedermappe); only `songs.sty` beside main.tex.
-
-  await copyFile(join(LATEX_DIR, templateFile), join(tempDir, "main.tex"));
 }
 
 async function cleanupTempDir(tempDir: string): Promise<void> {
@@ -154,6 +172,7 @@ async function convertSongToLatex(
   author: string | null,
   metadata: string,
   tempDir: string,
+  latexStyle: SongLatexStyle,
 ): Promise<string> {
   const parsed = JSON.parse(metadata || "{}") as SongPdfPipelineMetadata;
   const sngContent = buildSongContentForPdf(title, content, author, parsed);
@@ -161,12 +180,17 @@ async function convertSongToLatex(
   const sngPath = join(tempDir, `${randomUUID()}.sng`);
   await writeFile(sngPath, sngContent, "utf-8");
 
-  await execAsync(`${SONGMAKER_CLI} ${sngPath}`, {
+  const songmakerCmd = songmakerUsesSongsStyFlag(latexStyle)
+    ? `${SONGMAKER_CLI} --songssty ${sngPath}`
+    : `${SONGMAKER_CLI} ${sngPath}`;
+  await execAsync(songmakerCmd, {
     cwd: tempDir,
   });
 
   const texPath = sngPath.replace(".sng", ".tex");
   const latex = await readFile(texPath, "utf-8");
+  console.log(`[songmaker-cli debug] generated tex for "${title}"`);
+  console.log(latex);
   return latex;
 }
 
@@ -261,7 +285,8 @@ const SONGBOOK_PDF_VERSION_INCLUDE = {
 
 /**
  * Writes the exact LaTeX tree used for PDF generation (main.tex, layout, fragments,
- * generated-songs.tex, table-of-contents.tex, songs.sty) into `outDir` without running pdflatex.
+ * generated-songs.tex, table-of-contents.tex, and either `songs.sty` or `songbook-style.tex`
+ * + `songbook-layout.sty`) into `outDir` without running pdflatex.
  * Use for cross-host pdflatex comparison: same bytes → any PDF difference is TeX engine/fonts only.
  */
 export async function exportSongbookLatexWorkspace(
@@ -302,6 +327,7 @@ export async function exportSongbookLatexWorkspace(
   }
 
   const outputSettings = parseOutputSettings(songbook.outputSettings);
+  const effLatexStyle = effectiveLatexStyle(outputSettings);
   await setupLatexFiles(outDir, outputSettings);
 
   const latexSongs: string[] = [];
@@ -312,6 +338,7 @@ export async function exportSongbookLatexWorkspace(
       songEntry.songVersion.author,
       songEntry.songVersion.metadata,
       outDir,
+      effLatexStyle,
     );
     latexSongs.push(latex);
   }
@@ -333,6 +360,7 @@ export async function exportSongbookLatexWorkspace(
     `versionId=${version.id}`,
     `songCount=${version.songs.length}`,
     `mode=${outputSettings.mode}`,
+    `effectiveLatexStyle=${effLatexStyle}`,
     `exportedAt=${new Date().toISOString()}`,
     `combinedSongsSha256=${sha256String(latexSongs.join("\n\n"))}`,
   ].join("\n");
@@ -378,6 +406,7 @@ export async function generateSongbookPdf(
   const tempDir = await createTempDir();
 
   const outputSettings = parseOutputSettings(songbook.outputSettings);
+  const effLatexStyle = effectiveLatexStyle(outputSettings);
 
   // #region agent log
   await agentDebugLog({
@@ -400,6 +429,7 @@ export async function generateSongbookPdf(
     message: "Songbook output settings",
     data: {
       outputSettings,
+      effLatexStyle,
       rawOutputSettingsHead: (songbook.outputSettings ?? "").slice(0, 400),
     },
   });
@@ -407,13 +437,24 @@ export async function generateSongbookPdf(
   const templateNames =
     outputSettings.mode === "overhead"
       ? (["overhead.tex", "songs.sty"] as const)
-      : ([
-          MODE_TEMPLATE_MAP[outputSettings.mode],
-          "layout.tex",
-          "font-body.tex",
-          "songbook-hyper-toc.tex",
-          "songs.sty",
-        ] as const);
+      : effLatexStyle === "songbook_tex"
+        ? ([
+            outputSettings.mode === "chorded"
+              ? "chorded-songbook.tex"
+              : "text-only-songbook.tex",
+            "layout.tex",
+            "font-body-songbook.tex",
+            "songbook-toc-native.tex",
+            "songbook-style.tex",
+            "songbook-layout.sty",
+          ] as const)
+        : ([
+            MODE_TEMPLATE_MAP[outputSettings.mode],
+            "layout.tex",
+            "font-body.tex",
+            "songbook-hyper-toc.tex",
+            "songs.sty",
+          ] as const);
   const templateSha256: Record<string, string | null> = {};
   for (const name of templateNames) {
     templateSha256[name] = await sha256File(join(LATEX_DIR, name));
@@ -460,6 +501,7 @@ export async function generateSongbookPdf(
         songEntry.songVersion.author,
         songEntry.songVersion.metadata,
         tempDir,
+        effLatexStyle,
       );
       latexSongs.push(latex);
       const bodyAfterSep = sngForPdf.includes("***\n")

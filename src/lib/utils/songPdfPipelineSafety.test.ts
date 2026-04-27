@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildSongContentForPdf,
+  escapeChordProBodyForSongmaker,
   escapeStructuredHeaderFieldForSng,
   formatSongPdfPipelineIssues,
   normalizeSongPipelineText,
@@ -49,6 +50,16 @@ describe("songPdfPipelineSafety", () => {
       const sng = buildSongContentForPdf("ignored", raw, null, {});
       expect(sng).toBe(normalizeSongPipelineText(raw));
       expect(sng).toContain("title: X");
+    });
+
+    it("escapes $ and _ outside chord brackets for songmaker", () => {
+      expect(escapeChordProBodyForSongmaker("a$b")).toBe("a\\$b");
+      expect(escapeChordProBodyForSongmaker("a\\$b")).toBe("a\\$b");
+      expect(escapeChordProBodyForSongmaker("you____")).toBe("you\\_\\_\\_\\_");
+      expect(escapeChordProBodyForSongmaker("[C]you____")).toBe("[C]you\\_\\_\\_\\_");
+      expect(escapeChordProBodyForSongmaker("[A_m7]x")).toBe("[A_m7]x");
+      const sng = buildSongContentForPdf("T", "line $ chord", null, {});
+      expect(sng).toContain("***\nline \\$ chord");
     });
   });
 

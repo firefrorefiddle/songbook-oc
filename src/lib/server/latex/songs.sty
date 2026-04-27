@@ -1552,6 +1552,14 @@
   \fi\fi\fi%
 }
 \newcommand\musicnote[1]{\ifchorded\textnote{#1}\fi}
+% songbook-oc: songmaker sometimes appends \\ after these macros while still in
+% vertical mode, which triggers ``There's no line here to end''. Gobble one
+% following \\ when present (see also \memorize / \replay below).
+\newcommand{\songbookOC@gobblebreak}{\@ifnextchar\\{\@gobble}{}}
+\let\songbookOC@@textnote\textnote
+\renewcommand{\textnote}[1]{\songbookOC@@textnote{#1}\songbookOC@gobblebreak}
+\let\songbookOC@@musicnote\musicnote
+\renewcommand{\musicnote}[1]{\songbookOC@@musicnote{#1}\songbookOC@gobblebreak}
 \ifSB@etex
   \newcommand\echo{\begingroup\@sanitize\SB@echo}
   \newcommand\SB@echo[1]{%
@@ -2728,6 +2736,10 @@
   \SB@trackchfalse%
   \global\SB@ctail\SB@creg%
 }
+\let\songbookOC@@memorizecmd\memorize
+\def\memorize{\songbookOC@@memorizecmd\songbookOC@gobblebreak}
+\let\songbookOC@@replaycmd\replay
+\def\replay{\songbookOC@@replaycmd\songbookOC@gobblebreak}
 \newcommand\SB@rechord{}
 \newcommand\SB@@rechord{%
   \SB@ifempty\SB@ctail{%

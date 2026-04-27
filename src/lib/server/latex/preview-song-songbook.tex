@@ -1,0 +1,11 @@
+% Preview driver for native songmaker output (`songbook-style.tex` + `songbook-layout.sty`).
+\documentclass[@@FONTSIZE@@pt,@@PAPERSIZE@@]{extarticle}
+\usepackage[margin=2mm]{geometry}
+\usepackage[utf8]{inputenc}
+\input{songbook-style}
+\input{preview-font-songbook}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\begin{document}
+\input{generated-song}
+\end{document}

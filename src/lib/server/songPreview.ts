@@ -9,6 +9,11 @@ import {
   PREVIEW_OUTPUT_SETTINGS,
 } from "$lib/server/latexLayout";
 import { extractPdflatexUserMessage } from "$lib/server/latexLog";
+import {
+  DEFAULT_SONG_LATEX_STYLE,
+  songmakerUsesSongsStyFlag,
+  type SongLatexStyle,
+} from "$lib/songLatexStyle";
 
 const execAsync = promisify(exec);
 
@@ -16,8 +21,8 @@ const PROJECT_ROOT = process.cwd();
 const SONGMAKER_CLI = join(PROJECT_ROOT, "bin", "songmaker-cli");
 const LATEX_DIR = join(PROJECT_ROOT, "src/lib/server/latex");
 
-/** PNG preview uses `preview-song.tex` (extarticle); songbooks use `layout.tex` + scrbook separately. */
-const PREVIEW_TEX_BASENAME = "preview-song";
+/** Single basename in the temp dir so we can swap chorded vs native preview drivers. */
+const PREVIEW_JOB_BASENAME = "preview-job";
 
 async function createTempDir(): Promise<string> {
   const tmpDir = join(PROJECT_ROOT, "tmp", randomUUID());
@@ -33,22 +38,38 @@ async function ensureOutputDir(): Promise<string> {
   return outputDir;
 }
 
-async function setupLatexFiles(tempDir: string): Promise<void> {
-  const previewContent = await readFile(
-    join(LATEX_DIR, `${PREVIEW_TEX_BASENAME}.tex`),
-    "utf-8",
-  );
-  const previewWritten = applyLayoutPlaceholders(
-    previewContent,
-    PREVIEW_OUTPUT_SETTINGS,
-  );
-  await writeFile(
-    join(tempDir, `${PREVIEW_TEX_BASENAME}.tex`),
-    previewWritten,
-    "utf-8",
-  );
-  for (const file of ["font-body.tex", "preview-font.tex", "songs.sty"]) {
-    await copyFile(join(LATEX_DIR, file), join(tempDir, file));
+async function setupPreviewLatexFiles(
+  tempDir: string,
+  latexStyle: SongLatexStyle,
+): Promise<void> {
+  const driverSrc =
+    latexStyle === "songs_sty" ? "preview-song.tex" : "preview-song-songbook.tex";
+  const driverRaw = await readFile(join(LATEX_DIR, driverSrc), "utf-8");
+  const driverWritten = applyLayoutPlaceholders(driverRaw, PREVIEW_OUTPUT_SETTINGS);
+  await writeFile(join(tempDir, `${PREVIEW_JOB_BASENAME}.tex`), driverWritten, "utf-8");
+
+  await copyFile(join(LATEX_DIR, "font-body.tex"), join(tempDir, "font-body.tex"));
+
+  if (latexStyle === "songs_sty") {
+    await copyFile(join(LATEX_DIR, "preview-font.tex"), join(tempDir, "preview-font.tex"));
+    await copyFile(join(LATEX_DIR, "songs.sty"), join(tempDir, "songs.sty"));
+  } else {
+    await copyFile(
+      join(LATEX_DIR, "font-body-songbook.tex"),
+      join(tempDir, "font-body-songbook.tex"),
+    );
+    await copyFile(
+      join(LATEX_DIR, "preview-font-songbook.tex"),
+      join(tempDir, "preview-font-songbook.tex"),
+    );
+    await copyFile(
+      join(LATEX_DIR, "songbook-layout.sty"),
+      join(tempDir, "songbook-layout.sty"),
+    );
+    await copyFile(
+      join(LATEX_DIR, "songbook-style.tex"),
+      join(tempDir, "songbook-style.tex"),
+    );
   }
 }
 
@@ -75,16 +96,20 @@ export function isPreviewError(result: unknown): result is PreviewError {
 
 export async function convertToLatex(
   songContent: string,
+  latexStyle: SongLatexStyle = DEFAULT_SONG_LATEX_STYLE,
 ): Promise<string | PreviewError> {
   const tempDir = await createTempDir();
-  await setupLatexFiles(tempDir);
+  await setupPreviewLatexFiles(tempDir, latexStyle);
 
   const sngPath = join(tempDir, `${randomUUID()}.sng`);
 
   await writeFile(sngPath, songContent, "utf-8");
 
   try {
-    const { stdout, stderr } = await execAsync(`${SONGMAKER_CLI} ${sngPath}`, {
+    const songmakerCmd = songmakerUsesSongsStyFlag(latexStyle)
+      ? `${SONGMAKER_CLI} --songssty ${sngPath}`
+      : `${SONGMAKER_CLI} ${sngPath}`;
+    const { stderr } = await execAsync(songmakerCmd, {
       cwd: tempDir,
     });
     if (stderr?.trim()) {
@@ -94,7 +119,10 @@ export async function convertToLatex(
       };
     }
     const texPath = sngPath.replace(".sng", ".tex");
-    return await readFile(texPath, "utf-8");
+    const latex = await readFile(texPath, "utf-8");
+    console.log("[songmaker-cli debug] generated tex for preview");
+    console.log(latex);
+    return latex;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return {
@@ -108,12 +136,13 @@ export async function convertToLatex(
 
 export async function renderPdf(
   latexContent: string,
+  latexStyle: SongLatexStyle = DEFAULT_SONG_LATEX_STYLE,
 ): Promise<string | PreviewError> {
   const tempDir = await createTempDir();
-  await setupLatexFiles(tempDir);
+  await setupPreviewLatexFiles(tempDir, latexStyle);
 
   const generatedPath = join(tempDir, "generated-song.tex");
-  const texPath = join(tempDir, `${PREVIEW_TEX_BASENAME}.tex`);
+  const texPath = join(tempDir, `${PREVIEW_JOB_BASENAME}.tex`);
 
   await writeFile(generatedPath, latexContent, "utf-8");
 
@@ -125,20 +154,20 @@ export async function renderPdf(
       },
     );
 
-    const logPath = join(tempDir, `${PREVIEW_TEX_BASENAME}.log`);
+    const logPath = join(tempDir, `${PREVIEW_JOB_BASENAME}.log`);
     let logs: string | undefined;
     if (existsSync(logPath)) {
       logs = await readFile(logPath, "utf-8");
     }
 
-    const builtPdf = join(tempDir, `${PREVIEW_TEX_BASENAME}.pdf`);
+    const builtPdf = join(tempDir, `${PREVIEW_JOB_BASENAME}.pdf`);
     if (!existsSync(builtPdf)) {
       return {
         stage: "pdflatex",
         message:
           logs && logs.trim().length > 0
             ? extractPdflatexUserMessage(logs)
-            : `pdflatex finished without producing ${PREVIEW_TEX_BASENAME}.pdf`,
+            : `pdflatex finished without producing ${PREVIEW_JOB_BASENAME}.pdf`,
         logs,
       };
     }
@@ -148,7 +177,7 @@ export async function renderPdf(
     await copyFile(builtPdf, outputPdfPath);
     return outputPdfPath;
   } catch (error) {
-    const logPath = join(tempDir, `${PREVIEW_TEX_BASENAME}.log`);
+    const logPath = join(tempDir, `${PREVIEW_JOB_BASENAME}.log`);
     let logs: string | undefined;
     if (existsSync(logPath)) {
       logs = await readFile(logPath, "utf-8");
@@ -195,13 +224,14 @@ export interface PreviewResult {
 
 export async function generatePreview(
   songContent: string,
+  latexStyle: SongLatexStyle = DEFAULT_SONG_LATEX_STYLE,
 ): Promise<PreviewResult> {
-  const latexResult = await convertToLatex(songContent);
+  const latexResult = await convertToLatex(songContent, latexStyle);
   if (isPreviewError(latexResult)) {
     return { error: latexResult };
   }
 
-  const pdfResult = await renderPdf(latexResult);
+  const pdfResult = await renderPdf(latexResult, latexStyle);
   if (isPreviewError(pdfResult)) {
     return { error: pdfResult };
   }

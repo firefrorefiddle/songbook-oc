@@ -15,6 +15,7 @@ import {
 } from "$lib/server/collaborations";
 import { resolvePublicBaseUrl } from "$lib/server/email";
 import { error, fail, redirect } from "@sveltejs/kit";
+import { parseSongLatexStyle } from "$lib/songLatexStyle";
 
 export const load: PageServerLoad = async ({ params, url, locals }) => {
   const session = await locals.auth();
@@ -257,11 +258,14 @@ export const actions: Actions = {
       | "large"
       | "extra-large";
     const paperSize = formData.get("paperSize") as "a4" | "a5" | "letter";
+    const latexStyle =
+      mode === "overhead" ? "songs_sty" : parseSongLatexStyle(formData.get("latexStyle"));
 
     const outputSettings = JSON.stringify({
       mode: mode || "chorded",
       fontSize: fontSize || "medium",
       paperSize: paperSize || "a4",
+      latexStyle,
     });
 
     await prisma.songbook.update({

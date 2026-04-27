@@ -60,6 +60,45 @@ export function normalizeSongPipelineText(text: string): string {
 }
 
 /**
+ * Outside `[...]` chord directives, bare `$` and `_` reach songmaker and break
+ * pdflatex (math mode / subscript). Characters already preceded by `\` are
+ * left unchanged. Chord names may use `_` inside brackets; those are skipped.
+ */
+export function escapeChordProBodyForSongmaker(text: string): string {
+  let out = "";
+  let bracketDepth = 0;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    const prev = i > 0 ? text[i - 1]! : "";
+    const prevIsBackslash = prev === "\\";
+
+    if (ch === "[" && !prevIsBackslash) {
+      bracketDepth += 1;
+      out += ch;
+      continue;
+    }
+    if (ch === "]" && !prevIsBackslash && bracketDepth > 0) {
+      bracketDepth -= 1;
+      out += ch;
+      continue;
+    }
+
+    if (bracketDepth === 0 && !prevIsBackslash) {
+      if (ch === "$") {
+        out += "\\$";
+        continue;
+      }
+      if (ch === "_") {
+        out += "\\_";
+        continue;
+      }
+    }
+    out += ch;
+  }
+  return out;
+}
+
+/**
  * Escapes characters that songmaker copies into LaTeX `\\beginsong{...}` (and
  * similar) so common punctuation survives pdflatex.
  */
@@ -275,6 +314,6 @@ export function buildSongContentForPdf(
     sngContent += `numbering: ${escapeStructuredHeaderFieldForSng(metadata.numbering.trim())}\n`;
   }
   sngContent += "***\n";
-  sngContent += normalizedContent;
+  sngContent += escapeChordProBodyForSongmaker(normalizedContent);
   return sngContent;
 }

@@ -35,6 +35,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
     data: {
       ownerId: session.user.id!,
       forkedFromId: originalSongbook.id,
+      outputSettings: originalSongbook.outputSettings,
       versions: {
         create: {
           title: title || latestVersion.title,

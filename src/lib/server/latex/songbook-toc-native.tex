@@ -1,0 +1,13 @@
+% End-of-book TOC for `songbook-layout` PDFs (no `songs.sty`, so no \SB@ellipspread / \idxtitlefont).
+\usepackage[hidelinks,bookmarksopen]{hyperref}
+
+\newcommand{\songbooktocheading}{%
+	\begin{center}%
+		{\sffamily\bfseries\LARGE Inhaltsverzeichnis}%
+	\end{center}%
+}
+
+\newcommand{\songtocline}[3]{%
+	\noindent{\normalfont #2}\dotfill\makebox[2.5em][r]{#3}\par
+	\vskip0.25\baselineskip
+}

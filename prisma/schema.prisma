@@ -164,7 +164,7 @@ model Songbook {
   forkedFrom   Songbook?  @relation("SongbookForks", fields: [forkedFromId], references: [id])
   forks        Songbook[] @relation("SongbookForks")
 
-  // JSON configuration for PDF output: mode, fontSize, paperSize
+  // JSON configuration for PDF output: mode, fontSize, paperSize, latexStyle (songs_sty | songbook_tex)
   outputSettings String @default("{}")
 
   versions       SongbookVersion[]

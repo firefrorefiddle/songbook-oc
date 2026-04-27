@@ -1,0 +1,20 @@
+% Chorded songbook using songmaker native TeX + `songbook-layout` (no `songs` package).
+\input{layout}
+
+\usepackage[utf8]{inputenc}
+\usepackage[ngerman]{babel}
+\input{songbook-style}
+
+\input{font-body-songbook}
+
+\usepackage{pdfpages}
+
+\input{songbook-toc-native}
+
+\begin{document}
+
+\input{generated-songs}
+
+\input{table-of-contents}
+
+\end{document}
