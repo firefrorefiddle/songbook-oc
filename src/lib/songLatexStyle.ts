@@ -3,10 +3,10 @@
 export const SONG_LATEX_STYLES = ["songs_sty", "songbook_tex"] as const;
 export type SongLatexStyle = (typeof SONG_LATEX_STYLES)[number];
 
-export const DEFAULT_SONG_LATEX_STYLE: SongLatexStyle = "songs_sty";
+export const DEFAULT_SONG_LATEX_STYLE: SongLatexStyle = "songbook_tex";
 
 export function parseSongLatexStyle(value: unknown): SongLatexStyle {
-  return value === "songbook_tex" ? "songbook_tex" : "songs_sty";
+  return value === "songs_sty" ? "songs_sty" : DEFAULT_SONG_LATEX_STYLE;
 }
 
 /** Pass `--songssty` to songmaker-cli when emitting `songs.sty` / `\beginsong` format. */

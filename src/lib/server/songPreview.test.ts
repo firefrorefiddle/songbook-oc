@@ -20,8 +20,8 @@ Wie du warst vor aller Zeit, so bleibst du in E-wigkeit.`;
 
 describe("songPreview", () => {
   describe("convertToLatex", () => {
-    it("converts .sng content to LaTeX", async () => {
-      const result = await convertToLatex(TEST_SONG);
+    it("converts .sng content to LaTeX with the legacy songs.sty style", async () => {
+      const result = await convertToLatex(TEST_SONG, "songs_sty");
 
       expect(isPreviewError(result)).toBe(false);
       if (!isPreviewError(result)) {

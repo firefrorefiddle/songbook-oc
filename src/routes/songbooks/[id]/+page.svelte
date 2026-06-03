@@ -10,7 +10,11 @@
   import Button from "$lib/components/Button.svelte";
   import Input from "$lib/components/Input.svelte";
   import Modal from "$lib/components/Modal.svelte";
-  import { parseSongLatexStyle, type SongLatexStyle } from "$lib/songLatexStyle";
+  import {
+    DEFAULT_SONG_LATEX_STYLE,
+    parseSongLatexStyle,
+    type SongLatexStyle,
+  } from "$lib/songLatexStyle";
 
   let { data, form } = $props();
 
@@ -188,7 +192,7 @@
   let outputMode = $state("chorded");
   let outputFontSize = $state("medium");
   let outputPaperSize = $state("a4");
-  let outputLatexStyle = $state<SongLatexStyle>("songs_sty");
+  let outputLatexStyle = $state<SongLatexStyle>(DEFAULT_SONG_LATEX_STYLE);
 
   function openSettings() {
     const settings = JSON.parse(data.songbook.outputSettings || "{}");
@@ -1065,8 +1069,8 @@
               bind:value={outputLatexStyle}
               class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
             >
+              <option value="songbook_tex">Songbook layout (songbook-style.tex) (default)</option>
               <option value="songs_sty">Legacy (songs.sty + songmaker --songssty)</option>
-              <option value="songbook_tex">Songbook layout (songbook-style.tex)</option>
             </select>
             <p class="mt-1 text-xs text-gray-500">
               Must match how <code class="bg-gray-100 px-1 rounded">songmaker-cli</code> was invoked for each song in this book.

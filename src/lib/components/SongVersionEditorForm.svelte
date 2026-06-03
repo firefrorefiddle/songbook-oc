@@ -55,7 +55,7 @@
   onMount(() => {
     try {
       const stored = localStorage.getItem(PREVIEW_LATEX_STYLE_KEY);
-      previewLatexStyle = stored === 'songbook_tex' ? 'songbook_tex' : 'songs_sty';
+      previewLatexStyle = stored === 'songs_sty' ? 'songs_sty' : DEFAULT_SONG_LATEX_STYLE;
     } catch {
       /* private mode */
     }
@@ -263,12 +263,12 @@
         <legend class="sr-only">LaTeX style for preview</legend>
         <span class="font-medium text-gray-700 not-sr-only">Style</span>
         <label class="inline-flex items-center gap-1.5 cursor-pointer">
-          <input type="radio" name="preview-latex-style" value="songs_sty" bind:group={previewLatexStyle} />
-          <span>Legacy (songs.sty)</span>
+          <input type="radio" name="preview-latex-style" value="songbook_tex" bind:group={previewLatexStyle} />
+          <span>Songbook layout (default)</span>
         </label>
         <label class="inline-flex items-center gap-1.5 cursor-pointer">
-          <input type="radio" name="preview-latex-style" value="songbook_tex" bind:group={previewLatexStyle} />
-          <span>Songbook layout</span>
+          <input type="radio" name="preview-latex-style" value="songs_sty" bind:group={previewLatexStyle} />
+          <span>Legacy (songs.sty)</span>
         </label>
       </fieldset>
     </div>
