@@ -52,6 +52,34 @@ describe("songPdfPipelineSafety", () => {
       expect(sng).toContain("title: X");
     });
 
+    it("adds a number header for structured songs when given a song number", () => {
+      const sng = buildSongContentForPdf("Title", "C\nLine", null, {}, 7);
+      expect(sng).toContain("title: Title\n");
+      expect(sng).toContain("number: 7\n");
+      // number comes right after the title line.
+      expect(sng.indexOf("number: 7")).toBeGreaterThan(sng.indexOf("title:"));
+      expect(sng.indexOf("number: 7")).toBeLessThan(sng.indexOf("***"));
+    });
+
+    it("omits the number header when no song number is given", () => {
+      const sng = buildSongContentForPdf("Title", "C\nLine", null, {});
+      expect(sng).not.toContain("number:");
+    });
+
+    it("injects a number header into raw .sng content", () => {
+      const raw = "title: X\nauthor:\nreference:\n***\nC\nx\n";
+      const sng = buildSongContentForPdf("ignored", raw, null, {}, 12);
+      expect(sng).toContain("title: X\nnumber: 12\n");
+      expect(sng.indexOf("number: 12")).toBeLessThan(sng.indexOf("***"));
+    });
+
+    it("does not duplicate an existing number header in raw .sng", () => {
+      const raw = "title: X\nnumber: 3\nreference:\n***\nC\nx\n";
+      const sng = buildSongContentForPdf("ignored", raw, null, {}, 12);
+      expect(sng).toContain("number: 3");
+      expect(sng).not.toContain("number: 12");
+    });
+
     it("escapes $ and _ outside chord brackets for songmaker", () => {
       expect(escapeChordProBodyForSongmaker("a$b")).toBe("a\\$b");
       expect(escapeChordProBodyForSongmaker("a\\$b")).toBe("a\\$b");

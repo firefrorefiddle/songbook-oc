@@ -173,9 +173,10 @@ async function convertSongToLatex(
   metadata: string,
   tempDir: string,
   latexStyle: SongLatexStyle,
+  songNumber?: number,
 ): Promise<string> {
   const parsed = JSON.parse(metadata || "{}") as SongPdfPipelineMetadata;
-  const sngContent = buildSongContentForPdf(title, content, author, parsed);
+  const sngContent = buildSongContentForPdf(title, content, author, parsed, songNumber);
 
   const sngPath = join(tempDir, `${randomUUID()}.sng`);
   await writeFile(sngPath, sngContent, "utf-8");
@@ -268,7 +269,73 @@ export function buildSongbookTocLatex(songs: SongbookTocSongEntry[]): string {
   return tocLines.join("\n");
 }
 
-function generateTableOfContents(songs: SongbookTocSongEntry[]): string {
+/** Collation for the alphabetical title index (German-aware, case-insensitive). */
+const TOC_COLLATOR = new Intl.Collator("de", {
+  sensitivity: "base",
+  numeric: true,
+});
+
+/**
+ * Group key (gray letter box) for a title: first letter, upper-cased, with German
+ * diacritics folded to their base letter. Non-letters bucket under "#".
+ */
+export function songbookIndexLetter(title: string): string {
+  const first = title.trim().charAt(0);
+  if (!first) {
+    return "#";
+  }
+  const folded = first
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/ß/gi, "S")
+    .toUpperCase();
+  return /^[A-Z]$/.test(folded) ? folded : "#";
+}
+
+/**
+ * Two-column alphabetical title index matching the Liedermappe layout:
+ * gray letter-section boxes, italic titles, dot leaders, song numbers.
+ * Song numbers are the gray-box numbers (songbook position, 1-based).
+ */
+export function buildNativeSongbookIndex(songs: SongbookTocSongEntry[]): string {
+  const entries = songs.map((song, i) => ({
+    number: i + 1,
+    title: song.songVersion.title,
+  }));
+
+  entries.sort((a, b) => {
+    const byTitle = TOC_COLLATOR.compare(a.title.trim(), b.title.trim());
+    return byTitle !== 0 ? byTitle : a.number - b.number;
+  });
+
+  const lines: string[] = [
+    "\\clearpage",
+    "\\songbooktocheading",
+    "\\begin{songtocindex}",
+  ];
+
+  let currentLetter = "";
+  for (const entry of entries) {
+    const letter = songbookIndexLetter(entry.title);
+    if (letter !== currentLetter) {
+      currentLetter = letter;
+      lines.push(`\\songtocletter{${escapeLatexForSongbookToc(letter)}}`);
+    }
+    const escapedTitle = escapeLatexForSongbookToc(entry.title);
+    lines.push(`\\songtocline{${entry.number}}{${escapedTitle}}{${entry.number}}`);
+  }
+
+  lines.push("\\end{songtocindex}");
+  return lines.join("\n");
+}
+
+function generateTableOfContents(
+  songs: SongbookTocSongEntry[],
+  style: SongLatexStyle,
+): string {
+  if (style === "songbook_tex") {
+    return buildNativeSongbookIndex(songs);
+  }
   return buildSongbookTocLatex(songs);
 }
 
@@ -331,7 +398,8 @@ export async function exportSongbookLatexWorkspace(
   await setupLatexFiles(outDir, outputSettings);
 
   const latexSongs: string[] = [];
-  for (const songEntry of version.songs) {
+  for (let i = 0; i < version.songs.length; i++) {
+    const songEntry = version.songs[i];
     const latex = await convertSongToLatex(
       songEntry.songVersion.title,
       songEntry.songVersion.content,
@@ -339,6 +407,7 @@ export async function exportSongbookLatexWorkspace(
       songEntry.songVersion.metadata,
       outDir,
       effLatexStyle,
+      i + 1,
     );
     latexSongs.push(latex);
   }
@@ -351,7 +420,7 @@ export async function exportSongbookLatexWorkspace(
 
   await writeFile(
     join(outDir, "table-of-contents.tex"),
-    generateTableOfContents(version.songs),
+    generateTableOfContents(version.songs, effLatexStyle),
     "utf-8",
   );
 
@@ -487,13 +556,16 @@ export async function generateSongbookPdf(
       head800: string;
     }[] = [];
 
-    for (const songEntry of version.songs) {
+    for (let i = 0; i < version.songs.length; i++) {
+      const songEntry = version.songs[i];
+      const songNumber = i + 1;
       const parsedMeta = JSON.parse(songEntry.songVersion.metadata || "{}") as SongPdfPipelineMetadata;
       const sngForPdf = buildSongContentForPdf(
         songEntry.songVersion.title,
         songEntry.songVersion.content,
         songEntry.songVersion.author,
         parsedMeta,
+        songNumber,
       );
       const latex = await convertSongToLatex(
         songEntry.songVersion.title,
@@ -502,6 +574,7 @@ export async function generateSongbookPdf(
         songEntry.songVersion.metadata,
         tempDir,
         effLatexStyle,
+        songNumber,
       );
       latexSongs.push(latex);
       const bodyAfterSep = sngForPdf.includes("***\n")
@@ -533,7 +606,7 @@ export async function generateSongbookPdf(
       "utf-8",
     );
 
-    const tocContent = generateTableOfContents(version.songs);
+    const tocContent = generateTableOfContents(version.songs, effLatexStyle);
     await writeFile(
       join(tempDir, "table-of-contents.tex"),
       tocContent,

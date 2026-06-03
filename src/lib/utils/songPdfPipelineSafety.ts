@@ -272,6 +272,35 @@ export function normalizeMetadataRecord(
 }
 
 /**
+ * Inserts a `number:` header into raw `.sng` content (header block before `***`)
+ * so songmaker can render the songbook position. Existing `number:` lines win.
+ */
+function injectSongNumberIntoRawSng(
+  normalizedContent: string,
+  songNumber?: number,
+): string {
+  if (songNumber == null || !Number.isFinite(songNumber)) {
+    return normalizedContent;
+  }
+  const lines = normalizedContent.split("\n");
+  const sepIndex = lines.findIndex((l) => l.trim() === "***");
+  const headerEnd = sepIndex === -1 ? lines.length : sepIndex;
+  const hasNumber = lines
+    .slice(0, headerEnd)
+    .some((l) => /^\s*number\s*:/i.test(l));
+  if (hasNumber) {
+    return normalizedContent;
+  }
+  // Insert after the title line when present, otherwise at the top of the header.
+  const titleIdx = lines
+    .slice(0, headerEnd)
+    .findIndex((l) => /^\s*title\s*:/i.test(l));
+  const insertAt = titleIdx === -1 ? 0 : titleIdx + 1;
+  lines.splice(insertAt, 0, `number: ${Math.trunc(songNumber)}`);
+  return lines.join("\n");
+}
+
+/**
  * Builds .sng source for songmaker: escapes structured headers; passes raw .sng
  * through (after normalizing line endings and stripping dangerous controls).
  */
@@ -280,13 +309,17 @@ export function buildSongContentForPdf(
   content: string,
   author?: string | null,
   metadata?: SongPdfPipelineMetadata,
+  songNumber?: number,
 ): string {
   const normalizedContent = normalizeSongPipelineText(content);
   if (normalizedContent.trimStart().startsWith("title:")) {
-    return normalizedContent;
+    return injectSongNumberIntoRawSng(normalizedContent, songNumber);
   }
 
   let sngContent = `title: ${escapeStructuredHeaderFieldForSng(title)}\n`;
+  if (songNumber != null && Number.isFinite(songNumber)) {
+    sngContent += `number: ${Math.trunc(songNumber)}\n`;
+  }
   if (author?.trim()) {
     sngContent += `author: ${escapeStructuredHeaderFieldForSng(author.trim())}\n`;
   }

@@ -1,13 +1,54 @@
-% End-of-book TOC for `songbook-layout` PDFs (no `songs.sty`, so no \SB@ellipspread / \idxtitlefont).
+% End-of-book title index for `songbook-layout` PDFs.
+% Two-column, alphabetically grouped (gray letter-section boxes), italic titles,
+% dot leaders, and the song's gray-box number — mirrors the Liedermappe index.
 \usepackage[hidelinks,bookmarksopen]{hyperref}
+\usepackage{multicol}
 
+% Centered heading above both columns.
 \newcommand{\songbooktocheading}{%
 	\begin{center}%
 		{\sffamily\bfseries\LARGE Inhaltsverzeichnis}%
 	\end{center}%
+	\vspace{0.6em}%
 }
 
+% Two-column body.
+\newenvironment{songtocindex}%
+	{\begin{multicols}{2}}%
+	{\end{multicols}}
+
+\newcommand{\songtoctitlefont}{\sffamily\slshape\normalsize}
+\newcommand{\songtocnumfont}{\rmfamily\normalsize}
+\newlength\SongTocLineSep
+\setlength\SongTocLineSep{0.32\baselineskip}
+
+% Gray letter-section box (e.g. "A"), matching the song number box color.
+\newcommand{\songtocletter}[1]{%
+	\par\addvspace{0.7em}%
+	{\noindent\colorbox{SongNumberBg}{%
+		\sffamily\bfseries\large\strut\hspace{0.18em}#1\hspace{0.18em}%
+	}}%
+	\nobreak\par\addvspace{0.3em}\nobreak%
+}
+
+% One index line: hyperlinked italic title, dot leader, right-aligned number.
+% #1 anchor key (song number), #2 title, #3 displayed number.
+% Ragged title wrapping with a flush-right number on the last line (tocloft trick:
+% right margin reserved via \rightskip, cancelled on the final line by \parfillskip).
 \newcommand{\songtocline}[3]{%
-	\noindent{\normalfont #2}\dotfill\makebox[2.5em][r]{#3}\par
-	\vskip0.25\baselineskip
+	\begingroup
+	\leftskip=0pt\relax
+	\rightskip=2.1em plus 1fil\relax
+	\parfillskip=-\rightskip\relax
+	\hangindent=1.4em\relax
+	\hangafter=1\relax
+	\interlinepenalty=10000\relax
+	\noindent
+	\hyperlink{song-#1}{\songtoctitlefont #2}%
+	\nobreak\hspace{0.35em}%
+	\leaders\hbox to 0.55em{\hss.\hss}\hfill
+	\nobreak\hyperlink{song-#1}{\songtocnumfont #3}%
+	\par
+	\endgroup
+	\vspace{\SongTocLineSep}%
 }
