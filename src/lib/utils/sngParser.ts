@@ -214,7 +214,6 @@ function extractChordPlacements(
 ): ChordPlacement[] {
   const placements: ChordPlacement[] = [];
   const chordTokens = tokenizeChordLine(chordLine);
-  const trimmedChordLine = chordLine.trim();
 
   if (chordTokens.length === 0 || !lyricsLine.trim()) {
     return [];
@@ -225,37 +224,45 @@ function extractChordPlacements(
     return [];
   }
 
+  const lyricsLength = lyricsLine.length;
+
   for (const chord of chordTokens) {
-    const chordRelativePos = chord.chordLinePos;
-    const chordTotalLength = trimmedChordLine.length;
-    const lyricsLength = lyricsLine.length;
+    // The chord line is column-aligned over the lyrics: the chord's column is
+    // the character it sits above. Map it straight to that lyric character so
+    // sub-word/syllable placement is preserved exactly (no ratio scaling).
+    let col = Math.max(0, Math.min(chord.chordLinePos, lyricsLength - 1));
 
-    const relativePosition = chordRelativePos / chordTotalLength;
-    const targetCharPos = Math.round(relativePosition * lyricsLength);
-
-    let bestWord: { word: string; start: number; end: number } | null = null;
-    let minDistance = Infinity;
-
-    for (const word of words) {
-      const wordCenter = (word.start + word.end) / 2;
-      const distance = Math.abs(wordCenter - targetCharPos);
-      if (distance < minDistance) {
-        minDistance = distance;
-        bestWord = word;
+    // If the chord sits over whitespace (between words), snap forward to the
+    // next word so it highlights a real syllable rather than a gap.
+    if (lyricsLine[col] !== undefined && lyricsLine[col].trim() === "") {
+      let next = col;
+      while (next < lyricsLength && lyricsLine[next].trim() === "") {
+        next++;
+      }
+      if (next < lyricsLength) {
+        col = next;
       }
     }
 
-    if (bestWord) {
-      placements.push({
-        chord: chord.value,
-        startChar: bestWord.start,
-        endChar: bestWord.end,
-        isOptional: chord.isOptional,
-      });
-    }
+    placements.push({
+      chord: chord.value,
+      startChar: col,
+      endChar: findWordEndIndex(lyricsLine, col),
+      isOptional: chord.isOptional,
+    });
   }
 
   return placements;
+}
+
+/** End index of the word starting at (or containing) `start`. */
+function findWordEndIndex(lyrics: string, start: number): number {
+  for (let i = start; i < lyrics.length; i++) {
+    if (lyrics[i].trim() === "") {
+      return i - 1;
+    }
+  }
+  return Math.max(start, lyrics.length - 1);
 }
 
 function getWordPositions(
@@ -467,13 +474,14 @@ function renderChordLine(line: ChordedLine): string {
       .join(" ");
   }
 
-  const chordLineLength = Math.max(lyricsLength, 20);
+  // Place each chord at the exact column of the character it sits over. The
+  // editor stores real character offsets, so no ratio scaling is needed; this
+  // keeps sub-word/syllable chord placement aligned in the .sng text and PDF.
   const chordPositions: { chord: string; isOptional: boolean; pos: number }[] =
     [];
 
   for (const chord of line.chords) {
-    const relativePos = chord.startChar / lyricsLength;
-    const chordLinePos = Math.round(relativePos * chordLineLength);
+    const chordLinePos = Math.max(0, Math.min(chord.startChar, lyricsLength));
     chordPositions.push({
       chord: chord.chord,
       isOptional: chord.isOptional,
