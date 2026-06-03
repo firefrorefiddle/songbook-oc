@@ -3,7 +3,7 @@ import type { Actions, PageServerLoad } from "./$types";
 import { fail, redirect } from "@sveltejs/kit";
 
 import {
-  getPasswordResetTokenStatus,
+  getPasswordResetTokenInfo,
   resetPasswordWithToken,
 } from "$lib/server/passwordReset";
 import { prisma } from "$lib/server/prisma";
@@ -22,7 +22,7 @@ function getResetPasswordError(status: "invalid" | "expired" | "used") {
 
 export const load: PageServerLoad = async ({ url }) => {
   const token = url.searchParams.get("token")?.trim() ?? "";
-  const status = await getPasswordResetTokenStatus(prisma, token);
+  const { status, email } = await getPasswordResetTokenInfo(prisma, token);
 
   if (status !== "valid") {
     return {
@@ -35,6 +35,7 @@ export const load: PageServerLoad = async ({ url }) => {
   return {
     step: "reset" as const,
     token,
+    email,
   };
 };
 

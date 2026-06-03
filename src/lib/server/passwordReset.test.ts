@@ -13,6 +13,7 @@ vi.mock("./email", () => ({
 import {
   buildPasswordResetExpiry,
   createPasswordResetRequest,
+  getPasswordResetTokenInfo,
   getPasswordResetTokenStatus,
   hashPasswordResetToken,
   resetPasswordWithToken,
@@ -150,6 +151,44 @@ describe("passwordReset helpers", () => {
     expect(await getPasswordResetTokenStatus(prisma, "used")).toBe("used");
     expect(await getPasswordResetTokenStatus(prisma, "expired")).toBe("expired");
     expect(await getPasswordResetTokenStatus(prisma, "valid")).toBe("valid");
+  });
+
+  it("exposes the account email only for valid tokens", async () => {
+    const findUnique = vi
+      .fn()
+      .mockResolvedValueOnce({
+        id: "prt-valid",
+        userId: "user-1",
+        expiresAt: new Date("2999-04-01T13:00:00Z"),
+        usedAt: null,
+        user: { id: "user-1", email: "valid@example.org", isActive: true },
+      })
+      .mockResolvedValueOnce({
+        id: "prt-used",
+        userId: "user-1",
+        expiresAt: new Date("2999-04-01T13:00:00Z"),
+        usedAt: new Date("2026-04-01T11:00:00Z"),
+        user: { id: "user-1", email: "used@example.org", isActive: true },
+      })
+      .mockResolvedValueOnce(null);
+    const prisma = {
+      passwordResetToken: {
+        findUnique,
+      },
+    } as any;
+
+    expect(await getPasswordResetTokenInfo(prisma, "valid")).toEqual({
+      status: "valid",
+      email: "valid@example.org",
+    });
+    expect(await getPasswordResetTokenInfo(prisma, "used")).toEqual({
+      status: "used",
+      email: null,
+    });
+    expect(await getPasswordResetTokenInfo(prisma, "missing")).toEqual({
+      status: "invalid",
+      email: null,
+    });
   });
 
   it("updates the password and consumes all outstanding reset tokens", async () => {

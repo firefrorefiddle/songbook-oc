@@ -79,24 +79,48 @@ async function findPasswordResetToken(
   });
 }
 
+function resolvePasswordResetTokenStatus(
+  record: PasswordResetTokenRecord | null,
+): PasswordResetTokenStatus {
+  if (!record || !record.user.isActive) {
+    return "invalid";
+  }
+
+  if (record.usedAt) {
+    return "used";
+  }
+
+  if (record.expiresAt < new Date()) {
+    return "expired";
+  }
+
+  return "valid";
+}
+
 export async function getPasswordResetTokenStatus(
   prisma: PasswordResetPrisma,
   token: string,
 ) {
   const record = await findPasswordResetToken(prisma, token);
-  if (!record || !record.user.isActive) {
-    return "invalid" satisfies PasswordResetTokenStatus;
-  }
+  return resolvePasswordResetTokenStatus(record);
+}
 
-  if (record.usedAt) {
-    return "used" satisfies PasswordResetTokenStatus;
-  }
+/**
+ * Returns the token status alongside the associated account email so the reset
+ * form can present a `username` field for password managers. The email is only
+ * exposed when the token is valid, never for invalid/expired/used tokens.
+ */
+export async function getPasswordResetTokenInfo(
+  prisma: PasswordResetPrisma,
+  token: string,
+): Promise<{ status: PasswordResetTokenStatus; email: string | null }> {
+  const record = await findPasswordResetToken(prisma, token);
+  const status = resolvePasswordResetTokenStatus(record);
 
-  if (record.expiresAt < new Date()) {
-    return "expired" satisfies PasswordResetTokenStatus;
-  }
-
-  return "valid" satisfies PasswordResetTokenStatus;
+  return {
+    status,
+    email: status === "valid" && record ? record.user.email : null,
+  };
 }
 
 export async function createPasswordResetRequest(
