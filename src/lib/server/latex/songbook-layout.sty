@@ -33,12 +33,23 @@
 \newlength\SongLineSep
 \setlength\SongLineSep{0.15em}
 
+% Adaptive width of the gray number box (grows past \SongLeftNumberWidth for
+% multi-digit numbers). Computed per song in \BeginSong.
+\newlength\SongNumberBoxWidth
+
+% Scratch state for \Ch. Named registers/boxes are required because
+% tabular/\halign clobbers the unnamed scratch registers (\dimen0, \box0...),
+% which previously corrupted cell widths and overlapped lyrics.
+\newlength\SongChCellWidth
+\newsavebox\SongChLyrBox
+\newsavebox\SongChChordBox
+
 \newcommand{\SongTitleFont}{\sffamily\slshape\LARGE}
 \newcommand{\SongMetaFont}{\scriptsize}
 \newcommand{\SongMetaStrongFont}{\scriptsize\bfseries}
 \newcommand{\SongNumberFont}{\sffamily\bfseries\Huge}
 \newcommand{\SongLyricFont}{\rmfamily\normalsize}
-\newcommand{\SongChordFont}{\sffamily\itshape\large}
+\newcommand{\SongChordFont}{\sffamily\slshape\normalsize}
 
 % ---------- Song block ----------
 
@@ -54,15 +65,24 @@
   \hrule height 0.4pt%
   \vspace{0.55em}%
   \noindent
+  % Guard so single-song previews (no hyperref) still compile; the full songbook
+  % build loads hyperref and gets real anchors for the index links.
+  \ifcsname hypertarget\endcsname\hypertarget{song-#1}{}\fi%
+  % Grow the gray box to fit wide (e.g. 3-digit) numbers, keeping
+  % \SongLeftNumberWidth as a minimum, and track that width in the title hsize.
+  \settowidth{\SongNumberBoxWidth}{\SongNumberFont #1}%
+  \ifdim\SongNumberBoxWidth<\SongLeftNumberWidth
+    \setlength\SongNumberBoxWidth{\SongLeftNumberWidth}%
+  \fi
   \hbox{%
     \colorbox{SongNumberBg}{%
-      \hbox to \SongLeftNumberWidth{%
+      \hbox to \SongNumberBoxWidth{%
         \SongNumberFont #1\hfil
       }%
     }%
     \hspace{\SongHeaderGap}%
     \vtop{%
-      \hsize=\dimexpr\linewidth-\SongLeftNumberWidth-\SongHeaderGap\relax
+      \hsize=\dimexpr\linewidth-\SongNumberBoxWidth-\SongHeaderGap\relax
       {\SongTitleFont #2\par}%
       \vspace{0.15em}%
       {\SongMetaFont #3\par}%
@@ -142,15 +162,15 @@
 \NewDocumentCommand{\Ch}{m m}{%
   \leavevmode
   \begingroup
-  \setbox0=\hbox{{\SongLyricFont #2}}%
-  \setbox1=\hbox{{\SongChordFont #1}}%
-  \dimen0=\wd0
-  \ifdim\wd1>\dimen0
-    \dimen0=\wd1
+  \sbox\SongChLyrBox{{\SongLyricFont #2}}%
+  \sbox\SongChChordBox{{\SongChordFont #1}}%
+  \setlength\SongChCellWidth{\wd\SongChLyrBox}%
+  \ifdim\wd\SongChChordBox>\SongChCellWidth
+    \setlength\SongChCellWidth{\wd\SongChChordBox}%
   \fi
   \begin{tabular}[b]{@{}c@{}}%
     {\SongChordFont #1}\\[-0.35ex]%
-    \hbox to \dimen0{{\SongLyricFont #2}\hfil}%
+    \hbox to \SongChCellWidth{{\SongLyricFont #2}\hfil}%
   \end{tabular}%
   \endgroup
 }
