@@ -14,6 +14,8 @@ each other rights to modify their songs and songbooks.
 Songs are simple text files in a special format that can be converted to LaTeX with a custom command. LaTeX scaffolding will be used
 to convert songbooks to PDF, and also for simple previews of songs.
 
+> **PDF subsystem deep-dive:** see [`docs/pdf-generation-architecture.md`](docs/pdf-generation-architecture.md) for the full pipeline — the two LaTeX styles (`songs_sty` vs `songbook_tex`), the `songmaker` Haskell CLI (parse → normalize → layout → backend), the `.sng` headers, template inventory, the grouped two-column index, song numbering, and iteration/gotcha notes.
+
 ## Stack
 
 - Frontend: SvelteKit + TypeScript
@@ -263,6 +265,23 @@ Every architectural choice, tradeoff, or context that would be lost over time mu
 **Decision**: What was decided and why
 **Alternatives considered**: Other options that were rejected and why
 -->
+
+---
+
+**Date**: 2026-06-03
+**Context**: The new `songbook_tex` PDF method (custom `songbook-layout.sty`, no `songs` package) should visually match the legacy Liedermappe (`target.pdf`): per-song gray number box, metadata, and the end-of-book index. Two gaps existed: songmaker hardcoded the gray-box number to `1` for every song, and the native index was a single-column, song-order list with dot leaders instead of the Liedermappe's two-column, alphabetically grouped index with gray letter-section boxes.
+**Decision**:
+
+- Add a `number` header to songmaker (`SongMetaParsed.smNumber` → `SongMetaSemantic.sSongNumber` → `lmSongNumber`, falling back to `"1"`). The PDF pipeline owns numbering: `buildSongContentForPdf(..., songNumber)` writes `number: N` (N = songbook position, 1-based) for structured songs and injects it into raw `.sng` headers. Both backends share the layout pipeline, so songs.sty output is unaffected (it auto-numbers).
+- Rebuild the native index in TypeScript (`buildNativeSongbookIndex`): sort titles with a German `Intl.Collator`, group by folded first letter (`songbookIndexLetter`, diacritics → base letter, non-letters → `#`), and emit `\songtocletter` + `\songtocline` with the song's gray-box number. `generateTableOfContents` dispatches by style (`songbook_tex` → grouped index; `songs_sty` → existing `buildSongbookTocLatex`).
+- Rewrite `songbook-toc-native.tex`: `multicols{2}`, gray letter boxes (reusing `SongNumberBg`), italic titles, dot leaders, and flush-right numbers via the tocloft skip trick (`\rightskip` reserves the right margin, `\parfillskip=-\rightskip` cancels it on the last line) so wrapped titles stay ragged like the Liedermappe. `\BeginSong` now emits `\hypertarget{song-N}` so index entries hyperlink to songs.
+- Add `scripts/build-songmaker.sh` (`cabal build` + `cabal list-bin` → copy to `bin/songmaker-cli`) to automate installing the Haskell binary the pipeline invokes.
+
+**Alternatives considered**:
+
+- Post-processing songmaker's `\BeginSong{1}` output with a regex in the pipeline: rejected as fragile string surgery on generated TeX; the `number` header is the proper channel and songmaker editing was available.
+- Relying on the `songs` package's native `\showindex`/`songidx` for the grouped index: rejected because the new method deliberately drops the `songs` package, and `songidx` is an external sort step; generating the sorted/grouped index in TypeScript is simpler and fully controlled.
+- Inverting leading articles for sort keys (e.g. "The Nazarene" → "Nazarene, The") as the original source did via explicit index keys: deferred — our songs lack that metadata, and plain title collation keeps grouping predictable (titles like "Der …" stay under D, matching the target).
 
 ---
 

@@ -11,6 +11,14 @@ This file tracks the current state of work, improvements, and technical debt for
 
 ## Items
 
+### Match new songbook_tex PDF method to Liedermappe layout
+
+- **Status**: completed
+- **Priority**: high
+- **Description**: Made the native `songbook_tex` PDF output match `target.pdf`. Fixed per-song gray-box numbering (songmaker now reads a `number` header; pipeline assigns the songbook position). Rebuilt the end-of-book index as a two-column, alphabetically grouped `Inhaltsverzeichnis` with gray letter-section boxes, italic titles, dot leaders, flush-right numbers, and song hyperlinks. Added `scripts/build-songmaker.sh` to build and install the Haskell CLI to `bin/songmaker-cli`.
+- **Related**: `songbook-toc-native.tex`, `songbook-layout.sty`, `songbookPdf.ts`, `songPdfPipelineSafety.ts`, songmaker `number` header.
+- **Follow-up**: Optional — invert leading articles in index sort keys ("The X" → "X, The") once songs carry index-key metadata; tighten two-digit number box spacing.
+
 ### Add Definition of Done and Decision Logging
 
 - **Status**: completed

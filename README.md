@@ -21,6 +21,12 @@ A songbook management application for managing songs, song versions, and songboo
 - **Database**: SQLite with Prisma ORM
 - **Styling**: Tailwind CSS
 
+## Documentation
+
+- [`docs/pdf-generation-architecture.md`](docs/pdf-generation-architecture.md) — how songs become PDFs: the two LaTeX styles (`songs_sty` vs `songbook_tex`), the `songmaker` Haskell CLI, the `.sng` format, templates, the index/ToC, and iteration tips.
+- [`docs/advanced-editor-design.md`](docs/advanced-editor-design.md) — graphical song editor design.
+- [`docs/ui-simplification-audit.md`](docs/ui-simplification-audit.md) — UI review and simplification directions.
+
 ## Setup
 
 ### Prerequisites
